@@ -1,0 +1,172 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  MAP — Multi-Agent AI Automation Platform
+#  docker-compose.yml
+#
+#  Phase 0: Only postgres + redis are active.
+#  Uncomment each service as you build it phase by phase.
+# ─────────────────────────────────────────────────────────────
+
+networks:
+  map-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  faiss_data:
+  bentoml_models:
+
+services:
+
+  # ── INFRASTRUCTURE (active from Phase 0) ──────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: map-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-map_db}
+      POSTGRES_USER: ${DB_USER:-map_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - map-network
+    ports:
+      - "5432:5432"       # exposed for local dev tools (TablePlus, DBeaver)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-map_user} -d ${DB_NAME:-map_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: map-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - map-network
+    ports:
+      - "6379:6379"       # exposed for local dev tools (RedisInsight)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── BACKEND (uncomment in Phase 1) ────────────────────────
+
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: map-backend
+  #   restart: unless-stopped
+  #   env_file: [.env]
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     postgres: { condition: service_healthy }
+  #     redis:    { condition: service_healthy }
+  #   networks:
+  #     - map-network
+  #   volumes:
+  #     - faiss_data:/app/data/faiss
+  #   command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── WORKER (uncomment in Phase 3) ─────────────────────────
+
+  # worker:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile.worker
+  #   container_name: map-worker
+  #   restart: unless-stopped
+  #   env_file: [.env]
+  #   depends_on:
+  #     - backend
+  #     - redis
+  #     - postgres
+  #   networks:
+  #     - map-network
+  #   volumes:
+  #     - faiss_data:/app/data/faiss
+  #     - bentoml_models:/root/bentoml
+  #   command: celery -A app.worker.celery_app worker -l info -Q default,high_priority,long_running -c 4 -P gevent
+  #   deploy:
+  #     replicas: 3
+
+  # ── BENTOML (uncomment in Phase 5) ────────────────────────
+
+  # bentoml:
+  #   build:
+  #     context: ./bentoml
+  #     dockerfile: Dockerfile
+  #   container_name: map-bentoml
+  #   restart: unless-stopped
+  #   networks:
+  #     - map-network
+  #   volumes:
+  #     - bentoml_models:/root/bentoml
+  #   ports:
+  #     - "3001:3001"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 8G
+
+  # ── FRONTEND (uncomment in Phase 6) ───────────────────────
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: map-frontend
+  #   restart: unless-stopped
+  #   networks:
+  #     - map-network
+  #   ports:
+  #     - "3000:80"
+
+  # ── NGINX (uncomment in Phase 7) ──────────────────────────
+
+  # nginx:
+  #   image: nginx:1.26-alpine
+  #   container_name: map-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   networks:
+  #     - map-network
+
+  # ── FLOWER (uncomment in Phase 3) ─────────────────────────
+
+  # flower:
+  #   build:
+  #     context: ./backend
+  #   container_name: map-flower
+  #   restart: unless-stopped
+  #   networks:
+  #     - map-network
+  #   ports:
+  #     - "5555:5555"
+  #   command: celery -A app.worker.celery_app flower --port=5555
+  #   env_file: [.env]
+  #   depends_on:
+  #     - redis

@@ -1,0 +1,47 @@
+# ── Secrets ───────────────────────────────────────────────────
+.env
+*.pem
+nginx/ssl/
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ── Node / Frontend ───────────────────────────────────────────
+node_modules/
+dist/
+.next/
+frontend/dist/
+
+# ── Docker volumes ────────────────────────────────────────────
+postgres_data/
+redis_data/
+
+# ── IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Models (large files) ──────────────────────────────────────
+bentoml/models/
+*.gguf
+*.bin
+*.safetensors
