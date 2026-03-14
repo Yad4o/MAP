@@ -248,8 +248,8 @@ If VS Code only shows Haiku, your account is on the Free tier.
 
 ### How to switch models manually (any tier)
 
-1. Open GitHub Copilot Chat with `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Shift+I` (macOS)
-2. Click the **model name** shown at the top of the chat panel
+1. Open GitHub Copilot Chat from the Activity Bar (Copilot icon), or via the Command Palette: `Ctrl+Shift+P` / `Cmd+Shift+P` → “Copilot Chat: Focus on Chat View”
+2. In the GitHub Copilot Chat panel, click the **model name** shown at the top
 3. Choose the model you want — **Claude Sonnet** is recommended for complex agent work
 
 The `.vscode/settings.json` committed in this repo sets `claude-sonnet-4-5` as the default, so after cloning you should see Sonnet selected automatically (Pro+ required).
