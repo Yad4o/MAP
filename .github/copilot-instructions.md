@@ -21,7 +21,7 @@ MAP/
 
 ## Coding Conventions
 
-- **Python:** async/await throughout; Pydantic v2 for all data shapes; `from __future__ import annotations` at the top of every module
+- **Python:** async/await throughout; Pydantic v2 for all data shapes; when adding new modules, you may use `from __future__ import annotations` at the top if you need postponed evaluation of type hints, but stay consistent with nearby files
 - **Imports:** absolute from the project root (e.g. `from agents.shared.message import AgentMessage`)
 - **Config:** read exclusively from `app.config.settings`; never hard-code secrets
 - **Agents:** every agent inherits `BaseAgent` (`agents/shared/base_agent.py`) and implements `async def run(self, message: AgentMessage) -> AgentMessage`
