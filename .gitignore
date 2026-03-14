@@ -30,7 +30,9 @@ postgres_data/
 redis_data/
 
 # ── IDE ───────────────────────────────────────────────────────
-.vscode/
+# Track shared VS Code settings (model config, Copilot defaults); ignore personal files
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

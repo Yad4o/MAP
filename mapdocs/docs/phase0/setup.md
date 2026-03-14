@@ -222,7 +222,45 @@ To verify, go to **neon.tech dashboard** → your project → **Tables** tab. Yo
 
 ---
 
-## Task 0.7 — Create Phase 1 Branch
+## Task 0.7 — Configure GitHub Copilot in VS Code
+
+**Who does it:** All three members independently.
+
+This repository includes a `.vscode/settings.json` that sets **Claude Sonnet** as the default GitHub Copilot chat model so every team member gets the same experience out of the box.
+
+### Why you might only see Haiku
+
+GitHub Copilot's model picker shows different options depending on your subscription:
+
+| Tier | Available Models |
+|---|---|
+| **Free** | Claude Haiku (limited), GPT-4o (limited) |
+| **Pro / Pro+** | Claude Sonnet, Claude Opus, GPT-4o, o3-mini, and more |
+| **Business / Enterprise** | All models, higher rate limits |
+
+If VS Code only shows Haiku, your account is on the Free tier.
+
+### How to upgrade and unlock more models
+
+1. Go to <https://github.com/settings/copilot>
+2. Click **Upgrade to Copilot Pro**
+3. After upgrading, restart VS Code
+
+### How to switch models manually (any tier)
+
+1. Open GitHub Copilot Chat with `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Shift+I` (macOS)
+2. Click the **model name** shown at the top of the chat panel
+3. Choose the model you want — **Claude Sonnet** is recommended for complex agent work
+
+The `.vscode/settings.json` committed in this repo sets `claude-sonnet-4-5` as the default, so after cloning you should see Sonnet selected automatically (Pro+ required).
+
+**Acceptance Criteria:**
+- GitHub Copilot Chat opens in VS Code
+- The model picker shows at least one model beyond Haiku (after upgrading to Pro)
+
+---
+
+## Task 0.8 — Create Phase 1 Branch
 
 **Who does it:** Member A.
 
