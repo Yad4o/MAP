@@ -23,6 +23,8 @@ pydantic==2.9.2
 pydantic-settings==2.5.2
 
 # ── AI / Agents ───────────────────────────────────────────────
+#Use openai compatible with langchain-openai to avoid dependency conflicts
+#langchain-openai==0.2.3 requires openai>=1.52.0; keep <2.0 to avoid breaking changes
 openai>=1.52.0,<2.0
 google-generativeai==0.8.2
 langchain==0.3.3
