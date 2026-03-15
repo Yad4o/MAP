@@ -23,7 +23,7 @@ pydantic==2.9.2
 pydantic-settings==2.5.2
 
 # ── AI / Agents ───────────────────────────────────────────────
-openai==1.51.0
+openai>=1.52.0,<2.0
 google-generativeai==0.8.2
 langchain==0.3.3
 langchain-openai==0.2.3
