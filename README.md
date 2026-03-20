@@ -92,7 +92,7 @@ MAP accepts high-level task requests — natural language descriptions of comple
          │
   ┌──────▼─────────────┐   ┌──────────────────────────┐
   │  PRIMARY INFERENCE  │   │   FALLBACK: BentoML :3001│
-  │  OpenAI / Gemini   │   │   Mistral-7B (local)     │
+  │  Gemini / OpenAI   │   │   Mistral-7B (local)     │
   └─────────────────────┘   └──────────────────────────┘
 ```
 
@@ -119,8 +119,8 @@ MAP accepts high-level task requests — natural language descriptions of comple
 | **Redis** | 7.2+ | Queue broker, cache, distributed locks |
 | **Docker / Compose** | 25+ / 2.24+ | Containerization and service orchestration |
 | **BentoML** | 1.3+ | Local LLM serving for fallback inference |
-| **OpenAI API** | 1.x | Primary AI inference (GPT-4o) |
-| **Google Gemini** | 0.8+ | Secondary AI provider (Gemini 1.5 Pro) |
+| **Google Gemini** | 0.8+ | Primary AI provider (Gemini 1.5 Flash) |
+| **OpenAI API** | 1.x | Secondary AI provider (optional) |
 | **LangChain** | 0.3+ | Tool integration and chain management |
 | **LangGraph** | 0.2+ | Stateful agent graph with checkpointing |
 | **React** | 18+ | Frontend single-page application |
@@ -220,7 +220,7 @@ RS256 JWT with 15-minute access tokens and 30-day refresh tokens. Token revocati
   "payload": {},
   "timestamp": "2025-01-15T14:30:22Z",
   "metadata": {
-    "model_used": "gpt-4o",
+    "model_used": "gemini-1.5-flash",
     "tokens_in": 1847,
     "tokens_out": 312,
     "latency_ms": 2341
@@ -373,7 +373,7 @@ All services communicate over an internal `map-network` Docker bridge network. P
 
 ## BentoML Fallback
 
-The fallback service runs **Mistral-7B-Instruct-v0.3** (GGUF Q4_K_M, ~4.4 GB) and exposes an OpenAI-compatible API at `http://map-bentoml:3001/v1`. The Fallback Engine switches to it transparently — agent code uses the same OpenAI client library in both paths.
+The fallback service runs **Mistral-7B-Instruct-v0.3** (GGUF Q4_K_M, ~4.4 GB) and exposes an OpenAI-compatible API at `http://map-bentoml:3001/v1`. The Fallback Engine switches to it transparently — agent code uses the same client library in both paths.
 
 ### Circuit Breaker States
 
@@ -453,7 +453,7 @@ Every log line is a JSON object:
   "logger": "map.agents.executor",
   "task_id": "...",
   "agent": "executor",
-  "model_used": "gpt-4o",
+  "model_used": "gemini-1.5-flash",
   "tokens_in": 1847,
   "tokens_out": 312,
   "latency_ms": 2341,
@@ -500,6 +500,9 @@ map/
 │   │   ├── services/               # Business logic layer
 │   │   └── worker/                 # Celery app and task definitions
 │   ├── tests/
+│   │   ├── conftest.py             # Shared test setup and fixtures
+│   │   ├── unit/                   # Unit tests for individual functions
+│   │   └── integration/            # Integration tests for full API endpoints
 │   ├── Dockerfile
 │   └── requirements.txt
 │
@@ -529,9 +532,6 @@ map/
 ├── nginx/
 │   └── nginx.conf
 │
-├── docs/
-│   └── README.md                   # ← You are here
-│
 ├── .env.example
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
@@ -542,49 +542,59 @@ map/
 
 ## Development Plan
 
-| Week | Focus | Milestones |
+| Phase | Focus | Milestones |
 |---|---|---|
-| **1** | Setup & Foundations | Repo, Docker Compose base, DB schema, Alembic, React scaffold, LangGraph setup |
-| **2** | Core Backend | Auth system (JWT, sessions), Task Manager CRUD, Redis integration, Planner Agent |
-| **3** | Agents & Queue | Celery workers, Executor Agent (full ReAct loop + 5 tools), Analyzer, Memory + FAISS |
-| **4** | Integration | Fallback Engine + BentoML, Agent Controller pipeline, full frontend API integration |
-| **5** | Docker & Polish | Multi-stage builds, Nginx, production env hardening, E2E agent reliability testing |
-| **6** | Testing & Deploy | Integration tests, load testing (Locust), Playwright E2E, CI/CD pipeline, UAT |
+| **0** | Setup & Foundations | Repo, cloud services, DB schema, Alembic migrations, React scaffold, API keys |
+| **1** | Authentication System | JWT auth, user registration/login, sessions, protected routes, auth frontend |
+| **2** | Task System | Task CRUD, async processing, Redis queue integration, task list and detail pages |
+| **3** | Queue & Workers | Celery workers, Redis helpers, rate limiting, task status polling |
+| **4** | Agent Pipeline | Planner, Executor, Analyzer, Memory agents with LangGraph |
+| **5** | Fallback System | Circuit breaker, Fallback Engine, full Agent Controller pipeline |
+| **6** | Frontend Completion | Task detail with agent trace, admin page, logs page, settings page |
+| **7** | Docker & Testing | Multi-stage builds, Nginx, integration tests, Playwright E2E tests |
+| **8** | Final Polish | README, docstrings, seed data, error boundaries, UAT |
 
 ---
 
 ## Team
 
-| Member | Role | Primary Responsibilities |
-|---|---|---|
-| **Member 1** | Backend Engineer | FastAPI gateway, auth, task manager, PostgreSQL schema, Redis, Docker, Nginx, CI/CD |
-| **Member 2** | AI / Agents Engineer | All agents, LangGraph, Fallback Engine, BentoML, FAISS/Chroma, Celery workers, tools |
-| **Member 3** | Frontend Engineer | React app, all pages, React Query, WebSocket, React Flow visualization, Playwright tests |
+> All 5 members work as Full Stack AI Engineers — everyone contributes across backend, frontend, agents, and infrastructure equally. Responsibilities are divided by task and phase, not by specialization.
+
+| Member | Role |
+|---|---|
+| **Om** | Full Stack AI Engineer |
+| **Prajwal** | Full Stack AI Engineer |
+| **Neha** | Full Stack AI Engineer |
+| **Sanskruti** | Full Stack AI Engineer |
+| **Shravni** | Full Stack AI Engineer |
 
 ---
 
 ## Environment Variables
 
 ```env
-# Database
-DATABASE_URL=postgresql+asyncpg://map_user:password@postgres:5432/map_db
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql+asyncpg://user:password@host/map_db?ssl=require
 
-# Redis
-REDIS_URL=redis://redis:6379/0
-CELERY_BROKER_URL=redis://redis:6379/1
+# Redis (Upstash)
+REDIS_URL=rediss://default:password@host:6379
+CELERY_BROKER_URL=rediss://default:password@host:6379
+CELERY_RESULT_BACKEND=rediss://default:password@host:6379
 
-# Auth
+# Auth (generate with scripts — see Phase 0 setup)
 JWT_PRIVATE_KEY=<RSA PEM>
 JWT_PUBLIC_KEY=<RSA PEM>
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=30
+ENCRYPTION_KEY=<32-byte hex string>
 
-# AI Providers
-OPENAI_API_KEY=sk-...
+# AI Providers (free options — see Phase 0 setup)
 GEMINI_API_KEY=AIza...
-PRIMARY_AI_PROVIDER=openai
-DEFAULT_MODEL=gpt-4o
-BENTOML_BASE_URL=http://map-bentoml:3001/v1
+OPENAI_API_KEY=gsk_...         # put your Groq key here
+PRIMARY_AI_PROVIDER=gemini
+DEFAULT_MODEL=gemini-1.5-flash
+FALLBACK_MODEL=gemini-1.5-flash
+BENTOML_BASE_URL=https://api.groq.com/openai/v1
 
 # Agent Config
 PLANNER_TEMPERATURE=0.7
@@ -600,10 +610,10 @@ RATE_LIMIT_PRO_RPM=500
 RATE_LIMIT_ENTERPRISE_RPM=2000
 
 # App
-APP_ENV=production
+APP_ENV=development
+DEBUG=true
 LOG_LEVEL=INFO
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
-ENCRYPTION_KEY=<32-byte AES key>
+CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 See `.env.example` for the full list with descriptions.
@@ -613,7 +623,7 @@ See `.env.example` for the full list with descriptions.
 ## Advanced Features
 
 - **Streaming responses** — SSE endpoint at `GET /api/v1/tasks/{id}/stream` for progressive result rendering
-- **Role system** — `USER`, `ADMIN`, `SYSTEM` with per-endpoint enforcement and organization grouping in Phase 2
+- **Role system** — `USER`, `ADMIN`, `SYSTEM` with per-endpoint enforcement
 - **Plugin tool system** — Implement `BaseTool`, drop into `agents/executor/tools/`, auto-registered at startup
 - **Document memory** — Upload PDFs, DOCX, CSV to personal knowledge base; auto-retrieved during task execution
 - **Voice input** — Web Speech API in frontend; optional Whisper API server-side transcription
@@ -621,4 +631,4 @@ See `.env.example` for the full list with descriptions.
 
 ---
 
-*MAP Technical Specification v1.0 — Confidential, internal use only.*
+*MAP Technical Specification v2.0 — Built by the MAP Team*
