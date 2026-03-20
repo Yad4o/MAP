@@ -555,12 +555,15 @@ map/
 
 ## Team
 
-| Member | Role | Primary Responsibilities |
-|---|---|---|
-| **Member 1** | Backend Engineer | FastAPI gateway, auth, task manager, PostgreSQL schema, Redis, Docker, Nginx, CI/CD |
-| **Member 2** | AI / Agents Engineer | All agents, LangGraph, Fallback Engine, BentoML, FAISS/Chroma, Celery workers, tools |
-| **Member 3** | Frontend Engineer | React app, all pages, React Query, WebSocket, React Flow visualization, Playwright tests |
+> All 5 members work as Full Stack AI Engineers — everyone contributes across backend, frontend, agents, and infrastructure equally. Responsibilities are divided by task and phase, not by specialization.
 
+| Member | Role |
+|---|---|
+| **Om** | Full Stack AI Engineer |
+| **Prajwal** | Full Stack AI Engineer |
+| **Neha** | Full Stack AI Engineer |
+| **Sanskruti** | Full Stack AI Engineer |
+| **Shravni** | Full Stack AI Engineer |
 ---
 
 ## Environment Variables
@@ -621,4 +624,4 @@ See `.env.example` for the full list with descriptions.
 
 ---
 
-*MAP Technical Specification v1.0 — Confidential, internal use only.*
+*MAP Technical Specification v2.0 — Confidential, internal use only.*
