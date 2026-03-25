@@ -11,7 +11,7 @@ Phase 1 (Member building DB layer): Fill in relationships,
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,9 +53,7 @@ class User(Base):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────
-    # TODO Phase 1: add back_populates after Task and Session models are created
-    # sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
-    # tasks = relationship("Task", back_populates="user")
+    sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} role={self.role}>"
@@ -68,8 +66,7 @@ class Session(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
-        # TODO Phase 1: ForeignKey("users.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     refresh_token_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     access_jti: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -80,6 +77,9 @@ class Session(Base):
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # ── Relationships ─────────────────────────────────────────
+    user: Mapped["User"] = relationship("User", back_populates="sessions")
 
     def __repr__(self) -> str:
         return f"<Session id={self.id} user_id={self.user_id}>"
