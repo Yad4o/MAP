@@ -2,7 +2,6 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 
-
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import TaskListPage from './pages/TaskListPage'
@@ -47,4 +46,3 @@ export default function App() {
     </Routes>
   )
 }
-
