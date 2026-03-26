@@ -9,6 +9,9 @@ Phase 1: Implement using PyJWT and passlib.
 
 import uuid
 from datetime import datetime
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
 
 def hash_password(plain_password: str) -> str:
@@ -17,7 +20,7 @@ def hash_password(plain_password: str) -> str:
     Returns the hash string to store in the database.
     Phase 1 — implement using passlib.
     """
-    raise NotImplementedError("Phase 1 — implement this")
+    return pwd_context.hash(plain_password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -26,7 +29,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns True if match, False otherwise.
     Phase 1 — implement using passlib.
     """
-    raise NotImplementedError("Phase 1 — implement this")
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, datetime]:
