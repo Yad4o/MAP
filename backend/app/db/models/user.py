@@ -54,10 +54,11 @@ class User(Base):
 
     # ── Relationships ─────────────────────────────────────────
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    # TODO Phase 1: add back once Task model is created
+    # tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} role={self.role}>"
-
 
 class Session(Base):
     __tablename__ = "sessions"
