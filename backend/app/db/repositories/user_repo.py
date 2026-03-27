@@ -13,9 +13,8 @@ Services call repositories. Routes call services.
 import uuid
 from datetime import datetime, timezone
 
-
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
 from app.db.models.user import Session, User
 
 
@@ -24,7 +23,6 @@ class UserRepository:
         self.db = db
 
     async def create(self, email: str, username: str, password_hash: str) -> User:
-
         """Create a new user. Returns the created User instance."""
         new_user = User(
             email=email,
@@ -42,16 +40,15 @@ class UserRepository:
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         """Fetch user by UUID. Returns None if not found."""
-
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
-        
+     
 
     async def get_by_email(self, email: str) -> User | None:
         """Fetch user by email. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
-    
+ 
 
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
@@ -60,7 +57,7 @@ class UserRepository:
             .where(User.id == user_id)
             .values(last_login_at=datetime.now(timezone.utc))
         )
-        
+     
 
     async def deactivate(self, user_id: uuid.UUID) -> None:
         """Set is_active=False."""
@@ -69,9 +66,8 @@ class UserRepository:
             .where(User.id == user_id)
             .values(is_active=False)
         )
-        
 
-        
+         
     async def list_all(self, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
         """Return (users, total_count) for admin list endpoint."""
         result = await self.db.execute(
@@ -83,7 +79,6 @@ class UserRepository:
 
         return (list(users), total)
 
-    
 class SessionRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
