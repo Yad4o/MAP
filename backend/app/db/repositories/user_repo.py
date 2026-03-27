@@ -11,11 +11,10 @@ Services call repositories. Routes call services.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
 from app.db.models.user import Session, User
 
 
@@ -44,19 +43,21 @@ class UserRepository:
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
+
     async def get_by_email(self, email: str) -> User | None:
         """Fetch user by email. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
+
 
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
         await self.db.execute(
             update(User)
             .where(User.id == user_id)
-            .values(last_login_at=datetime.utcnow())
+            .values(last_login_at=datetime.now(timezone.utc))
         )
-        
+
 
     async def deactivate(self, user_id: uuid.UUID) -> None:
         """Set is_active=False."""
@@ -65,9 +66,8 @@ class UserRepository:
             .where(User.id == user_id)
             .values(is_active=False)
         )
-        
 
-        
+
     async def list_all(self, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
         """Return (users, total_count) for admin list endpoint."""
         result = await self.db.execute(
@@ -79,7 +79,6 @@ class UserRepository:
 
         return (list(users), total)
 
-    
 class SessionRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -111,7 +110,7 @@ class SessionRepository:
             select(Session).where(
                 Session.user_id == user_id,
                 Session.revoked_at == None,  # noqa: E711
-                Session.expires_at > datetime.utcnow(),
+                Session.expires_at > datetime.now(timezone.utc),
             )
         )
         return result.scalar_one_or_none()
@@ -121,4 +120,3 @@ class SessionRepository:
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         raise NotImplementedError("Phase 1 — implement this")
-      
