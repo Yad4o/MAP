@@ -23,16 +23,19 @@ class UserRepository:
         self.db = db
 
     async def create(self, email: str, username: str, password_hash: str) -> User:
-        """Create a new user. Returns the created User instance."""
-        raise NotImplementedError("Phase 1 — implement this")
+        user = User(email=email, username=username, password_hash=password_hash)
+        self.db.add(user)
+        await self.db.flush()
+        await self.db.refresh(user)
+        return user
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
-        """Fetch user by UUID. Returns None if not found."""
-        raise NotImplementedError("Phase 1 — implement this")
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
-        """Fetch user by email. Returns None if not found."""
-        raise NotImplementedError("Phase 1 — implement this")
+        result = await self.db.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
     
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
@@ -106,4 +109,5 @@ class SessionRepository:
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         raise NotImplementedError("Phase 1 — implement this")
+
 
