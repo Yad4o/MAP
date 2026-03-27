@@ -58,7 +58,7 @@ class UserRepository:
         await self.db.execute(
             update(User)
             .where(User.id == user_id)
-            .values(last_login_at=datetime.utcnow())
+            .values(last_login_at=datetime.now(timezone.utc))
         )
         
 
@@ -115,7 +115,7 @@ class SessionRepository:
             select(Session).where(
                 Session.user_id == user_id,
                 Session.revoked_at == None,  # noqa: E711
-                Session.expires_at > datetime.utcnow(),
+                Session.expires_at > datetime.now(timezone.utc),
             )
         )
         return result.scalar_one_or_none()
