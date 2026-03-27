@@ -42,13 +42,13 @@ class UserRepository:
         """Fetch user by UUID. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
-     
+
 
     async def get_by_email(self, email: str) -> User | None:
         """Fetch user by email. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
- 
+
 
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
@@ -57,7 +57,7 @@ class UserRepository:
             .where(User.id == user_id)
             .values(last_login_at=datetime.now(timezone.utc))
         )
-     
+
 
     async def deactivate(self, user_id: uuid.UUID) -> None:
         """Set is_active=False."""
@@ -67,7 +67,7 @@ class UserRepository:
             .values(is_active=False)
         )
 
-         
+
     async def list_all(self, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
         """Return (users, total_count) for admin list endpoint."""
         result = await self.db.execute(
