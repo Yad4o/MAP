@@ -13,6 +13,7 @@ Services call repositories. Routes call services.
 import uuid
 from datetime import datetime
 
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.user import Session, User
@@ -24,15 +25,29 @@ class UserRepository:
 
     async def create(self, email: str, username: str, password_hash: str) -> User:
         """Create a new user. Returns the created User instance."""
-        raise NotImplementedError("Phase 1 — implement this")
+        new_user = User(
+            email=email,
+            username=username,
+            password_hash=password_hash,
+            role="USER",
+            tier="free",
+            is_active=True,
+            email_verified=False,
+        )
+        self.db.add(new_user)
+        await self.db.flush()
+        await self.db.refresh(new_user)
+        return new_user
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         """Fetch user by UUID. Returns None if not found."""
-        raise NotImplementedError("Phase 1 — implement this")
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
         """Fetch user by email. Returns None if not found."""
-        raise NotImplementedError("Phase 1 — implement this")
+        result = await self.db.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
 
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
