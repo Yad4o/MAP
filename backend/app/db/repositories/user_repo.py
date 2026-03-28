@@ -116,7 +116,15 @@ class SessionRepository:
         return result.scalar_one_or_none()
 
     async def revoke(self, session_id: uuid.UUID) -> None:
-        raise NotImplementedError("Phase 1 — implement this")
+        await self.db.execute(
+            update(Session)
+            .where(Session.id == session_id)
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
-        raise NotImplementedError("Phase 1 — implement this")
+        await self.db.execute(
+            update(Session)
+            .where(Session.user_id == user_id, Session.revoked_at == None)  # noqa: E711
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
