@@ -11,7 +11,7 @@
  */
 
 import { create } from "zustand";
-import {authApi} from "../api/auth";
+import { authApi } from "../api/auth";
 import type { UserResponse } from "../types";
 
 interface AuthState {
@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 2. Call setTokens with the returned pair
     // 3. Call authApi.getMe() to fetch user profile
     // 4. Call setUser with the profile
-    set({isLoading:true});
+    set({ isLoading: true });
     try{
       // Call the login API
       const tokenPair = await authApi.login({ email, password });
