@@ -46,8 +46,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 2. Call setTokens with the returned pair
     // 3. Call authApi.getMe() to fetch user profile
     // 4. Call setUser with the profile
-    set({ isLoading: true });
-    try{
+    
+    try {
+      set({ isLoading: true });
       // Call the login API
       const tokenPair = await authApi.login({ email, password });
       // Store tokens in memory
@@ -59,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       get().clearAuth();
       throw error;
-    }finally{
+    } finally {
       set({ isLoading: false});
     }
     
