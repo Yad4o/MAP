@@ -11,6 +11,7 @@
  */
 
 import { create } from "zustand";
+import { authApi } from "../api/auth";
 import type { UserResponse } from "../types";
 
 interface AuthState {
@@ -45,14 +46,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 2. Call setTokens with the returned pair
     // 3. Call authApi.getMe() to fetch user profile
     // 4. Call setUser with the profile
-    throw new Error("Phase 1 — implement this");
+    
+    try {
+      set({ isLoading: true });
+      // Call the login API
+      const tokenPair = await authApi.login({ email, password });
+      // Store tokens in memory
+      get().setTokens(tokenPair.access_token, tokenPair.refresh_token);
+      // Fetch the user profile
+      const user = await authApi.getMe();
+      // Store the user
+      get().setUser(user);
+    } catch (error) {
+      get().clearAuth();
+      throw error;
+    } finally {
+      set({ isLoading: false});
+    }
+    
   },
 
   logout: async () => {
     // TODO Phase 1:
     // 1. Call authApi.logout()
     // 2. Call clearAuth()
-    throw new Error("Phase 1 — implement this");
+    try {
+      // Try to call the logout API
+      await authApi.logout();
+    } catch {
+      // Even if the API call fails, clear local auth state
+    } finally {
+      // Always clear auth state regardless
+      get().clearAuth();
+    }
   },
 
   setTokens: (accessToken, refreshToken) => {
