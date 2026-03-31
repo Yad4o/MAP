@@ -3,6 +3,7 @@
 import pytest
 import uuid
 from datetime import datetime
+from fastapi import HTTPException
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token
 
 
@@ -61,7 +62,6 @@ def test_decode_access_token_valid():
 
 
 def test_decode_access_token_invalid_raises_401():
-    from fastapi import HTTPException
     with pytest.raises(HTTPException) as exc_info:
         decode_access_token("invalid.token.here")
     assert exc_info.value.status_code == 401
@@ -81,3 +81,12 @@ def test_generate_refresh_token_raw_is_long():
 def test_generate_refresh_token_hash_starts_with_bcrypt():
     raw_token, token_hash = generate_refresh_token()
     assert token_hash.startswith("$2b$")
+
+
+def test_verify_password_truncation_boundary():
+    """Test that passwords longer than 72 bytes are properly truncated."""
+    long_password = "a" * 80  # exceeds 72 bytes
+    hashed = hash_password(long_password)
+    assert verify_password(long_password, hashed) is True
+    # First 72 chars should also match — documents the truncation contract
+    assert verify_password("a" * 72, hashed) is True

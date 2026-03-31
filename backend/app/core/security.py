@@ -76,6 +76,8 @@ def generate_refresh_token() -> tuple[str, str]:
         - hashed_token → store in the database; never persist the raw value
     """
     raw_token = secrets.token_urlsafe(64)
-    # Truncate to 72 bytes max for bcrypt compatibility
-    hashed_token = pwd_context.hash(raw_token[:72])
+    # Truncate to 72 bytes max for bcrypt compatibility and return truncated version
+    # to ensure raw_token and hashed_token are consistent
+    raw_token = raw_token[:72]
+    hashed_token = pwd_context.hash(raw_token)
     return raw_token, hashed_token
