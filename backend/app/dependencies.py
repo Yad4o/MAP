@@ -15,6 +15,8 @@ _redis_client: aioredis.Redis | None = None
 def init_redis(client: aioredis.Redis) -> None:
     """Call this once from main.py lifespan startup to set the shared client."""
     global _redis_client
+    if _redis_client is not None:
+        raise RuntimeError("Redis client already initialised.")
     _redis_client = client
 
 
@@ -22,7 +24,6 @@ async def _get_redis() -> aioredis.Redis:
     if _redis_client is None:
         raise RuntimeError("Redis client has not been initialised. Call init_redis() at startup.")
     return _redis_client
-
 
 
 async def get_current_user(
@@ -53,6 +54,8 @@ async def get_current_user(
 
 def require_role(role: str | list[str]):
     roles = [role] if isinstance(role, str) else role
+
+
     async def check_role(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in roles:
             raise HTTPException(status_code=403, detail=f"Access denied. Required role(s): {roles}")
