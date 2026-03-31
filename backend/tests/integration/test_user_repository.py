@@ -1,6 +1,15 @@
+"""
+Integration tests for UserRepository and SessionRepository against the test database.
+
+These tests verify the data access layer functionality for user and session management,
+including CRUD operations, authentication-related queries, and pagination.
+Tests use the db_session fixture which provides a fresh SQLite database
+for each test case.
+"""
+
 import pytest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.db.repositories.user_repo import UserRepository, SessionRepository
 from app.db.models.user import User, Session
@@ -144,13 +153,19 @@ async def test_list_all_users(db_session):
         )
         users.append(user)
     
-    # List all users
+    # Test default pagination (first page)
     user_list, total_count = await user_repo.list_all()
     
     assert total_count == 3
     assert len(user_list) == 3
     
-    # Check that all created users are in the list
+    # Test pagination with parameters
+    user_list_page2, total_count_page2 = await user_repo.list_all(page=2, page_size=1)
+    
+    assert total_count_page2 == 3  # Total count should remain the same
+    assert len(user_list_page2) == 1  # Should return 1 user
+    
+    # Check that all created users are in the full list
     emails = [user.email for user in user_list]
     assert "user1@example.com" in emails
     assert "user2@example.com" in emails
@@ -175,14 +190,14 @@ async def test_create_session(db_session):
         user_id=user.id,
         refresh_token_hash="refresh_hash",
         access_jti="access_jti",
-        expires_at=datetime.utcnow() + timedelta(days=30),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
         ip_address="127.0.0.1",
         user_agent="Test Agent"
     )
     
     assert session is not None
     assert session.id is not None
-    assert session.user_id == user.id
+    assert session.user_id == user.id  # Both are UUID objects, will compare correctly
     assert session.refresh_token_hash == "refresh_hash"
     assert session.access_jti == "access_jti"
     assert session.ip_address == "127.0.0.1"
@@ -208,7 +223,7 @@ async def test_get_active_session(db_session):
         user_id=user.id,
         refresh_token_hash="refresh_hash",
         access_jti="access_jti",
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     # Get active session
@@ -238,7 +253,7 @@ async def test_get_active_session_not_found_when_revoked(db_session):
         user_id=user.id,
         refresh_token_hash="refresh_hash",
         access_jti="access_jti",
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     # Revoke the session
@@ -268,7 +283,7 @@ async def test_revoke_session(db_session):
         user_id=user.id,
         refresh_token_hash="refresh_hash",
         access_jti="access_jti",
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     # Initially revoked_at should be None
@@ -303,14 +318,14 @@ async def test_revoke_all_for_user(db_session):
         user_id=user.id,
         refresh_token_hash="refresh_hash1",
         access_jti="access_jti1",
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     session2 = await session_repo.create(
         user_id=user.id,
         refresh_token_hash="refresh_hash2",
         access_jti="access_jti2",
-        expires_at=datetime.utcnow() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30)
     )
     
     # Initially both sessions should have revoked_at as None

@@ -1,3 +1,4 @@
+"""Integration tests for UserRepository and SessionRepository against the test database."""
 import asyncio
 import sqlalchemy as sa
 from app.db.base import engine
