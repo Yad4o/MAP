@@ -1,6 +1,8 @@
+"""Unit tests for app.core.security — hashing, token creation, decoding, and refresh token generation."""
+
 import pytest
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token
 
 
