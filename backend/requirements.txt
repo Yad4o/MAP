@@ -16,6 +16,7 @@ flower==2.0.1
 # ── Auth ──────────────────────────────────────────────────────
 pyjwt[crypto]==2.9.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.1.3  # pinned explicitly to avoid passlib compatibility warnings
 cryptography==43.0.1
 
 # ── Validation ────────────────────────────────────────────────
