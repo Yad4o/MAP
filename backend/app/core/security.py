@@ -46,19 +46,15 @@ def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, dateti
         "exp": expires_at,
         "iat": now,               
     }
-    token = jwt.encode(payload, settings.JWT_PRIVATE_KEY, algorithm=settings.JWT_ALGORITHM)
+    private_key = settings.JWT_PRIVATE_KEY.replace("\\n", "\n") 
+    token = jwt.encode(payload, private_key, algorithm=settings.JWT_ALGORITHM)
     return (token, jti, expires_at)
 
 
 def decode_access_token(token: str) -> dict:
-    """
-    Decode and verify a JWT access token.
-    Returns the payload dict.
-    Raises HTTPException 401 on expired or invalid token.
-    """
-
     try:
-        payload = jwt.decode(token, settings.JWT_PUBLIC_KEY, algorithms=[settings.JWT_ALGORITHM])
+        public_key = settings.JWT_PUBLIC_KEY.replace("\\n", "\n")
+        payload = jwt.decode(token, public_key, algorithms=[settings.JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
