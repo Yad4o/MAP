@@ -20,7 +20,8 @@ def hash_password(plain_password: str) -> str:
     Hash a plain text password using bcrypt with cost factor 12.
     Returns the hash string to store in the database.
     """
-    return pwd_context.hash(plain_password)
+    # Truncate to 72 bytes max for bcrypt compatibility
+    return pwd_context.hash(plain_password[:72])
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -28,7 +29,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Verify a plain text password against a stored bcrypt hash.
     Returns True if match, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    # Truncate to 72 bytes max for bcrypt compatibility (same as hashing)
+    return pwd_context.verify(plain_password[:72], hashed_password)
 
 
 def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, datetime]:
@@ -46,14 +48,16 @@ def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, dateti
         "exp": expires_at,
         "iat": now,               
     }
-    private_key = settings.JWT_PRIVATE_KEY.replace("\\n", "\n") 
+    # Config already handles newline replacement via field_validator
+    private_key = settings.JWT_PRIVATE_KEY
     token = jwt.encode(payload, private_key, algorithm=settings.JWT_ALGORITHM)
     return (token, jti, expires_at)
 
 
 def decode_access_token(token: str) -> dict:
     try:
-        public_key = settings.JWT_PUBLIC_KEY.replace("\\n", "\n")
+        # Config already handles newline replacement via field_validator
+        public_key = settings.JWT_PUBLIC_KEY
         payload = jwt.decode(token, public_key, algorithms=[settings.JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
@@ -72,5 +76,6 @@ def generate_refresh_token() -> tuple[str, str]:
         - hashed_token → store in the database; never persist the raw value
     """
     raw_token = secrets.token_urlsafe(64)
-    hashed_token = pwd_context.hash(raw_token)
+    # Truncate to 72 bytes max for bcrypt compatibility
+    hashed_token = pwd_context.hash(raw_token[:72])
     return raw_token, hashed_token
