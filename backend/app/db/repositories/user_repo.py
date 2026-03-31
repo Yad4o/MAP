@@ -33,6 +33,8 @@ class UserRepository:
             is_active=True,
             email_verified=False,
         )
+        # Convert UUID to string for SQLite compatibility
+        new_user.id = str(uuid.uuid4())
         self.db.add(new_user)
         await self.db.flush()
         await self.db.refresh(new_user)
@@ -40,7 +42,7 @@ class UserRepository:
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         """Fetch user by UUID. Returns None if not found."""
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        result = await self.db.execute(select(User).where(User.id == str(user_id)))
         return result.scalar_one_or_none()
 
 
@@ -54,7 +56,7 @@ class UserRepository:
         """Set last_login_at to now."""
         await self.db.execute(
             update(User)
-            .where(User.id == user_id)
+            .where(User.id == str(user_id))
             .values(last_login_at=datetime.now(timezone.utc))
         )
 
@@ -63,7 +65,7 @@ class UserRepository:
         """Set is_active=False."""
         await self.db.execute(
             update(User)
-            .where(User.id == user_id)
+            .where(User.id == str(user_id))
             .values(is_active=False)
         )
 
@@ -93,13 +95,15 @@ class SessionRepository:
         user_agent: str | None = None,
     ) -> Session:
         new_session = Session(
-            user_id=user_id,
+            user_id=str(user_id),
             refresh_token_hash=refresh_token_hash,
             access_jti=access_jti,
             expires_at=expires_at,
             ip_address=ip_address,
             user_agent=user_agent,
         )
+        # Convert UUID to string for SQLite compatibility
+        new_session.id = str(uuid.uuid4())
         self.db.add(new_session)
         await self.db.flush()
         await self.db.refresh(new_session)
@@ -108,7 +112,7 @@ class SessionRepository:
     async def get_active_by_user(self, user_id: uuid.UUID) -> Session | None:
         result = await self.db.execute(
             select(Session).where(
-                Session.user_id == user_id,
+                Session.user_id == str(user_id),
                 Session.revoked_at == None,  # noqa: E711
                 Session.expires_at > datetime.now(timezone.utc),
             )
@@ -118,13 +122,13 @@ class SessionRepository:
     async def revoke(self, session_id: uuid.UUID) -> None:
         await self.db.execute(
             update(Session)
-            .where(Session.id == session_id)
+            .where(Session.id == str(session_id))
             .values(revoked_at=datetime.now(timezone.utc))
         )
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         await self.db.execute(
             update(Session)
-            .where(Session.user_id == user_id, Session.revoked_at == None)  # noqa: E711
+            .where(Session.user_id == str(user_id), Session.revoked_at == None)  # noqa: E711
             .values(revoked_at=datetime.now(timezone.utc))
         )
