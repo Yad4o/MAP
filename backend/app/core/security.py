@@ -2,6 +2,7 @@
 core/security.py
 """
 
+import secrets
 import uuid
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -36,18 +37,16 @@ def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, dateti
     Returns (token_string, jti, expires_at).
     """
     jti = str(uuid.uuid4())
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    now = datetime.now(timezone.utc)         
+    expires_at = now + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": str(user_id),
         "role": role,
         "jti": jti,
         "exp": expires_at,
-        "iat": datetime.now(timezone.utc),
+        "iat": now,               
     }
-    private_key = settings.JWT_PRIVATE_KEY.replace("\\n", "\n")
-    token = jwt.encode(payload, private_key, algorithm=settings.JWT_ALGORITHM)
+    token = jwt.encode(payload, settings.JWT_PRIVATE_KEY, algorithm=settings.JWT_ALGORITHM)
     return (token, jti, expires_at)
 
 
@@ -57,9 +56,9 @@ def decode_access_token(token: str) -> dict:
     Returns the payload dict.
     Raises HTTPException 401 on expired or invalid token.
     """
-    public_key = settings.JWT_PUBLIC_KEY.replace("\\n", "\n")
+
     try:
-        payload = jwt.decode(token, public_key, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_PUBLIC_KEY, algorithms=[settings.JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
@@ -69,9 +68,13 @@ def decode_access_token(token: str) -> dict:
 
 def generate_refresh_token() -> tuple[str, str]:
     """
-    Generate a secure random refresh token.
-    Returns (raw_token, bcrypt_hash).
-    Store only the hash in the database.
-    Phase 1 — implement using secrets + passlib.
+    Generate a secure refresh token pair.
+
+    Returns:
+        (raw_token, hashed_token)
+        - raw_token    → send to the client; they store and return it on refresh
+        - hashed_token → store in the database; never persist the raw value
     """
-    raise NotImplementedError("Phase 1 — implement this")
+    raw_token = secrets.token_urlsafe(64)
+    hashed_token = pwd_context.hash(raw_token)
+    return raw_token, hashed_token

@@ -11,7 +11,7 @@ Usage:
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""
         return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",")]
+    
+    @field_validator("JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", mode="before")
+    @classmethod
+    def fix_newlines(cls, v: str) -> str:
+        """Convert literal \\n in .env values to real newlines for PEM keys."""
+        return v.replace("\\n", "\n")
 
     @property
     def is_production(self) -> bool:
