@@ -1,4 +1,3 @@
-"""Unit tests for app.core.security — hashing, token creation, decoding, and refresh token generation."""
 
 import pytest
 import uuid

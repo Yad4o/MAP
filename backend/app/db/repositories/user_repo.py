@@ -13,7 +13,6 @@ Services call repositories. Routes call services.
 import uuid
 from datetime import datetime, timezone
 
-
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models.user import Session, User
