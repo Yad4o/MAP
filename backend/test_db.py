@@ -1,4 +1,4 @@
-"""Integration tests for UserRepository and SessionRepository against the test database."""
+"""Database connection smoke test script."""
 import asyncio
 import sqlalchemy as sa
 from app.db.base import engine

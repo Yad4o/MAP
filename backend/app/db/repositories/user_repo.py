@@ -11,7 +11,7 @@ Services call repositories. Routes call services.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 
 from sqlalchemy import func, select, update
@@ -24,7 +24,16 @@ class UserRepository:
         self.db = db
 
     async def create(self, email: str, username: str, password_hash: str) -> User:
-        new_user = User(email=email, username=username, password_hash=password_hash)
+        """Create a new user. Returns the created User instance."""
+        new_user = User(
+            email=email,
+            username=username,
+            password_hash=password_hash,
+            role="USER",
+            tier="free",
+            is_active=True,
+            email_verified=False,
+        )
         self.db.add(new_user)
         await self.db.flush()
         await self.db.refresh(new_user)
@@ -97,7 +106,6 @@ class SessionRepository:
         await self.db.flush()
         await self.db.refresh(new_session)
         return new_session
-
 
     async def get_active_by_user(self, user_id: uuid.UUID) -> Session | None:
         result = await self.db.execute(

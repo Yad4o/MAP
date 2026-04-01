@@ -11,7 +11,8 @@ Phase 1 (Member building DB layer): Fill in relationships,
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func, JSON
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -22,7 +23,7 @@ class User(Base):
 
     # ── Primary Key ───────────────────────────────────────────
     id: Mapped[uuid.UUID] = mapped_column(
-        String(36), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
     # ── Identity ──────────────────────────────────────────────
@@ -49,7 +50,7 @@ class User(Base):
     )
 
     # ── Extensible Metadata ───────────────────────────────────
-    metadata_: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -63,14 +64,14 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        String(36), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     refresh_token_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     access_jti: Mapped[str] = mapped_column(String(128), nullable=False)
-    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
