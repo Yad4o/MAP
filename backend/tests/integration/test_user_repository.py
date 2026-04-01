@@ -1,3 +1,11 @@
+"""
+Integration tests for UserRepository and SessionRepository against the test database.
+
+These tests verify the data access layer functionality for user and session management,
+including CRUD operations, authentication-related queries, and pagination.
+Tests use the db_session fixture which provides a fresh SQLite database
+for each test case.
+"""
 
 import pytest
 import uuid
