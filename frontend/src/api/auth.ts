@@ -6,7 +6,7 @@
  * Until then, they throw — the MSW mock handler intercepts them first.
  */
 
-import apiClient from "./client";
+import { apiClient } from "./client";
 import type {
   LoginRequest,
   RegisterRequest,
