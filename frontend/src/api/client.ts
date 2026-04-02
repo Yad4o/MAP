@@ -7,19 +7,23 @@
  * Phase 1: Fill in the auth interceptor to attach JWT + handle refresh.
  */
 
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from '../store/authStore';
-import type { InternalAxiosRequestConfig } from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  import.meta.env.VITE_API_URL ??
+  'http://localhost:8000/api/v1';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  withCredentials: true,
 });
+ 
+export default apiClient;
+
+let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | null = null;
 
 // ── Request Interceptor ───────────────────────────────────────
 // Attaches the JWT access token to every request.
@@ -30,14 +34,12 @@ apiClient.interceptors.request.use(
     // TODO Phase 1: attach access token from auth store
     // const token = useAuthStore.getState().accessToken;
     // if (token) config.headers.Authorization = `Bearer ${token}`;
-    const token = useAuthStore.getState().accessToken
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    const token = useAuthStore.getState().accessToken;
+    if (token && !('Authorization' in config.headers) && !('authorization' in config.headers)) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-  },
-  (error) => Promise.reject(error)
-);
+  });
 
 // ── Response Interceptor ──────────────────────────────────────
 // Handles 401 responses by attempting a token refresh.
@@ -46,21 +48,37 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status !== 401) {
-      // TODO Phase 1: attempt token refresh, retry original request
-      // If refresh fails, clear auth state and redirect to /login
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+    // TODO Phase 1: attempt token refresh, retry original request
+    // If refresh fails, clear auth state and redirect to /login
+    // Only handle 401s; propagate everything else immediately.
+    if (error.response?.status !== 401 || !originalRequest) {
+      return Promise.reject(error);
+    }
+     // If this request was already retried once, the refresh itself is broken
+    // (revoked token, rate-limit, server bug). Clear auth and redirect rather
+    // than looping forever.
+    if (originalRequest._retry) {
+      useAuthStore.getState().clearAuth();
+      window.location.href = '/login';
       return Promise.reject(error);
     }
     // Don't attempt a refresh if the failing request was itself an auth endpoint
     // (avoids infinite loops on bad credentials or an expired refresh token).
-    const originalUrl: string = error.config?.url ?? ''
+    // failing request was itself an auth endpoint — that would be circular.
+    const originalUrl: string = originalRequest.url ?? '';
     if (
       originalUrl.includes('/auth/login') ||
       originalUrl.includes('/auth/refresh')
     ) {
-      return Promise.reject(error)
+      return Promise.reject(error);
     }
  
+    // Stamp the request *before* any await so concurrent 401s see the flag.
+    originalRequest._retry = true;
+    
     try {
       const refreshToken = useAuthStore.getState().refreshToken
  
@@ -69,10 +87,22 @@ apiClient.interceptors.response.use(
         window.location.href = '/login'
         return Promise.reject(error)
       }
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            // Fix #6: Lazy import breaks the circular dependency chain:
+            //   client.ts → authStore.ts → auth.ts → client.ts
+            const { authApi } = await import('./auth');
+            return await authApi.refreshToken(refreshToken);
+          } finally {
+            // Always clear so the next refresh cycle gets a fresh promise.
+            refreshPromise = null;
+          }
+        })();
+      }
  
       // Lazy-import authApi to avoid a circular-dependency between client ↔ auth.
-      const { authApi } = await import('./auth')
-      const newTokens = await authApi.refreshToken(refreshToken)
+      const { data: newTokens } = await refreshPromise;
  
       useAuthStore.getState().setTokens(
         newTokens.access_token,
@@ -80,22 +110,16 @@ apiClient.interceptors.response.use(
       );
  
       // Retry the original request with the fresh access token.
-      if (!error.config){
-        return Promise.reject(error);
-      }
-      
-const originalRequest = error.config as InternalAxiosRequestConfig;
-
-originalRequest.headers = originalRequest.headers || {};
-originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
-
-return apiClient(originalRequest);
-}  catch (err) {
+      (originalRequest.headers as Record<string, string>).Authorization =
+        `Bearer ${newTokens.access_token}`;
+ 
+      return apiClient(originalRequest);
+    } catch (err) {
       useAuthStore.getState().clearAuth();
       window.location.href = '/login';
-      return Promise.reject(err);
+      // Fix #8: Reject with the original 401 error, not the refresh error,
+      // so callers receive the correct context for debugging.
+      return Promise.reject(error);
     }
   }
 );
-  
-
