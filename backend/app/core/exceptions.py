@@ -4,3 +4,4 @@ class EmailAlreadyRegistered(Exception):
 
 class UserNotFound(Exception):
     pass
+    
