@@ -9,11 +9,12 @@
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from '../store/authStore';
+import { AxiosHeaders } from 'axios';
 
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
-  import.meta.env.VITE_API_URL ??
+  (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
   'http://localhost:8000/api/v1';
 
 export const apiClient: AxiosInstance = axios.create({
@@ -31,15 +32,14 @@ let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | n
 
 apiClient.interceptors.request.use(
   (config) => {
-    // TODO Phase 1: attach access token from auth store
-    // const token = useAuthStore.getState().accessToken;
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
     const token = useAuthStore.getState().accessToken;
     if (token && !('Authorization' in config.headers) && !('authorization' in config.headers)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-  });
+  },
+  (error) => Promise.reject(error)
+);
 
 // ── Response Interceptor ──────────────────────────────────────
 // Handles 401 responses by attempting a token refresh.
@@ -51,7 +51,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
-    // TODO Phase 1: attempt token refresh, retry original request
+    // Attach access token from Zustand auth store
     // If refresh fails, clear auth state and redirect to /login
     // Only handle 401s; propagate everything else immediately.
     if (error.response?.status !== 401 || !originalRequest) {
@@ -83,9 +83,9 @@ apiClient.interceptors.response.use(
       const refreshToken = useAuthStore.getState().refreshToken
  
       if (!refreshToken) {
-        useAuthStore.getState().clearAuth()
-        window.location.href = '/login'
-        return Promise.reject(error)
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(error);
       }
       if (!refreshPromise) {
         refreshPromise = (async () => {
@@ -102,7 +102,7 @@ apiClient.interceptors.response.use(
       }
  
       // Lazy-import authApi to avoid a circular-dependency between client ↔ auth.
-      const { data: newTokens } = await refreshPromise;
+      const newTokens = await refreshPromise;
  
       useAuthStore.getState().setTokens(
         newTokens.access_token,
@@ -110,8 +110,12 @@ apiClient.interceptors.response.use(
       );
  
       // Retry the original request with the fresh access token.
-      (originalRequest.headers as Record<string, string>).Authorization =
-        `Bearer ${newTokens.access_token}`;
+     
+
+
+     // ...inside the catch/retry block, replace the header-patching section:
+    originalRequest.headers = new AxiosHeaders(originalRequest.headers);
+    originalRequest.headers.set('Authorization', `Bearer ${newTokens.access_token}`);
  
       return apiClient(originalRequest);
     } catch (err) {
