@@ -11,6 +11,9 @@ Routes should never call repositories directly.
 """
 
 import uuid
+from fastapi import HTTPException
+from app.core.security import hash_password
+from app.db.repositories.user_repo import UserRepository
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
@@ -21,13 +24,13 @@ class AuthService:
         self.db = db
 
     async def register(self, data: RegisterRequest) -> UserResponse:
-        """
-        1. Check email not already taken
-        2. Hash password with bcrypt
-        3. Create user via UserRepository
-        4. Return UserResponse (no password hash)
-        """
-        raise NotImplementedError("Phase 1 — implement this")
+        user_repo = UserRepository(self.db)
+        existing = await user_repo.get_by_email(data.email)
+        if existing is not None:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        password_hash = hash_password(data.password)
+        user = await user_repo.create(email=data.email, username=data.username, password_hash=password_hash)
+        return UserResponse.model_validate(user)
 
     async def login(self, email: str, password: str) -> TokenPair:
         """
@@ -57,4 +60,8 @@ class AuthService:
         raise NotImplementedError("Phase 1 — implement this")
 
     async def get_current_user(self, user_id: uuid.UUID) -> UserResponse:
-        raise NotImplementedError("Phase 1 — implement this")
+        user_repo = UserRepository(self.db)
+        user = await user_repo.get_by_id(user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return UserResponse.model_validate(user)
