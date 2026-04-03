@@ -6,7 +6,7 @@
  * Until then, they throw — the MSW mock handler intercepts them first.
  */
 
-import { apiClient } from "./client";
+import apiClient from "./client";
 import type {
   LoginRequest,
   RegisterRequest,
@@ -47,6 +47,7 @@ export const authApi = {
 
   refreshToken: async (refreshToken: string): Promise<TokenPair> => {
     const res = await apiClient.post("/auth/refresh", {}, {
+      withCredentials: true,
       headers: { Authorization: `Bearer ${refreshToken}` },
     });
     return res.data;

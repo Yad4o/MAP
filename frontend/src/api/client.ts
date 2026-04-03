@@ -20,7 +20,6 @@ const BASE_URL =
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
-  withCredentials: true,
   headers: {
     common: {
       'Content-Type': 'application/json',
@@ -39,9 +38,11 @@ let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | n
 apiClient.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().accessToken;
-    if (token && !('Authorization' in config.headers) && !('authorization' in config.headers)) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const headers = AxiosHeaders.from(config.headers);
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
+    config.headers = headers;
     return config;
   },
   (error) => Promise.reject(error)
@@ -116,7 +117,6 @@ apiClient.interceptors.response.use(
       );
  
       // Retry the original request with the fresh access token.
-     // ...inside the catch/retry block, replace the header-patching section:
     originalRequest.headers = new AxiosHeaders(originalRequest.headers);
     originalRequest.headers.set('Authorization', `Bearer ${newTokens.access_token}`);
  
