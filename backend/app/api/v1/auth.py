@@ -91,4 +91,3 @@ async def change_password(
 @router.post("/reset-password", status_code=202, response_model=MessageResponse)
 async def reset_password(body: ResetPasswordRequest):
     raise NotImplementedError("Phase 1 — implement this")
-   
