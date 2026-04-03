@@ -19,7 +19,13 @@ const BASE_URL =
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
+  timeout: 10000,
   withCredentials: true,
+  headers: {
+    common: {
+      'Content-Type': 'application/json',
+    },
+  },
 });
  
 export default apiClient;
@@ -90,8 +96,9 @@ apiClient.interceptors.response.use(
       if (!refreshPromise) {
         refreshPromise = (async () => {
           try {
-            // Fix #6: Lazy import breaks the circular dependency chain:
-            //   client.ts → authStore.ts → auth.ts → client.ts
+        // Lazy-import authApi to defer circular dependency:
+        //   client.ts → authStore.ts → auth.ts → client.ts
+        // Import happens at runtime inside promise, not at module load
             const { authApi } = await import('./auth');
             return await authApi.refreshToken(refreshToken);
           } finally {
@@ -103,16 +110,12 @@ apiClient.interceptors.response.use(
  
       // Lazy-import authApi to avoid a circular-dependency between client ↔ auth.
       const newTokens = await refreshPromise;
- 
       useAuthStore.getState().setTokens(
         newTokens.access_token,
         newTokens.refresh_token
       );
  
       // Retry the original request with the fresh access token.
-     
-
-
      // ...inside the catch/retry block, replace the header-patching section:
     originalRequest.headers = new AxiosHeaders(originalRequest.headers);
     originalRequest.headers.set('Authorization', `Bearer ${newTokens.access_token}`);
