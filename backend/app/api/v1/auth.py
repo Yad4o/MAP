@@ -33,12 +33,12 @@ def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-async def register(
-    body: RegisterRequest,
-    service: AuthService = Depends(get_auth_service),
-):
+ async def register(
+     body: RegisterRequest,
+     service: AuthService = Depends(get_auth_service),
+ ):
     """Create a new user account."""
-   try:
+    try:
         return await service.register(body)
     except EmailAlreadyRegistered:
         raise HTTPException(status_code=400, detail="Email already registered")
