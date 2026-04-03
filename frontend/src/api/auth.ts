@@ -46,9 +46,9 @@ export const authApi = {
   },
 
   refreshToken: async (refreshToken: string): Promise<TokenPair> => {
-    const res = await apiClient.post("/auth/refresh", {}, {
-      headers: { Authorization: `Bearer ${refreshToken}` },
-    });
-    return res.data;
-  },
+  const res = await apiClient.post("/auth/refresh", {}, {
+    headers: { Authorization: `Bearer ${refreshToken}` },
+  });
+  return res.data;
+},
 };
