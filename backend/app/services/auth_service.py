@@ -13,21 +13,29 @@ Routes should never call repositories directly.
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import EmailAlreadyRegistered, UserNotFound
+from app.core.security import hash_password
+from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
 
 
 class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.user_repo = UserRepository(self.db)
 
     async def register(self, data: RegisterRequest) -> UserResponse:
-        """
-        1. Check email not already taken
-        2. Hash password with bcrypt
-        3. Create user via UserRepository
-        4. Return UserResponse (no password hash)
-        """
-        raise NotImplementedError("Phase 1 — implement this")
+        email = data.email.lower().strip()
+        existing = await self.user_repo.get_by_email(email)
+        if existing is not None:
+            raise EmailAlreadyRegistered(email)
+        password_hash = hash_password(data.password)
+        user = await self.user_repo.create(
+            email=email,
+            username=data.username,
+            password_hash=password_hash,
+        )
+        return UserResponse.model_validate(user)
 
     async def login(self, email: str, password: str) -> TokenPair:
         """
@@ -57,4 +65,7 @@ class AuthService:
         raise NotImplementedError("Phase 1 — implement this")
 
     async def get_current_user(self, user_id: uuid.UUID) -> UserResponse:
-        raise NotImplementedError("Phase 1 — implement this")
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None:
+            raise UserNotFound(str(user_id))
+        return UserResponse.model_validate(user)

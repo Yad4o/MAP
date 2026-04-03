@@ -9,7 +9,7 @@ Member building the frontend uses these to know what to send and expect.
 """
 
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ── Requests ──────────────────────────────────────────────────
@@ -51,7 +51,7 @@ class UserResponse(BaseModel):
     is_active: bool
     email_verified: bool
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TokenPair(BaseModel):
