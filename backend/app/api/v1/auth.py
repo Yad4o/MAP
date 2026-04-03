@@ -11,6 +11,7 @@ Phase 1 (Member building API routes): Fill in the implementations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_auth_service
 from app.core.exceptions import EmailAlreadyRegistered
 from app.db.base import get_db
 from app.schemas.auth import (
@@ -28,15 +29,11 @@ from app.services.auth_service import AuthService
 router = APIRouter()
 
 
-def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
-    return AuthService(db)
-
-
 @router.post("/register", response_model=UserResponse, status_code=201)
- async def register(
-     body: RegisterRequest,
-     service: AuthService = Depends(get_auth_service),
- ):
+async def register(
+    body: RegisterRequest,
+    service: AuthService = Depends(get_auth_service),
+):
     """Create a new user account."""
     try:
         return await service.register(body)
