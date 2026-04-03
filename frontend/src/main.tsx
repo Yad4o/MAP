@@ -7,7 +7,7 @@ import App from './App'
 (async () => {
   if (import.meta.env.DEV) {
     const { worker } = await import('./mocks/browser')
-    await worker.start({ onUnhandledRequest: 'bypass' })
+    await worker.start({ onUnhandledRequest: 'warn' })
   }
 
   const queryClient = new QueryClient({

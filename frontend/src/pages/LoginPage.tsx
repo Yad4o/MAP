@@ -32,8 +32,9 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password)
       navigate('/tasks')
-    } catch {
-      setServerError('Incorrect email or password.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Login failed. Please try again.'
+      setServerError(msg)
     }
   }
 
@@ -86,9 +87,10 @@ export default function LoginPage() {
               />
               <button
                 type="button"
-                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded px-1 transition-colors"
               >
                 {showPassword
                   ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3l18 18M10.477 10.477A3 3 0 0013.5 13.5M6.5 6.5A9.97 9.97 0 003 12c1.274 4.057 5.065 7 9.5 7a9.95 9.95 0 005-1.343M9 9a3 3 0 014.243 4.243M21 12c-.69 2.2-2.1 4.1-3.97 5.37" /></svg>

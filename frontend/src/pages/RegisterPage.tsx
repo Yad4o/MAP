@@ -54,8 +54,9 @@ export default function RegisterPage() {
       await authApi.register({ email: data.email, username: data.username, password: data.password })
       await login(data.email, data.password)
       navigate('/tasks')
-    } catch {
-      setServerError('Registration failed. That email may already be taken.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Registration failed. Please try again.'
+      setServerError(msg)
     }
   }
 
@@ -64,12 +65,13 @@ export default function RegisterPage() {
       err ? 'border-red-400' : 'border-gray-200 focus:border-gray-400'
     }`
 
-  const EyeBtn = ({ show, onToggle }: { show: boolean; onToggle: () => void }) => (
+  const EyeBtn = ({ show, onToggle, label }: { show: boolean; onToggle: () => void; label: string }) => (
     <button
       type="button"
-      tabIndex={-1}
+      aria-label={label}
+      aria-pressed={show}
       onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded px-1 transition-colors"
     >
       {show
         ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3l18 18M10.477 10.477A3 3 0 0013.5 13.5M6.5 6.5A9.97 9.97 0 003 12c1.274 4.057 5.065 7 9.5 7a9.95 9.95 0 005-1.343M9 9a3 3 0 014.243 4.243M21 12c-.69 2.2-2.1 4.1-3.97 5.37" /></svg>
@@ -120,7 +122,11 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 {...register('password', { onChange: (e) => setPw(e.target.value) })}
                 className={inputCls(!!errors.password) + ' pr-10'} />
-              <EyeBtn show={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+              <EyeBtn 
+                show={showPassword} 
+                onToggle={() => setShowPassword((v) => !v)} 
+                label={showPassword ? 'Hide password' : 'Show password'} 
+              />
             </div>
             {pw && (
               <div className="mt-2 flex items-center gap-2">
@@ -143,7 +149,11 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 {...register('confirmPassword')}
                 className={inputCls(!!errors.confirmPassword) + ' pr-10'} />
-              <EyeBtn show={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />
+              <EyeBtn 
+                show={showConfirm} 
+                onToggle={() => setShowConfirm((v) => !v)} 
+                label={showConfirm ? 'Hide confirmation' : 'Show confirmation'} 
+              />
             </div>
             {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
           </div>
