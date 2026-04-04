@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as aioredis
+import jwt
 from app.db.base import get_db
 from app.core.security import decode_access_token
 from app.db.repositories.user_repo import UserRepository
@@ -26,15 +27,18 @@ async def _get_redis() -> aioredis.Redis:
     return _redis_client
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> User:
+async def get_token_payload(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
     token = credentials.credentials
     try:
-        payload = decode_access_token(token)
-    except Exception:
+        return decode_access_token(token)
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def get_current_user(
+    payload: dict = Depends(get_token_payload),
+    db: AsyncSession = Depends(get_db),
+) -> User:
     user_id = payload.get("sub")
     jti = payload.get("jti")
     if not user_id or not jti:

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_auth_service
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
+from app.dependencies import get_current_user, get_token_payload
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
@@ -61,18 +62,23 @@ async def refresh_token(
 
 @router.post("/logout", status_code=204)
 async def logout(
+    payload: dict = Depends(get_token_payload),
+    current_user: UserResponse = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
     """Revoke the current session tokens."""
-    raise NotImplementedError("Phase 1 — implement this")
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=401, detail="Token missing jti claim")
+    await service.logout(current_user.id, jti)
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(
-    service: AuthService = Depends(get_auth_service),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """Return the authenticated user's profile."""
-    raise NotImplementedError("Phase 1 — implement this")
+    return current_user
 
 
 @router.patch("/me", response_model=UserResponse)
