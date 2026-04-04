@@ -39,8 +39,8 @@ def create_app() -> FastAPI:
     # Uncomment each router as it is built in the corresponding phase.
 
     # Phase 1 — Auth
-    # from app.api.v1.auth import router as auth_router
-    # app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+    from app.api.v1.auth import router as auth_router
+    app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
     # Phase 2 — Tasks
     # from app.api.v1.tasks import router as tasks_router

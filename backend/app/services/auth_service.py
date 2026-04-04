@@ -26,7 +26,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.repositories.session_repo import SessionRepository
+from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
 

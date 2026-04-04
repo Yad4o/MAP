@@ -9,9 +9,12 @@ Phase 1 (Member building API routes): Fill in the implementations
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.api.deps import get_auth_service
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
+from app.core.security import decode_access_token
+from app.dependencies import get_current_user
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
@@ -61,18 +64,22 @@ async def refresh_token(
 
 @router.post("/logout", status_code=204)
 async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    current_user: UserResponse = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
     """Revoke the current session tokens."""
-    raise NotImplementedError("Phase 1 — implement this")
+    payload = decode_access_token(credentials.credentials)
+    jti = payload.get("jti", "")
+    await service.logout(current_user.id, jti)
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(
-    service: AuthService = Depends(get_auth_service),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     """Return the authenticated user's profile."""
-    raise NotImplementedError("Phase 1 — implement this")
+    return UserResponse.model_validate(current_user)
 
 
 @router.patch("/me", response_model=UserResponse)
