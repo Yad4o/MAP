@@ -11,7 +11,7 @@ Phase 1 (Member building API routes): Fill in the implementations
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_auth_service
-from app.core.exceptions import EmailAlreadyRegistered
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
@@ -45,7 +45,10 @@ async def login(
     service: AuthService = Depends(get_auth_service),
 ):
     """Authenticate and receive JWT access + refresh tokens."""
-    raise NotImplementedError("Phase 1 — implement this")
+    try:
+        return await service.login(body.email, body.password)
+    except InvalidCredentials:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @router.post("/refresh", response_model=TokenPair)
