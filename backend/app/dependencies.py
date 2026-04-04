@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as aioredis
+import jwt
 from app.db.base import get_db
 from app.core.security import decode_access_token
 from app.db.repositories.user_repo import UserRepository
@@ -30,7 +31,7 @@ async def get_token_payload(credentials: HTTPAuthorizationCredentials = Depends(
     token = credentials.credentials
     try:
         return decode_access_token(token)
-    except Exception:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 

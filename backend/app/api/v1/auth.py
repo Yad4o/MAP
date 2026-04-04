@@ -9,11 +9,9 @@ Phase 1 (Member building API routes): Fill in the implementations
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.api.deps import get_auth_service
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
-from app.core.security import decode_access_token
 from app.dependencies import get_current_user, get_token_payload
 from app.schemas.auth import (
     ChangePasswordRequest,
