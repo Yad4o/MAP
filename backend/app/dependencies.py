@@ -39,10 +39,17 @@ async def get_current_user(
     payload: dict = Depends(get_token_payload),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    user_id = payload.get("sub")
+    user_id_str = payload.get("sub")
     jti = payload.get("jti")
-    if not user_id or not jti:
+    if not user_id_str or not jti:
         raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+    try:
+        import uuid
+        user_id = uuid.UUID(str(user_id_str))
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token payload format")
+
     redis = await _get_redis()
     is_revoked = await redis.exists(f"revoked:{jti}")
     if is_revoked:

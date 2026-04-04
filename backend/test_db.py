@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 """Database connection smoke test script."""
 import asyncio
 import sqlalchemy as sa
@@ -11,4 +15,5 @@ async def test():
         tables = [r[0] for r in result.fetchall()]
         print("Connected! Tables found:", tables)
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())

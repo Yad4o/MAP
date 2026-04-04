@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -6,6 +10,17 @@ from httpx import AsyncClient
 from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
+import app.dependencies as deps
+
+class MockRedis:
+    def __init__(self):
+        self.data = {}
+    async def setex(self, key, time, value):
+        self.data[key] = value
+    async def exists(self, key):
+        return key in self.data
+    async def close(self):
+        self.data.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -53,9 +68,15 @@ async def client(db_session):
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    
+    mock_redis = MockRedis()
+    deps._redis_client = mock_redis
+    
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
+        
     app.dependency_overrides.clear()
+    deps._redis_client = None
 
 
 # ---------------------------------------------------------------------------
