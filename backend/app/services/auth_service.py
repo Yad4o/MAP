@@ -11,10 +11,20 @@ Routes should never call repositories directly.
 """
 
 import uuid
+from datetime import datetime, timedelta
+
+import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import EmailAlreadyRegistered, UserNotFound
-from app.core.security import hash_password
+from app.config import settings
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials, UserNotFound
+from app.core.security import (
+    create_access_token,
+    generate_refresh_token,
+    hash_password,
+    verify_password,
+)
+from app.db.repositories.session_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
 
@@ -46,7 +56,28 @@ class AuthService:
         5. Update last_login_at
         6. Return TokenPair
         """
-        raise NotImplementedError("Phase 1 — implement this")
+        user = await self.user_repo.get_by_email(email.lower().strip())
+        if user is None:
+            raise InvalidCredentials()
+        if not verify_password(password, user.password_hash):
+            raise InvalidCredentials()
+        access_token, jti, expires_at = create_access_token(user.id, user.role)
+        raw_refresh_token, refresh_token_hash = generate_refresh_token()
+        session_repo = SessionRepository(self.db)
+        session_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        await session_repo.create(
+            user_id=user.id,
+            refresh_token_hash=refresh_token_hash,
+            access_jti=jti,
+            expires_at=session_expires,
+        )
+        await self.user_repo.update_last_login(user.id)
+        return TokenPair(
+            access_token=access_token,
+            refresh_token=raw_refresh_token,
+            token_type="bearer",
+            expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
 
     async def refresh(self, refresh_token: str) -> TokenPair:
         """
@@ -62,10 +93,20 @@ class AuthService:
         1. Revoke session in DB
         2. Add access JTI to Redis revocation set
         """
-        raise NotImplementedError("Phase 1 — implement this")
+        session_repo = SessionRepository(self.db)
+        session = await session_repo.get_active_by_user(user_id)
+        if session:
+            await session_repo.revoke(session.id)
+        redis = aioredis.from_url(settings.REDIS_URL, ssl_cert_reqs=None)
+        try:
+            ttl = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            await redis.set(f"revoked:{access_jti}", "1", ex=ttl)
+        finally:
+            await redis.aclose()
 
     async def get_current_user(self, user_id: uuid.UUID) -> UserResponse:
         user = await self.user_repo.get_by_id(user_id)
         if user is None:
             raise UserNotFound(str(user_id))
         return UserResponse.model_validate(user)
+       
