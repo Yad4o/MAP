@@ -21,6 +21,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null;
 
   // ── Actions ───────────────────────────────────────────────
   login: (email: string, password: string) => Promise<void>;
@@ -28,6 +29,7 @@ interface AuthState {
   setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: UserResponse) => void;
   clearAuth: () => void;
+  setError: (error: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -37,6 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   refreshToken: null,
   isAuthenticated: false,
   isLoading: false,
+  error: null,
 
   // ── Actions (implement in Phase 1) ────────────────────────
 
@@ -45,10 +48,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 1. Call authApi.login({ email, password })
     // 2. Call setTokens with the returned pair
     // 3. Call authApi.getMe() to fetch user profile
-    // 4. Call setUser with the profile
+    // 4. Call setUser with profile
     
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
       // Call the login API
       const tokenPair = await authApi.login({ email, password });
       // Store tokens in memory
@@ -58,10 +61,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store the user
       get().setUser(user);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      set({ error: errorMessage });
       get().clearAuth();
       throw error;
     } finally {
-      set({ isLoading: false});
+      set({ isLoading: false });
     }
     
   },
@@ -71,7 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 1. Call authApi.logout()
     // 2. Call clearAuth()
     try {
-      // Try to call the logout API
+      // Try to call logout API
       await authApi.logout();
     } catch {
       // Even if the API call fails, clear local auth state
@@ -82,7 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setTokens: (accessToken, refreshToken) => {
-    set({ accessToken, refreshToken, isAuthenticated: true });
+    set({ accessToken, refreshToken, isAuthenticated: true, error: null });
   },
 
   setUser: (user) => {
@@ -95,6 +100,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      error: null,
     });
+  },
+
+  setError: (error: string | null) => {
+    set({ error });
   },
 }));

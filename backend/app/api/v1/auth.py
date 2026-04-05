@@ -8,10 +8,11 @@ Phase 1 (Member building API routes): Fill in the implementations
          by calling auth_service methods.
 """
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.db.base import get_db
+from app.api.deps import get_auth_service
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
+from app.dependencies import get_current_user, get_token_payload
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
@@ -22,47 +23,79 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.auth_service import AuthService
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    body: RegisterRequest,
+    service: AuthService = Depends(get_auth_service),
+):
     """Create a new user account."""
-    raise NotImplementedError("Phase 1 — implement this")
+    try:
+        return await service.register(body)
+    except EmailAlreadyRegistered:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
 
 @router.post("/login", response_model=TokenPair)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    body: LoginRequest,
+    service: AuthService = Depends(get_auth_service),
+):
     """Authenticate and receive JWT access + refresh tokens."""
-    raise NotImplementedError("Phase 1 — implement this")
+    try:
+        return await service.login(body.email, body.password)
+    except InvalidCredentials:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @router.post("/refresh", response_model=TokenPair)
-async def refresh_token(db: AsyncSession = Depends(get_db)):
+async def refresh_token(
+    service: AuthService = Depends(get_auth_service),
+):
     """Rotate refresh token and issue new access token."""
     raise NotImplementedError("Phase 1 — implement this")
 
 
 @router.post("/logout", status_code=204)
-async def logout(db: AsyncSession = Depends(get_db)):
+async def logout(
+    payload: dict = Depends(get_token_payload),
+    current_user: UserResponse = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+):
     """Revoke the current session tokens."""
-    raise NotImplementedError("Phase 1 — implement this")
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=401, detail="Token missing jti claim")
+    await service.logout(current_user.id, jti)
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(db: AsyncSession = Depends(get_db)):
+async def get_me(
+    current_user: UserResponse = Depends(get_current_user),
+):
     """Return the authenticated user's profile."""
-    raise NotImplementedError("Phase 1 — implement this")
+    return current_user
 
 
 @router.patch("/me", response_model=UserResponse)
-async def update_me(body: UpdateProfileRequest, db: AsyncSession = Depends(get_db)):
-    raise NotImplementedError("Phase 1 — implement this")
+async def update_me(
+    body: UpdateProfileRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+):
+    """Update the authenticated user's profile info (e.g. username)."""
+    return await service.update_me(current_user.id, body)
 
 
 @router.post("/change-password", status_code=204)
-async def change_password(body: ChangePasswordRequest, db: AsyncSession = Depends(get_db)):
+async def change_password(
+    body: ChangePasswordRequest,
+    service: AuthService = Depends(get_auth_service),
+):
     raise NotImplementedError("Phase 1 — implement this")
 
 

@@ -78,8 +78,8 @@ class Settings(BaseSettings):
     @field_validator("JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", mode="before")
     @classmethod
     def fix_newlines(cls, v: str) -> str:
-        """Convert literal \\n in .env values to real newlines for PEM keys."""
-        return v.replace("\\n", "\n")
+        """Convert literal \\n in .env values to real newlines and strip surrounding quotes for PEM keys."""
+        return v.strip('\"\'').replace("\\n", "\n")
 
     @property
     def is_production(self) -> bool:

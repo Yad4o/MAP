@@ -12,8 +12,15 @@ Usage:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from contextlib import asynccontextmanager
 from app.config import settings
+from app.core.redis import close_redis
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await close_redis()
+
 
 # ── App Factory ───────────────────────────────────────────────
 
@@ -24,6 +31,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
+        lifespan=lifespan,
     )
 
     # ── CORS ──────────────────────────────────────────────────
@@ -39,8 +47,8 @@ def create_app() -> FastAPI:
     # Uncomment each router as it is built in the corresponding phase.
 
     # Phase 1 — Auth
-    # from app.api.v1.auth import router as auth_router
-    # app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+    from app.api.v1.auth import router as auth_router
+    app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
     # Phase 2 — Tasks
     # from app.api.v1.tasks import router as tasks_router
