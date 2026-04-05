@@ -1,5 +1,6 @@
 # Import models needed for the application
-# For tests, we only import task models to avoid User model JSONB issues
+from .user import User, Session
 from .task import Task, TaskStep
+from .log import Log, AgentResult, ApiKey, Config
 
-__all__ = ["Task", "TaskStep"]
+__all__ = ["User", "Session", "Task", "TaskStep", "Log", "AgentResult", "ApiKey", "Config"]

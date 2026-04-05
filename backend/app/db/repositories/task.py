@@ -28,8 +28,14 @@ class TaskRepository:
 
     async def create(self, user_id: uuid.UUID, data: dict) -> Task:
         """Create a new task. Returns the created Task instance."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
         new_task = Task(
-            user_id=user_id,
+            user_id=user_id_str,
             title=data["title"],
             description=data.get("description"),
             status="pending"
@@ -78,10 +84,18 @@ class TaskStepRepository:
 
     async def create(self, task_id: uuid.UUID, data: dict) -> TaskStep:
         """Create a new task step. Returns the created TaskStep instance."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            task_id_str = str(task_id)
+        else:
+            task_id_str = task_id
+            
         new_step = TaskStep(
-            task_id=task_id,
+            task_id=task_id_str,
             title=data["title"],
-            order=data["order"]
+            order=data["order"],
+            step_index=data["step_index"],
+            step_type=data["step_type"]
         )
         self.db.add(new_step)
         await self.db.flush()
@@ -90,13 +104,25 @@ class TaskStepRepository:
 
     async def get_by_task(self, task_id: uuid.UUID) -> list[TaskStep]:
         """Fetch all steps for a task, ordered by order."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            task_id_str = str(task_id)
+        else:
+            task_id_str = task_id
+            
         result = await self.db.execute(
-            select(TaskStep).where(TaskStep.task_id == task_id).order_by(TaskStep.order)
+            select(TaskStep).where(TaskStep.task_id == task_id_str).order_by(TaskStep.order)
         )
         return result.scalars().all()
 
     async def delete(self, step_id: uuid.UUID) -> bool:
         """Delete task step. Returns True if deleted, False if not found."""
-        stmt = delete(TaskStep).where(TaskStep.id == step_id)
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            step_id_str = str(step_id)
+        else:
+            step_id_str = step_id
+            
+        stmt = delete(TaskStep).where(TaskStep.id == step_id_str)
         result = await self.db.execute(stmt)
         return result.rowcount > 0

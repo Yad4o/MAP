@@ -42,7 +42,13 @@ class UserRepository:
 
     async def get_by_id(self, user_id: uuid.UUID):
         """Fetch user by UUID. Returns None if not found."""
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        result = await self.db.execute(select(User).where(User.id == user_id_str))
         return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str):
@@ -52,12 +58,24 @@ class UserRepository:
 
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
-        stmt = update(User).where(User.id == user_id).values(last_login_at=func.now())
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(User).where(User.id == user_id_str).values(last_login_at=func.now())
         await self.db.execute(stmt)
 
     async def deactivate(self, user_id: uuid.UUID) -> None:
         """Set is_active=False."""
-        stmt = update(User).where(User.id == user_id).values(is_active=False)
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(User).where(User.id == user_id_str).values(is_active=False)
         await self.db.execute(stmt)
 
     async def list_all(self, page: int = 1, page_size: int = 20):
@@ -91,8 +109,14 @@ class SessionRepository:
         user_agent: str | None = None,
     ):
         """Create a new session."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
         new_session = Session(
-            user_id=user_id,
+            user_id=user_id_str,
             refresh_token_hash=refresh_token_hash,
             access_jti=access_jti,
             expires_at=expires_at,
@@ -106,9 +130,15 @@ class SessionRepository:
 
     async def get_active_by_user(self, user_id: uuid.UUID):
         """Get active session for user."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
         result = await self.db.execute(
             select(Session).where(
-                Session.user_id == user_id,
+                Session.user_id == user_id_str,
                 Session.is_active == True,
                 Session.expires_at > func.now()
             )
@@ -117,7 +147,13 @@ class SessionRepository:
 
     async def revoke(self, session_id: uuid.UUID) -> None:
         """Revoke a session."""
-        stmt = update(Session).where(Session.id == session_id).values(
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            session_id_str = str(session_id)
+        else:
+            session_id_str = session_id
+            
+        stmt = update(Session).where(Session.id == session_id_str).values(
             is_active=False, 
             revoked_at=func.now()
         )
@@ -126,7 +162,16 @@ class SessionRepository:
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         """Revoke all sessions for user."""
-        stmt = update(Session).where(Session.user_id == user_id).values(
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(Session).where(
+            Session.user_id == user_id_str,
+            Session.revoked_at == None  # noqa: E711
+        ).values(
             is_active=False, 
             revoked_at=func.now()
         )

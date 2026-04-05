@@ -85,6 +85,21 @@ class TestTask(TestBase):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    
+    # Execution Configuration
+    task_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    estimated_duration_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    
+    # Execution Timestamps
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -109,6 +124,22 @@ class TestTaskStep(TestBase):
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     order: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Agent Execution Fields
+    step_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    step_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    input_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    output_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    error: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

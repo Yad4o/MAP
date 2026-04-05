@@ -177,7 +177,9 @@ class TestTaskStepRepository:
         # Create a step
         step_data = {
             "title": "Test Step",
-            "order": 1
+            "order": 1,
+            "step_index": 1,
+            "step_type": "test"
         }
         step = await step_repo.create(task.id, step_data)
         
@@ -208,9 +210,9 @@ class TestTaskStepRepository:
         
         # Create multiple steps
         steps_data = [
-            {"title": "Step 1", "order": 1},
-            {"title": "Step 2", "order": 2},
-            {"title": "Step 3", "order": 3}
+            {"title": "Step 1", "order": 1, "step_index": 1, "step_type": "test"},
+            {"title": "Step 2", "order": 2, "step_index": 2, "step_type": "test"},
+            {"title": "Step 3", "order": 3, "step_index": 3, "step_type": "test"}
         ]
         
         created_steps = []
@@ -233,7 +235,7 @@ class TestTaskStepRepository:
         task_data = {"title": "Task with step to delete", "description": "Test task"}
         task = await task_repo.create(test_user_id, task_data)
         
-        step_data = {"title": "Step to delete", "order": 1}
+        step_data = {"title": "Step to delete", "order": 1, "step_index": 1, "step_type": "test"}
         step = await step_repo.create(task.id, step_data)
         step_id = step.id
         
