@@ -26,6 +26,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+# SessionRepository was consolidated into user_repo.py to co-locate all user-related data access 
 from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse

@@ -1,6 +1,5 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -17,10 +16,12 @@ class MockRedis:
         self.data = {}
     async def setex(self, key, time, value):
         self.data[key] = value
+    async def set(self, key, value, ex=None):
+        self.data[key] = value
     async def exists(self, key):
         return key in self.data
     async def close(self):
-        self.data.clear()
+        pass  # no-op; mock has no connection to close
 
 
 # ---------------------------------------------------------------------------
@@ -84,15 +85,11 @@ async def client(db_session):
 #    Use this fixture in any test that requires authentication
 # ---------------------------------------------------------------------------
 @pytest.fixture
-async def auth_headers(client):
-    await client.post("/api/v1/auth/register", json={
-        "email": "test@map.com",
-        "username": "testuser",
-        "password": "testpassword123"
-    })
+async def auth_headers(client, test_user_data: dict):
+    await client.post("/api/v1/auth/register", json=test_user_data)
     response = await client.post("/api/v1/auth/login", json={
-        "email": "test@map.com",
-        "password": "testpassword123"
+        "email": test_user_data["email"],
+        "password": test_user_data["password"]
     })
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}

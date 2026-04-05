@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as aioredis
 import jwt
+import uuid
 from app.db.base import get_db
 from app.core.security import decode_access_token
 from app.db.repositories.user_repo import UserRepository
@@ -45,7 +46,6 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid token payload")
         
     try:
-        import uuid
         user_id = uuid.UUID(str(user_id_str))
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token payload format")
