@@ -1,126 +1,173 @@
 /**
  * frontend/src/pages/LoginPage.tsx
- * Phase 1: Implement using authStore.login() and React Hook Form.
+ * ────────────────────────────────
+ * Premium Design Refactor: Glassmorphic Dark Edition.
+ * Features: Framer Motion animations, Lucide icons, Inter typography.
  */
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'Minimum 8 characters'),
-})
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
 
-type FormData = z.infer<typeof schema>
+type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const login = useAuthStore((s) => s.login)
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const login = useAuthStore((s) => s.login);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
-  })
+  });
 
   const onSubmit = async (data: FormData) => {
-    setServerError(null)
+    setServerError(null);
     try {
-      await login(data.email, data.password)
-      navigate('/tasks')
+      await login(data.email, data.password);
+      navigate('/tasks');
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Login failed. Please try again.'
-      setServerError(msg)
+      const msg = error instanceof Error ? error.message : 'Invalid credentials. Please try again.';
+      setServerError(msg);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
-      <div className="w-full max-w-xs">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6 bg-[#020617]">
+      {/* Background Mesh (defined in index.css) */}
+      <div className="bg-mesh" />
 
-        {/* Wordmark */}
-        <div className="mb-10">
-          <span className="text-sm font-semibold tracking-widest text-gray-900 uppercase">MAP</span>
+      {/* Hero Content Stacking */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="w-full max-w-[420px] relative z-10"
+      >
+        {/* Logo / Branding */}
+        <div className="flex flex-col items-center mb-10 text-center">
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-4 shadow-xl shadow-violet-500/20"
+          >
+            <Sparkles className="text-white w-6 h-6" />
+          </motion.div>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Welcome Back</h1>
+          <p className="text-slate-400 text-sm">Enter your credentials to access the platform</p>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Sign in</h1>
-        <p className="text-sm text-gray-400 mb-8">Welcome back.</p>
-
-        {serverError && (
-          <p className="text-xs text-red-500 mb-5">{serverError}</p>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-xs font-medium text-gray-500 mb-1.5">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              className={`w-full text-sm border rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-300 outline-none transition-colors
-                ${errors.email ? 'border-red-400' : 'border-gray-200 focus:border-gray-400'}`}
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-xs font-medium text-gray-500 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                {...register('password')}
-                className={`w-full text-sm border rounded-lg px-3 py-2.5 pr-10 text-gray-900 placeholder-gray-300 outline-none transition-colors
-                  ${errors.password ? 'border-red-400' : 'border-gray-200 focus:border-gray-400'}`}
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded px-1 transition-colors"
+        {/* Glass Card */}
+        <div className="glass-card p-8 sm:p-10">
+          <AnimatePresence mode="wait">
+            {serverError && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
               >
-                {showPassword
-                  ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3l18 18M10.477 10.477A3 3 0 0013.5 13.5M6.5 6.5A9.97 9.97 0 003 12c1.274 4.057 5.065 7 9.5 7a9.95 9.95 0 005-1.343M9 9a3 3 0 014.243 4.243M21 12c-.69 2.2-2.1 4.1-3.97 5.37" /></svg>
-                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                }
-              </button>
+                <p className="text-xs text-red-400 font-medium leading-relaxed">{serverError}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500 ml-1">
+                Email Address
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors">
+                  <Mail size={18} />
+                </div>
+                <input
+                  {...register('email')}
+                  type="email"
+                  id="email"
+                  className={`form-input pl-11 ${errors.email ? 'border-red-500/50' : ''}`}
+                  placeholder="name@company.com"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.email.message}</p>
+              )}
             </div>
-            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
-          </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-gray-900 hover:bg-gray-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg py-2.5 transition-colors flex items-center justify-center gap-2"
-          >
-            {isSubmitting
-              ? <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Signing in</>
-              : 'Sign in'
-            }
-          </button>
-        </form>
+            {/* Password Field */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between ml-1">
+                <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Password
+                </label>
+                <Link to="/forgot-password" className="text-[10px] text-violet-400 font-semibold hover:text-violet-300 transition-colors">
+                  FORGOT?
+                </Link>
+              </div>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors">
+                  <Lock size={18} />
+                </div>
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  className={`form-input pl-11 pr-11 ${errors.password ? 'border-red-500/50' : ''}`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.password.message}</p>
+              )}
+            </div>
 
-        <p className="mt-8 text-xs text-gray-400">
-          No account?{' '}
-          <Link to="/register" className="text-gray-900 font-medium hover:underline underline-offset-2">
-            Register
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-4 h-4 ml-1 opacity-60 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center mt-8 text-slate-500 text-sm">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-violet-400 font-semibold hover:text-violet-300 underline-offset-4 hover:underline transition-all">
+            Join the collective
           </Link>
         </p>
-
-      </div>
+      </motion.div>
     </div>
-  )
+  );
 }
