@@ -93,3 +93,17 @@ async def test_logout_success(client: AsyncClient, auth_headers: dict):
     # Log out with an authenticated user's headers
     response = await client.post("/api/v1/auth/logout", headers=auth_headers)
     assert response.status_code == 204
+
+
+async def test_update_me_success(client: AsyncClient, auth_headers: dict):
+    response = await client.patch("/api/v1/auth/me", headers=auth_headers, json={"username": "newusername"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "newusername"
+
+
+async def test_update_me_no_data(client: AsyncClient, auth_headers: dict):
+    response = await client.patch("/api/v1/auth/me", headers=auth_headers, json={})
+    assert response.status_code == 200
+    # Should return current user unchanged
+    assert "username" in response.json()
