@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
-from app.core.redis import override_redis_client
+from app.core.redis import override_redis_client, set_test_mode
 
 class MockRedis:
     def __init__(self):
@@ -21,6 +21,9 @@ class MockRedis:
     async def close(self):
         pass  # no-op; mock has no connection to close
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_mode():
+    set_test_mode(True)
 
 # ---------------------------------------------------------------------------
 # 1. Test database URL — SQLite so no real Neon DB is needed during tests

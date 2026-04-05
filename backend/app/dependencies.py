@@ -1,7 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-import redis.asyncio as aioredis
 import jwt
 import uuid
 from app.db.base import get_db

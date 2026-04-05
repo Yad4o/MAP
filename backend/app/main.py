@@ -13,8 +13,6 @@ Usage:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.core.redis import close_redis
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -22,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 
 from app.config import settings
-
+from app.core.redis import close_redis
 # ── App Factory ───────────────────────────────────────────────
 
 def create_app() -> FastAPI:
