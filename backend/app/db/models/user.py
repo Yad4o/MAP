@@ -28,7 +28,7 @@ class User(Base):
 
     # ── Identity ──────────────────────────────────────────────
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
-    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
 
     # ── Role & Access ─────────────────────────────────────────

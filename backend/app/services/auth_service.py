@@ -14,7 +14,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -29,7 +28,7 @@ from app.core.security import (
 # SessionRepository was consolidated into user_repo.py to co-locate all user-related data access 
 from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
-from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
+from app.schemas.auth import RegisterRequest, TokenPair, UserResponse, UpdateProfileRequest
 from app.core.redis import get_redis
 
 logger = logging.getLogger(__name__)
@@ -124,4 +123,19 @@ class AuthService:
         user = await self.user_repo.get_by_id(user_id)
         if user is None:
             raise UserNotFound(str(user_id))
+        return UserResponse.model_validate(user)
+
+
+    async def update_me(self, user_id: uuid.UUID, data: UpdateProfileRequest) -> UserResponse:
+        """Update current user profile info."""
+        # Convert Pydantic fields to a dict, excluding unset fields
+        update_data = data.model_dump(exclude_unset=True)
+        if not update_data:
+            # Nothing to update, just return current profile
+            return await self.get_current_user(user_id)
+
+        user = await self.user_repo.update(user_id, **update_data)
+        if user is None:
+            raise UserNotFound(str(user_id))
+
         return UserResponse.model_validate(user)

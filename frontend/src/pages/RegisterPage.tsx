@@ -1,183 +1,254 @@
 /**
  * frontend/src/pages/RegisterPage.tsx
- * Phase corresponding to this page — implement then.
+ * ───────────────────────────────────
+ * Premium Design Refactor: Glassmorphic Dark Edition.
  */
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
-import { authApi } from '../api/auth'
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { authApi } from '../api/auth';
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email'),
-  username: z.string().min(3, 'Minimum 3 characters'),
-  password: z.string().min(8, 'Minimum 8 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: 'Passwords do not match',
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
   path: ['confirmPassword'],
-})
+});
 
-type FormData = z.infer<typeof schema>
+type FormData = z.infer<typeof schema>;
 
-function strengthScore(pw: string) {
-  let s = 0
-  if (pw.length >= 8) s++
-  if (pw.length >= 12) s++
-  if (/[A-Z]/.test(pw)) s++
-  if (/[0-9]/.test(pw)) s++
-  if (/[^A-Za-z0-9]/.test(pw)) s++
-  return s
+function getStrengthScore(pw: string) {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score;
 }
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
-  const login = useAuthStore((s) => s.login)
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [pw, setPw] = useState('')
+  const navigate = useNavigate();
+  const login = useAuthStore((s) => s.login);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passwordValue, setPasswordValue] = useState('');
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
-  })
+  });
 
-  const score = strengthScore(pw)
-  const strengthLabel = ['', 'Weak', 'Weak', 'Fair', 'Good', 'Strong'][score] ?? ''
-  const strengthColor = score <= 2 ? 'bg-red-400' : score === 3 ? 'bg-amber-400' : score === 4 ? 'bg-blue-400' : 'bg-green-400'
+  const strengthScore = getStrengthScore(passwordValue);
+  const strengthColor = 
+    strengthScore <= 2 ? 'bg-red-500 shadow-red-500/20' : 
+    strengthScore === 3 ? 'bg-amber-500 shadow-amber-500/20' : 
+    strengthScore === 4 ? 'bg-blue-500 shadow-blue-500/20' : 
+    'bg-green-500 shadow-green-500/20';
 
   const onSubmit = async (data: FormData) => {
-    setServerError(null)
+    setServerError(null);
     try {
-      await authApi.register({ email: data.email, username: data.username, password: data.password })
-      await login(data.email, data.password)
-      navigate('/tasks')
+      await authApi.register({ email: data.email, username: data.username, password: data.password });
+      await login(data.email, data.password);
+      navigate('/tasks');
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Registration failed. Please try again.'
-      setServerError(msg)
+      const msg = error instanceof Error ? error.message : 'Registration failed. Please try again later.';
+      setServerError(msg);
     }
-  }
-
-  const inputCls = (err: boolean) =>
-    `w-full text-sm border rounded-lg px-3 py-2.5 text-gray-900 placeholder-gray-300 outline-none transition-colors ${
-      err ? 'border-red-400' : 'border-gray-200 focus:border-gray-400'
-    }`
-
-  const EyeBtn = ({ show, onToggle, label }: { show: boolean; onToggle: () => void; label: string }) => (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={show}
-      onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-400 rounded px-1 transition-colors"
-    >
-      {show
-        ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3l18 18M10.477 10.477A3 3 0 0013.5 13.5M6.5 6.5A9.97 9.97 0 003 12c1.274 4.057 5.065 7 9.5 7a9.95 9.95 0 005-1.343M9 9a3 3 0 014.243 4.243M21 12c-.69 2.2-2.1 4.1-3.97 5.37" /></svg>
-        : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-      }
-    </button>
-  )
+  };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-xs">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6 bg-[#020617]">
+      <div className="bg-mesh" />
 
-        {/* Wordmark */}
-        <div className="mb-10">
-          <span className="text-sm font-semibold tracking-widest text-gray-900 uppercase">MAP</span>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-[480px] relative z-10"
+      >
+        {/* Logo / Branding */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ShieldCheck className="text-violet-400 w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold tracking-tight text-white">MAP Platform</span>
+          </Link>
+          <h1 className="text-2xl font-bold text-white mt-6 mb-1">Create an Account</h1>
+          <p className="text-slate-500 text-sm">Join our specialized agent network</p>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Create account</h1>
-        <p className="text-sm text-gray-400 mb-8">Free to get started.</p>
-
-        {serverError && (
-          <p className="text-xs text-red-500 mb-5">{serverError}</p>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-xs font-medium text-gray-500 mb-1.5">Email</label>
-            <input id="email" type="email" autoComplete="email" placeholder="you@example.com"
-              {...register('email')} className={inputCls(!!errors.email)} />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-          </div>
-
-          {/* Username */}
-          <div>
-            <label htmlFor="username" className="block text-xs font-medium text-gray-500 mb-1.5">Username</label>
-            <input id="username" type="text" autoComplete="username" placeholder="yourhandle"
-              {...register('username')} className={inputCls(!!errors.username)} />
-            {errors.username && <p className="mt-1 text-xs text-red-500">{errors.username.message}</p>}
-          </div>
-
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-xs font-medium text-gray-500 mb-1.5">Password</label>
-            <div className="relative">
-              <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password"
-                placeholder="••••••••"
-                {...register('password', { onChange: (e) => setPw(e.target.value) })}
-                className={inputCls(!!errors.password) + ' pr-10'} />
-              <EyeBtn 
-                show={showPassword} 
-                onToggle={() => setShowPassword((v) => !v)} 
-                label={showPassword ? 'Hide password' : 'Show password'} 
-              />
-            </div>
-            {pw && (
-              <div className="mt-2 flex items-center gap-2">
-                <div className="flex gap-0.5 flex-1">
-                  {[1,2,3,4,5].map((i) => (
-                    <div key={i} className={`h-0.5 flex-1 rounded-full transition-colors ${i <= score ? strengthColor : 'bg-gray-100'}`} />
-                  ))}
-                </div>
-                <span className="text-xs text-gray-400 w-10 text-right">{strengthLabel}</span>
-              </div>
+        <div className="glass-card p-8 sm:p-10">
+          <AnimatePresence mode="wait">
+            {serverError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+              >
+                <p className="text-xs text-red-400 font-medium leading-relaxed font-mono">{serverError}</p>
+              </motion.div>
             )}
-            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
-          </div>
+          </AnimatePresence>
 
-          {/* Confirm */}
-          <div>
-            <label htmlFor="confirmPassword" className="block text-xs font-medium text-gray-500 mb-1.5">Confirm password</label>
-            <div className="relative">
-              <input id="confirmPassword" type={showConfirm ? 'text' : 'password'} autoComplete="new-password"
-                placeholder="••••••••"
-                {...register('confirmPassword')}
-                className={inputCls(!!errors.confirmPassword) + ' pr-10'} />
-              <EyeBtn 
-                show={showConfirm} 
-                onToggle={() => setShowConfirm((v) => !v)} 
-                label={showConfirm ? 'Hide confirmation' : 'Show confirmation'} 
-              />
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+            {/* Username Field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
+                Username
+              </label>
+              <div className="relative">
+                <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('username')}
+                  type="text"
+                  className="form-input pl-11"
+                  placeholder="agent_nexus"
+                />
+              </div>
+              {errors.username && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.username.message}</p>
+              )}
             </div>
-            {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
-          </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-gray-900 hover:bg-gray-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg py-2.5 transition-colors flex items-center justify-center gap-2"
-          >
-            {isSubmitting
-              ? <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Creating account</>
-              : 'Create account'
-            }
-          </button>
-        </form>
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
+                Intelligence Handle (Email)
+              </label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('email')}
+                  type="email"
+                  className="form-input pl-11"
+                  placeholder="nexus@matrix.ai"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.email.message}</p>
+              )}
+            </div>
 
-        <p className="mt-8 text-xs text-gray-400">
-          Have an account?{' '}
-          <Link to="/login" className="text-gray-900 font-medium hover:underline underline-offset-2">
-            Sign in
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
+                Access Secret
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                  className="form-input pl-11 pr-11"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              
+              {/* Password Strength Indicator */}
+              {passwordValue && (
+                <div className="px-1 pt-1">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Strength</span>
+                    <span className={`text-[9px] font-bold uppercase tracking-widest ${strengthScore <= 2 ? 'text-red-400' : 'text-green-400'}`}>
+                      {['Weak', 'Weak', 'Fair', 'Strong', 'Secure', 'Inderflectable'][strengthScore]}
+                    </span>
+                  </div>
+                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden flex gap-1">
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <div 
+                        key={lvl}
+                        className={`h-full flex-1 transition-all duration-500 rounded-full ${
+                          strengthScore >= lvl ? strengthColor : 'bg-transparent'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {errors.password && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Confirm Password Field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
+                Verify Secret
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('confirmPassword')}
+                  type={showConfirm ? 'text' : 'password'}
+                  className="form-input pl-11 pr-11"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                >
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary w-full shadow-violet-500/20 active:translate-y-0.5"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm font-bold tracking-widest uppercase">Initializing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-bold tracking-widest uppercase">Deploy Identity</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center mt-8 text-slate-500 text-xs tracking-wide">
+          Already verified?{' '}
+          <Link to="/login" className="text-violet-400 font-bold hover:text-violet-300 transition-colors">
+            SIGN IN
           </Link>
         </p>
-
-      </div>
+      </motion.div>
     </div>
-  )
+  );
 }

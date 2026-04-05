@@ -50,6 +50,18 @@ class UserRepository:
         return result.scalar_one_or_none()
 
 
+    async def update(self, user_id: uuid.UUID, **kwargs) -> User | None:
+        """Update user record. Returns updated User or None if not found."""
+        query = (
+            update(User)
+            .where(User.id == user_id)
+            .values(**kwargs)
+            .returning(User)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
         await self.db.execute(

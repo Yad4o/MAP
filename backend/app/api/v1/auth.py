@@ -84,9 +84,11 @@ async def get_me(
 @router.patch("/me", response_model=UserResponse)
 async def update_me(
     body: UpdateProfileRequest,
+    current_user: UserResponse = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
 ):
-    raise NotImplementedError("Phase 1 — implement this")
+    """Update the authenticated user's profile info (e.g. username)."""
+    return await service.update_me(current_user.id, body)
 
 
 @router.post("/change-password", status_code=204)
