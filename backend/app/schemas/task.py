@@ -57,7 +57,7 @@ class TaskCreateRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=500)
     description: str = Field(..., min_length=10)
     priority: int = Field(default=5, ge=1, le=10)
-    config: dict[str, Any] | None = None    # optional per-task overrides
+    config: dict[str, Any] | None = None
 
 
 class TaskListParams(BaseModel):
