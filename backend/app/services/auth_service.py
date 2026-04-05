@@ -26,9 +26,11 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.repositories.session_repo import SessionRepository
+# SessionRepository was consolidated into user_repo.py to co-locate all user-related data access 
+from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
+from app.core.redis import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +77,13 @@ class AuthService:
         session_repo = SessionRepository(self.db)
         session_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
         raw_refresh_token, refresh_token_hash = generate_refresh_token()
+        access_token, jti, access_expires_at = create_access_token(user.id, user.role)
         session = await session_repo.create(
             user_id=user.id,
             refresh_token_hash=refresh_token_hash,
+            access_jti=jti,
             expires_at=session_expires,
         )
-        access_token, jti, expires_at = create_access_token(user.id, user.role)
-        await session_repo.update_access_jti(session.id, jti)
         await self.user_repo.update_last_login(user.id)
         logger.info("User %s logged in successfully", user.id)
 
@@ -110,11 +112,11 @@ class AuthService:
         session = await session_repo.get_active_by_user(user_id)
         if session:
             await session_repo.revoke(session.id)
-        redis = aioredis.from_url(settings.REDIS_URL, ssl_cert_reqs=None)
-        async with redis:
-            ttl = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
-            key = f"{REDIS_REVOKED_TOKEN_KEY_PREFIX}:{access_jti}"
-            await redis.set(key, "1", ex=ttl)
+            
+        redis = await get_redis()
+        ttl = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        key = f"{REDIS_REVOKED_TOKEN_KEY_PREFIX}:{access_jti}"
+        await redis.setex(key, ttl, "1")
 
         logger.info("User %s logged out", user_id)
 

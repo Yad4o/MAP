@@ -11,7 +11,7 @@ Phase 1 (Member building DB layer): Fill in relationships,
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -50,7 +50,7 @@ class User(Base):
     )
 
     # ── Extensible Metadata ───────────────────────────────────
-    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # ── Relationships ─────────────────────────────────────────
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -71,7 +71,7 @@ class Session(Base):
     )
     refresh_token_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     access_jti: Mapped[str] = mapped_column(String(128), nullable=False)
-    ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45).with_variant(INET, "postgresql"), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
