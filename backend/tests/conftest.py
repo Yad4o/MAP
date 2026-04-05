@@ -1,7 +1,5 @@
-import sys
-import os
-
 import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from httpx import AsyncClient
@@ -9,7 +7,7 @@ from httpx import AsyncClient
 from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
-import app.dependencies as deps
+import app.core.redis as core_redis
 
 class MockRedis:
     def __init__(self):
@@ -63,7 +61,7 @@ async def db_session(engine):
 # 4. client — AsyncClient with get_db overridden to use the test db_session
 #    Use this fixture in any test that calls an API endpoint
 # ---------------------------------------------------------------------------
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function")  # must stay function-scoped — MockRedis is stateful
 async def client(db_session):
     async def override_get_db():
         yield db_session
@@ -71,13 +69,13 @@ async def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     
     mock_redis = MockRedis()
-    deps._redis_client = mock_redis
+    core_redis._redis_client = mock_redis
     
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
         
     app.dependency_overrides.clear()
-    deps._redis_client = None
+    core_redis._redis_client = None
 
 
 # ---------------------------------------------------------------------------

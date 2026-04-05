@@ -80,7 +80,7 @@ async def test_get_me_authenticated(client: AsyncClient, auth_headers: dict):
 async def test_get_me_no_token(client: AsyncClient):
     # Omit the authorization token
     response = await client.get("/api/v1/auth/me")
-    assert response.status_code in (401, 403)
+    assert response.status_code == 401
 
 
 async def test_get_me_invalid_token(client: AsyncClient):

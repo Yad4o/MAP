@@ -1,6 +1,3 @@
-import sys
-import os
-
 """Database connection smoke test script."""
 import asyncio
 import sqlalchemy as sa

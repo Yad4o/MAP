@@ -30,6 +30,7 @@ from app.core.security import (
 from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse
+from app.core.redis import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +113,7 @@ class AuthService:
         if session:
             await session_repo.revoke(session.id)
             
-        from app.dependencies import _get_redis
-        redis = await _get_redis()
+        redis = await get_redis()
         ttl = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
         key = f"{REDIS_REVOKED_TOKEN_KEY_PREFIX}:{access_jti}"
         await redis.setex(key, ttl, "1")
