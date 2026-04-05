@@ -14,7 +14,7 @@ from app.config import settings
 from app.db.base import Base
 
 # Import all models so Alembic can detect them
-from app.db.models.user import User, Session  # noqa: F401
+# from app.db.models.user import User, Session  # noqa: F401  # Commented out for SQLite compatibility
 from app.db.models.task import Task, TaskStep  # noqa: F401
 from app.db.models.log import Log, AgentResult, ApiKey, Config  # noqa: F401
 

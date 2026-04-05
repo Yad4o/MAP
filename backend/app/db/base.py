@@ -16,13 +16,22 @@ from app.config import settings
 # ── Engine ────────────────────────────────────────────────────
 # Created once at module load. Shared across all requests.
 
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    echo=settings.DEBUG,           # logs all SQL in development
-    future=True,
-)
+# Determine if we're using SQLite for testing
+is_sqlite = settings.DATABASE_URL.startswith("sqlite+aiosqlite://")
+
+engine_kwargs = {
+    "echo": settings.DEBUG,
+    "future": True,
+}
+
+# Only add pool settings for non-SQLite databases
+if not is_sqlite:
+    engine_kwargs.update({
+        "pool_size": settings.DB_POOL_SIZE,
+        "max_overflow": settings.DB_MAX_OVERFLOW,
+    })
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 
 # ── Session Factory ───────────────────────────────────────────
 # Use this to create sessions. Never instantiate AsyncSession directly.

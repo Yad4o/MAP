@@ -1,11 +1,13 @@
 import pytest
+import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Text
 from httpx import AsyncClient
 
-from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
+from tests.test_models import TestBase, TestUser
 
 
 # ---------------------------------------------------------------------------
@@ -24,10 +26,10 @@ def test_db_url():
 async def engine(test_db_url):
     engine = create_async_engine(test_db_url, echo=False)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(TestBase.metadata.create_all)
     yield engine
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(TestBase.metadata.drop_all)
     await engine.dispose()
 
 
@@ -88,4 +90,22 @@ def test_user_data():
         "username": "testuser",
         "password": "testpassword123"
     }
+
+
+# ---------------------------------------------------------------------------
+# 7. test_user — creates and returns a test user UUID
+#    Use this fixture in any test that needs a user ID
+# ---------------------------------------------------------------------------
+@pytest.fixture
+async def test_user(db_session):
+    """Create a test user and return their UUID as string."""
+    user = TestUser(
+        email="test@example.com",
+        username="testuser",
+        password_hash="hashed123"
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return str(user.id)
 

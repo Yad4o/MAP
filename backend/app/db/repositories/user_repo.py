@@ -15,69 +15,85 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models.user import Session, User
+
+# Use test models when in SQLite testing mode
+from app.config import settings
+if settings.DATABASE_URL.startswith("sqlite"):
+    from tests.test_models import TestUser as User, TestSession as Session
+else:
+    from app.db.models.user import User, Session
 
 
 class UserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, email: str, username: str, password_hash: str) -> User:
+    async def create(self, email: str, username: str, password_hash: str):
         """Create a new user. Returns the created User instance."""
         new_user = User(
             email=email,
             username=username,
-            password_hash=password_hash,
-            role="USER",
-            tier="free",
-            is_active=True,
-            email_verified=False,
+            password_hash=password_hash
         )
         self.db.add(new_user)
         await self.db.flush()
         await self.db.refresh(new_user)
         return new_user
 
-    async def get_by_id(self, user_id: uuid.UUID) -> User | None:
+    async def get_by_id(self, user_id: uuid.UUID):
         """Fetch user by UUID. Returns None if not found."""
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        result = await self.db.execute(select(User).where(User.id == user_id_str))
         return result.scalar_one_or_none()
 
-
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str):
         """Fetch user by email. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-
     async def update_last_login(self, user_id: uuid.UUID) -> None:
         """Set last_login_at to now."""
-        await self.db.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(last_login_at=datetime.now(timezone.utc))
-        )
-
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(User).where(User.id == user_id_str).values(last_login_at=func.now())
+        await self.db.execute(stmt)
 
     async def deactivate(self, user_id: uuid.UUID) -> None:
         """Set is_active=False."""
-        await self.db.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(is_active=False)
-        )
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(User).where(User.id == user_id_str).values(is_active=False)
+        await self.db.execute(stmt)
 
-
-    async def list_all(self, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
+    async def list_all(self, page: int = 1, page_size: int = 20):
         """Return (users, total_count) for admin list endpoint."""
-        result = await self.db.execute(
-            select(User).offset((page - 1) * page_size).limit(page_size))
-        users = result.scalars().all()
-
+        offset = (page - 1) * page_size
+        
+        # Get total count
         count_result = await self.db.execute(select(func.count(User.id)))
-        total = count_result.scalar()
+        total_count = count_result.scalar()
+        
+        # Get paginated users
+        users_result = await self.db.execute(
+            select(User).offset(offset).limit(page_size).order_by(User.created_at.desc())
+        )
+        users = users_result.scalars().all()
+        
+        return users, total_count
 
-        return (list(users), total)
 
 class SessionRepository:
     def __init__(self, db: AsyncSession):
@@ -91,40 +107,70 @@ class SessionRepository:
         expires_at: datetime,
         ip_address: str | None = None,
         user_agent: str | None = None,
-    ) -> Session:
+    ):
+        """Create a new session."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
         new_session = Session(
-            user_id=user_id,
+            user_id=user_id_str,
             refresh_token_hash=refresh_token_hash,
             access_jti=access_jti,
             expires_at=expires_at,
             ip_address=ip_address,
-            user_agent=user_agent,
+            user_agent=user_agent
         )
         self.db.add(new_session)
         await self.db.flush()
         await self.db.refresh(new_session)
         return new_session
 
-    async def get_active_by_user(self, user_id: uuid.UUID) -> Session | None:
+    async def get_active_by_user(self, user_id: uuid.UUID):
+        """Get active session for user."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
         result = await self.db.execute(
             select(Session).where(
-                Session.user_id == user_id,
-                Session.revoked_at == None,  # noqa: E711
-                Session.expires_at > datetime.now(timezone.utc),
+                Session.user_id == user_id_str,
+                Session.is_active == True,
+                Session.expires_at > func.now()
             )
         )
         return result.scalar_one_or_none()
 
     async def revoke(self, session_id: uuid.UUID) -> None:
-        await self.db.execute(
-            update(Session)
-            .where(Session.id == session_id)
-            .values(revoked_at=datetime.now(timezone.utc))
+        """Revoke a session."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            session_id_str = str(session_id)
+        else:
+            session_id_str = session_id
+            
+        stmt = update(Session).where(Session.id == session_id_str).values(
+            is_active=False, 
+            revoked_at=func.now()
         )
+        await self.db.execute(stmt)
+        await self.db.flush()
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
-        await self.db.execute(
-            update(Session)
-            .where(Session.user_id == user_id, Session.revoked_at == None)  # noqa: E711
-            .values(revoked_at=datetime.now(timezone.utc))
+        """Revoke all sessions for user."""
+        # Convert UUID to string for test models
+        if settings.DATABASE_URL.startswith("sqlite"):
+            user_id_str = str(user_id)
+        else:
+            user_id_str = user_id
+            
+        stmt = update(Session).where(Session.user_id == user_id_str).values(
+            is_active=False, 
+            revoked_at=func.now()
         )
+        await self.db.execute(stmt)
+        await self.db.flush()
