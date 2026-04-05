@@ -28,14 +28,8 @@ class TaskRepository:
 
     async def create(self, user_id: uuid.UUID, data: dict) -> Task:
         """Create a new task. Returns the created Task instance."""
-        # Convert UUID to string for test models
-        if settings.DATABASE_URL.startswith("sqlite"):
-            user_id_str = str(user_id)
-        else:
-            user_id_str = user_id
-            
         new_task = Task(
-            user_id=user_id_str,
+            user_id=user_id,
             title=data["title"],
             description=data.get("description"),
             status="pending"
