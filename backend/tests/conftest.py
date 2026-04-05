@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
-import app.core.redis as core_redis
+from app.core.redis import override_redis_client
 
 class MockRedis:
     def __init__(self):
@@ -69,20 +69,20 @@ async def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     
     mock_redis = MockRedis()
-    core_redis._redis_client = mock_redis
+    override_redis_client(mock_redis)
     
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
         
     app.dependency_overrides.clear()
-    core_redis._redis_client = None
+    override_redis_client(None)
 
 
 # ---------------------------------------------------------------------------
 # 5. auth_headers — registers and logs in a test user, returns Bearer token
 #    Use this fixture in any test that requires authentication
 # ---------------------------------------------------------------------------
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function")
 async def auth_headers(client, test_user_data: dict):
     await client.post("/api/v1/auth/register", json=test_user_data)
     response = await client.post("/api/v1/auth/login", json={
