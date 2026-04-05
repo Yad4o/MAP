@@ -100,7 +100,7 @@ def test_user_data():
 async def test_user(db_session):
     """Create a test user and return their UUID as string."""
     user = TestUser(
-        email="test@example.com",
+        email="test@map.com",
         username="testuser",
         password_hash="hashed123"
     )
