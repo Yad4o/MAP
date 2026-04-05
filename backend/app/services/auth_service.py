@@ -14,7 +14,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
