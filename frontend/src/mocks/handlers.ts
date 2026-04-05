@@ -53,8 +53,8 @@ export const handlers = [
   // Update profile
   http.patch(`${API_BASE}/auth/me`, () => {
     return HttpResponse.json<UserResponse>({
-      id: '1',
-      email: 'user@example.com',
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'test@example.com',
       username: 'updated-user',
       role: 'USER',
       tier: 'free',
