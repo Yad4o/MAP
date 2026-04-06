@@ -116,7 +116,8 @@ def test_user_data():
 @pytest.fixture
 async def test_user(db_session):
     """Create a test user and return their UUID as string."""
-    user = TestUser(
+    from app.db.models import User
+    user = User(
         email="test@map.com",
         username="testuser",
         password_hash="hashed123"
