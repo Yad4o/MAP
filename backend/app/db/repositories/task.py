@@ -8,7 +8,6 @@ TaskStepRepository with: create, get_by_task, delete.
 """
 
 import uuid
-from typing import Any
 
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
