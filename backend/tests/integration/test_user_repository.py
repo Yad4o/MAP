@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.db.repositories.user_repo import UserRepository, SessionRepository
-from tests.test_models import TestUser as User, TestSession as Session
+from app.db.models.user import User, Session
 
 
 @pytest.mark.asyncio

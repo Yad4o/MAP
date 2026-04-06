@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.task import TaskRepository, TaskStepRepository
 
+pytestmark = pytest.mark.asyncio
+
 
 @pytest.fixture
 def task_repo(db_session: AsyncSession) -> TaskRepository:
@@ -23,11 +25,25 @@ def step_repo(db_session: AsyncSession) -> TaskStepRepository:
     return TaskStepRepository(db_session)
 
 
+@pytest.fixture
+async def test_user(db_session: AsyncSession) -> uuid.UUID:
+    """Create a test user and return the ID as UUID."""
+    from app.db.models.user import User
+    user = User(
+        email="test@example.com",
+        username="testuser",
+        password_hash="hashed123"
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user.id
+
+
 class TestTaskRepository:
     """Test suite for TaskRepository methods."""
-    pytestmark = pytest.mark.asyncio
 
-    async def test_create_task(self, task_repo: TaskRepository, test_user: str):
+    async def test_create_task(self, task_repo: TaskRepository, test_user: uuid.UUID):
         """Test creating a new task."""
         task_data = {
             "title": "Test Task",
@@ -154,7 +170,6 @@ class TestTaskRepository:
 
 class TestTaskStepRepository:
     """Test suite for TaskStepRepository methods."""
-    pytestmark = pytest.mark.asyncio
 
     async def test_create_step(self, step_repo: TaskStepRepository, test_user: uuid.UUID):
         """Test creating a new task step."""

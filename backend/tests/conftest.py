@@ -2,12 +2,11 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Text
 from httpx import AsyncClient
 
 from app.main import app
 from app.dependencies import get_db
-from tests.test_models import TestBase, TestUser
+from app.db.base import Base
 from app.core.redis import override_redis_client, set_test_mode
 
 class MockRedis:
@@ -42,10 +41,10 @@ def test_db_url():
 async def engine(test_db_url):
     engine = create_async_engine(test_db_url, echo=False)
     async with engine.begin() as conn:
-        await conn.run_sync(TestBase.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield engine
     async with engine.begin() as conn:
-        await conn.run_sync(TestBase.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 

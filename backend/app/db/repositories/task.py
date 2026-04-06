@@ -10,16 +10,11 @@ TaskStepRepository with: create, get_by_task, delete.
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select, update, delete
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-# Use test models when in SQLite testing mode
-from app.config import settings
-if settings.DATABASE_URL.startswith("sqlite"):
-    from tests.test_models import TestTask as Task, TestTaskStep as TaskStep
-else:
-    from app.db.models.task import Task, TaskStep
+from app.db.models.task import Task, TaskStep
 
 
 class TaskRepository:
@@ -28,14 +23,8 @@ class TaskRepository:
 
     async def create(self, user_id: uuid.UUID, data: dict) -> Task:
         """Create a new task. Returns the created Task instance."""
-        # Convert UUID to string for test models
-        if settings.DATABASE_URL.startswith("sqlite"):
-            user_id_str = str(user_id)
-        else:
-            user_id_str = user_id
-            
         new_task = Task(
-            user_id=user_id_str,
+            user_id=user_id,
             title=data["title"],
             description=data.get("description"),
             status="pending"
@@ -84,18 +73,12 @@ class TaskStepRepository:
 
     async def create(self, task_id: uuid.UUID, data: dict) -> TaskStep:
         """Create a new task step. Returns the created TaskStep instance."""
-        # Convert UUID to string for test models
-        if settings.DATABASE_URL.startswith("sqlite"):
-            task_id_str = str(task_id)
-        else:
-            task_id_str = task_id
-            
         new_step = TaskStep(
-            task_id=task_id_str,
+            task_id=task_id,
             title=data["title"],
             order=data["order"],
-            step_index=data["step_index"],
-            step_type=data["step_type"]
+            step_index=data.get("step_index", 0),
+            step_type=data.get("step_type", "generic")
         )
         self.db.add(new_step)
         await self.db.flush()
@@ -104,25 +87,13 @@ class TaskStepRepository:
 
     async def get_by_task(self, task_id: uuid.UUID) -> list[TaskStep]:
         """Fetch all steps for a task, ordered by order."""
-        # Convert UUID to string for test models
-        if settings.DATABASE_URL.startswith("sqlite"):
-            task_id_str = str(task_id)
-        else:
-            task_id_str = task_id
-            
         result = await self.db.execute(
-            select(TaskStep).where(TaskStep.task_id == task_id_str).order_by(TaskStep.order)
+            select(TaskStep).where(TaskStep.task_id == task_id).order_by(TaskStep.order)
         )
         return result.scalars().all()
 
     async def delete(self, step_id: uuid.UUID) -> bool:
         """Delete task step. Returns True if deleted, False if not found."""
-        # Convert UUID to string for test models
-        if settings.DATABASE_URL.startswith("sqlite"):
-            step_id_str = str(step_id)
-        else:
-            step_id_str = step_id
-            
-        stmt = delete(TaskStep).where(TaskStep.id == step_id_str)
+        stmt = delete(TaskStep).where(TaskStep.id == step_id)
         result = await self.db.execute(stmt)
         return result.rowcount > 0
