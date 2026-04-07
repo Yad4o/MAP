@@ -4,9 +4,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from httpx import AsyncClient
 
-from app.db.base import Base
 from app.main import app
 from app.dependencies import get_db
+from app.db.base import Base
 from app.core.redis import override_redis_client, set_test_mode
 
 class MockRedis:
@@ -107,4 +107,23 @@ def test_user_data():
         "username": "testuser",
         "password": "testpassword123"
     }
+
+
+# ---------------------------------------------------------------------------
+# 7. test_user — creates and returns a test user UUID
+#    Use this fixture in any test that needs a user ID
+# ---------------------------------------------------------------------------
+@pytest.fixture
+async def test_user(db_session):
+    """Create a test user and return their UUID as string."""
+    from app.db.models import User
+    user = User(
+        email="test@map.com",
+        username="testuser",
+        password_hash="hashed123"
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return str(user.id)
 

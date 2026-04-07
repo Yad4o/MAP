@@ -295,7 +295,9 @@ async def test_revoke_session(db_session):
     
     # Fetch session again to check updated value
     # Note: We need to refresh the session object or fetch it again
-    revoked_session = await db_session.get(Session, session.id)
+    from sqlalchemy import select
+    result = await db_session.execute(select(Session).where(Session.id == session.id))
+    revoked_session = result.scalar_one_or_none()
     assert revoked_session is not None
     assert revoked_session.revoked_at is not None
 
@@ -337,8 +339,11 @@ async def test_revoke_all_for_user(db_session):
     await db_session.flush()
     
     # Fetch both sessions again to check they are revoked
-    revoked_session1 = await db_session.get(Session, session1.id)
-    revoked_session2 = await db_session.get(Session, session2.id)
+    from sqlalchemy import select
+    result1 = await db_session.execute(select(Session).where(Session.id == session1.id))
+    revoked_session1 = result1.scalar_one_or_none()
+    result2 = await db_session.execute(select(Session).where(Session.id == session2.id))
+    revoked_session2 = result2.scalar_one_or_none()
     
     assert revoked_session1 is not None
     assert revoked_session1.revoked_at is not None

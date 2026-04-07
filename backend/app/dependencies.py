@@ -51,7 +51,7 @@ def require_role(role: str | list[str]):
     roles = [role] if isinstance(role, str) else role
 
 
-    async def check_role(current_user: User = Depends(get_current_user)) -> User:
+    async def check_role(current_user: User = Depends(get_current_user)):
         if current_user.role not in roles:
             raise HTTPException(status_code=403, detail=f"Access denied. Required role(s): {roles}")
         return current_user

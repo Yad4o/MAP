@@ -11,8 +11,8 @@ Phase 2 (Member building DB layer): Add foreign keys,
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, SmallInteger, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, SmallInteger, Float, JSON
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -28,38 +28,40 @@ class Task(Base):
 
     # ── Ownership ─────────────────────────────────────────────
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
-        # TODO Phase 2: ForeignKey("users.id")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # ── Task Definition ───────────────────────────────────────
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    
+    # ── Execution Configuration ────────────────────────────────
     task_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     priority: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=5)
-
-    # ── Lifecycle ─────────────────────────────────────────────
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING", index=True)
     retry_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-    # ── Configuration & Results ───────────────────────────────
-    config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    error: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    config: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    error: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     estimated_duration_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
-    # ── Timestamps ────────────────────────────────────────────
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
-    )
+    
+    # ── Execution Timestamps ───────────────────────────────────
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # ── Timestamps ────────────────────────────────────────────
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+        onupdate=func.now(), nullable=False
+    )
+
     # ── Relationships ─────────────────────────────────────────
-    # TODO Phase 2: uncomment after models exist
-    # steps = relationship("TaskStep", back_populates="task", cascade="all, delete-orphan", order_by="TaskStep.step_index")
-    # user = relationship("User", back_populates="tasks")
+    steps: Mapped[list["TaskStep"]] = relationship("TaskStep", back_populates="task", cascade="all, delete-orphan")
+    user: Mapped["User"] = relationship("User", back_populates="tasks")
 
     def __repr__(self) -> str:
         return f"<Task id={self.id} status={self.status} title={self.title[:30]}>"
@@ -68,33 +70,42 @@ class Task(Base):
 class TaskStep(Base):
     __tablename__ = "task_steps"
 
+    # ── Primary Key ───────────────────────────────────────────
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+
+    # ── Foreign Key ────────────────────────────────────────────
     task_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
-        # TODO Phase 2: ForeignKey("tasks.id", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    step_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+    # ── Step Definition ───────────────────────────────────────
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # ── Agent Execution Fields ─────────────────────────────────
+    step_index: Mapped[int] = mapped_column(Integer, nullable=False)
     step_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    agent_name: Mapped[str] = mapped_column(String(50), nullable=False)
-
-    input_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    output_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    input_payload: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    output_payload: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)
     tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    confidence: Mapped[float | None] = mapped_column(nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    error: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
-    error: Mapped[str | None] = mapped_column(Text, nullable=True)
-
+    # ── Timestamps ────────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # ── Relationships ─────────────────────────────────────────
+    task: Mapped["Task"] = relationship("Task", back_populates="steps")
 
     def __repr__(self) -> str:
-        return f"<TaskStep task_id={self.task_id} index={self.step_index} agent={self.agent_name}>"
+        return f"<TaskStep task_id={self.task_id} order={self.order} title={self.title[:30]}>"
