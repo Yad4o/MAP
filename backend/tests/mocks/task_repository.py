@@ -65,6 +65,9 @@ class MockTaskRepository(TaskRepositoryProtocol):
 
         # Convert TaskUpdate data to dict and update
         update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
+        # Ensure status is stored as string for consistency with TaskRead schema
+        if 'status' in update_data and hasattr(update_data['status'], 'value'):
+            update_data['status'] = update_data['status'].value
         self._tasks[task_id].update(update_data)
         return self._tasks[task_id].copy()
 
@@ -79,6 +82,9 @@ class MockTaskRepository(TaskRepositoryProtocol):
 
         # Convert TaskUpdate data to dict and update
         update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
+        # Ensure status is stored as string for consistency with TaskRead schema
+        if 'status' in update_data and hasattr(update_data['status'], 'value'):
+            update_data['status'] = update_data['status'].value
         self._tasks[task_id].update(update_data)
         return self._tasks[task_id].copy()
 

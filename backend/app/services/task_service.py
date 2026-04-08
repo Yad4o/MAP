@@ -32,8 +32,8 @@ class TaskService:
         if not task:
             raise TaskNotFoundError(task_id)
         
-        # Handle both dict and object responses
-        task_user_id = task.user_id if hasattr(task, 'user_id') else task['user_id']
+        # Use consistent dictionary access for all repo responses
+        task_user_id = task['user_id'] if isinstance(task, dict) else task.user_id
         if task_user_id != user_id:
             raise TaskOwnershipError()
         
