@@ -65,7 +65,6 @@ class TaskUpdateRequest(BaseModel):
     description: str | None = None
     priority: int | None = Field(None, ge=1, le=10)
     config: dict[str, Any] | None = None
-    status: TaskStatus | None = None
 
 
 class TaskListParams(BaseModel):

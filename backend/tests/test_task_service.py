@@ -9,6 +9,7 @@ and error handling using HTTPException.
 
 import pytest
 import uuid
+from typing import Any
 
 from app.services.task_service import TaskService
 from tests.mocks.task_repository import MockTaskRepository
@@ -110,12 +111,28 @@ class TestTaskService:
         assert user2_tasks[0].user_id == user2_id
 
     @pytest.mark.asyncio
-    async def test_update_task_changes_status(self, task_service, mock_repo, sample_task_data, sample_update_data):
-        """Test that update_task successfully changes task status."""
+    async def test_update_task_changes_status(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task successfully changes status via internal method."""
         # Arrange
         user_id = uuid.uuid4()
         created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
         assert created_task.status == "PENDING"
+        
+        # Act - use internal status update method
+        updated_task = await task_service.update_task_status(
+            None, task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED
+        )
+        
+        # Assert
+        assert updated_task.status == TaskStatus.COMPLETED
+        assert updated_task.id == created_task.id
+
+    @pytest.mark.asyncio
+    async def test_update_task_changes_title(self, task_service, mock_repo, sample_task_data, sample_update_data):
+        """Test that update_task successfully changes title."""
+        # Arrange
+        user_id = uuid.uuid4()
+        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
         
         # Act
         updated_task = await task_service.update_task(
@@ -123,7 +140,6 @@ class TestTaskService:
         )
         
         # Assert
-        assert updated_task.status == TaskStatus.COMPLETED
         assert updated_task.title == "Updated Task Title"
         assert updated_task.id == created_task.id
 
@@ -143,22 +159,19 @@ class TestTaskService:
 
     @pytest.mark.asyncio
     async def test_update_task_raises_transition_error_from_completed_state(self, task_service, mock_repo, sample_task_data):
-        """Test that update_task raises TaskStateTransitionError when trying to update a completed task."""
+        """Test that update_task_status raises TaskStateTransitionError when trying to update a completed task."""
         # Arrange
         user_id = uuid.uuid4()
         created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
         
-        # First update task to COMPLETED state
-        update_to_completed = TaskUpdateRequest(status=TaskStatus.COMPLETED)
-        await task_service.update_task(None, task_id=created_task.id, user_id=user_id, data=update_to_completed)
+        # First update task to COMPLETED state using internal method
+        await task_service.update_task_status(None, task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED)
         
         # Try to update completed task back to PENDING
-        update_to_pending = TaskUpdateRequest(status=TaskStatus.PENDING)
-        
         # Act & Assert
         with pytest.raises(TaskStateTransitionError) as exc_info:
-            await task_service.update_task(
-                None, task_id=created_task.id, user_id=user_id, data=update_to_pending
+            await task_service.update_task_status(
+                None, task_id=created_task.id, user_id=user_id, status=TaskStatus.PENDING
             )
         
         assert exc_info.value.current_status == TaskStatus.COMPLETED

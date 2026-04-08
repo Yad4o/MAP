@@ -130,20 +130,20 @@ class TestTaskServiceIntegration:
         assert user2_tasks[0].user_id == user2_id
 
     @pytest.mark.asyncio
-    async def test_update_task_with_real_db(self, task_service_with_real_repo, db_session, sample_task_data, sample_update_data):
-        """Test that update_task works with real database."""
+    async def test_update_task_with_real_db(self, task_service_with_real_repo, db_session, sample_task_data):
+        """Test that update_task works with real database (non-status fields only)."""
         # Arrange
         user_id = uuid.uuid4()
         created_task = await task_service_with_real_repo.create_task(db_session, user_id=user_id, data=sample_task_data)
-        assert created_task.status == "PENDING"
         
-        # Act
+        # Act - update only title (status not allowed via API)
+        update_data = {"title": "Updated Integration Task"}
         updated_task = await task_service_with_real_repo.update_task(
-            db_session, task_id=created_task.id, user_id=user_id, data=sample_update_data
+            db_session, task_id=created_task.id, user_id=user_id, data=TaskUpdateRequest(**update_data)
         )
         
         # Assert
-        assert updated_task.status == TaskStatus.COMPLETED
+        assert updated_task.status == TaskStatus.PENDING  # Status unchanged
         assert updated_task.title == "Updated Integration Task"
         assert updated_task.id == created_task.id
 

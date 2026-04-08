@@ -45,21 +45,13 @@ class TaskService:
         return [TaskRead.model_validate(task) for task in tasks]
 
     async def update_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
-        """Update a task with atomic ownership validation and state transition guards."""
+        """Update a task with atomic ownership validation (only non-status fields)."""
         # First check if task exists to distinguish between not found and ownership errors
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
         
-        # Get current status for transition validation
-        current_status = existing_task['status'] if isinstance(existing_task, dict) else existing_task.status
-        
-        # Validate status transitions - prevent reverting from terminal states
-        TERMINAL_STATES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
-        if data.status is not None and current_status in TERMINAL_STATES:
-            raise TaskStateTransitionError(current_status, data.status)
-        
-        # Update with atomic ownership check
+        # Update with atomic ownership check (status updates not allowed via API)
         updated_task = await self.repo.update_owned(db, task_id, user_id, data)
         if not updated_task:
             # Task exists but user doesn't own it
@@ -79,3 +71,28 @@ class TaskService:
             # Task exists but user doesn't own it
             raise TaskOwnershipError()
         return True
+
+    async def update_task_status(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, status: TaskStatus) -> TaskRead:
+        """Internal method for updating task status (used by workers, not API)."""
+        # First check if task exists and user owns it
+        existing_task = await self.repo.get(db, task_id)
+        if not existing_task:
+            raise TaskNotFoundError(task_id)
+        
+        # Check ownership
+        task_user_id = existing_task['user_id'] if isinstance(existing_task, dict) else existing_task.user_id
+        if task_user_id != user_id:
+            raise TaskOwnershipError()
+        
+        # Validate status transitions
+        current_status = existing_task['status'] if isinstance(existing_task, dict) else existing_task.status
+        TERMINAL_STATES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
+        if current_status in TERMINAL_STATES:
+            raise TaskStateTransitionError(current_status, status)
+        
+        # Update status atomically
+        update_data = {"status": status}
+        updated_task = await self.repo.update_owned(db, task_id, user_id, update_data)
+        if not updated_task:
+            raise TaskOwnershipError()
+        return TaskRead.model_validate(updated_task)

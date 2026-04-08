@@ -11,6 +11,7 @@ must implement, enabling easy mocking and swapping of implementations.
 
 from typing import Any, Protocol
 import uuid
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
 
 
 class TaskRepositoryProtocol(Protocol):
@@ -29,13 +30,14 @@ class TaskRepositoryProtocol(Protocol):
         - Return types should match the underlying storage (ORM objects or dicts)
     """
 
-    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Any:
+    async def create(self, db: Any, user_id: uuid.UUID, data: TaskCreateRequest) -> Any:
         """
         Create a new task.
         
         Args:
             db: AsyncSession for real repos, None for mock repos (tests only)
             user_id: UUID of the user creating the task
+            data: Task creation data (TaskCreateRequest)
             data: Task creation data (TaskCreateRequest or similar)
         
         Returns:
@@ -69,7 +71,7 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Any | None:
+    async def update(self, db: Any, task_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
         """
         Update a task.
         
