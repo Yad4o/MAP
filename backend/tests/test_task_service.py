@@ -115,7 +115,7 @@ class TestTaskService:
         # Arrange
         user_id = uuid.uuid4()
         created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
-        assert created_task.status == "PENDING"
+        assert created_task.status == TaskStatus.PENDING
         
         # Act - use internal status update method
         updated_task = await task_service.update_task_status(
