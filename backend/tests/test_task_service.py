@@ -13,7 +13,7 @@ import uuid
 from app.services.task_service import TaskService
 from tests.mocks.task_repository import MockTaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskRead
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
 
 @pytest.fixture
@@ -140,6 +140,29 @@ class TestTaskService:
             await task_service.update_task(
                 None, task_id=created_task.id, user_id=user2_id, data=sample_update_data
             )
+
+    @pytest.mark.asyncio
+    async def test_update_task_raises_transition_error_from_completed_state(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task raises TaskStateTransitionError when trying to update a completed task."""
+        # Arrange
+        user_id = uuid.uuid4()
+        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        
+        # First update task to COMPLETED state
+        update_to_completed = TaskUpdateRequest(status=TaskStatus.COMPLETED)
+        await task_service.update_task(None, task_id=created_task.id, user_id=user_id, data=update_to_completed)
+        
+        # Try to update completed task back to PENDING
+        update_to_pending = TaskUpdateRequest(status=TaskStatus.PENDING)
+        
+        # Act & Assert
+        with pytest.raises(TaskStateTransitionError) as exc_info:
+            await task_service.update_task(
+                None, task_id=created_task.id, user_id=user_id, data=update_to_pending
+            )
+        
+        assert exc_info.value.current_status == TaskStatus.COMPLETED
+        assert exc_info.value.new_status == TaskStatus.PENDING
 
     @pytest.mark.asyncio
     async def test_delete_task_returns_true(self, task_service, mock_repo, sample_task_data):

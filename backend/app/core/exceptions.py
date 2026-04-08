@@ -27,3 +27,12 @@ class TaskOwnershipError(Exception):
     
     def __init__(self):
         super().__init__("User does not have permission to access this task")
+
+
+class TaskStateTransitionError(Exception):
+    """Raised when an invalid task status transition is attempted."""
+    
+    def __init__(self, current_status, new_status):
+        super().__init__(f"Invalid task state transition: {current_status} -> {new_status}")
+        self.current_status = current_status
+        self.new_status = new_status

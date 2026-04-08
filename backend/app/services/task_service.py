@@ -11,8 +11,8 @@ from typing import Any, List
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
-from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
 
 class TaskService:
@@ -45,11 +45,19 @@ class TaskService:
         return [TaskRead.model_validate(task) for task in tasks]
 
     async def update_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
-        """Update a task with atomic ownership validation."""
+        """Update a task with atomic ownership validation and state transition guards."""
         # First check if task exists to distinguish between not found and ownership errors
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
+        
+        # Get current status for transition validation
+        current_status = existing_task['status'] if isinstance(existing_task, dict) else existing_task.status
+        
+        # Validate status transitions - prevent reverting from terminal states
+        TERMINAL_STATES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
+        if data.status is not None and current_status in TERMINAL_STATES:
+            raise TaskStateTransitionError(current_status, data.status)
         
         # Update with atomic ownership check
         updated_task = await self.repo.update_owned(db, task_id, user_id, data)

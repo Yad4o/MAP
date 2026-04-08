@@ -13,7 +13,7 @@ import uuid
 from app.services.task_service import TaskService
 from app.db.repositories.task import TaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
 
 @pytest.fixture
