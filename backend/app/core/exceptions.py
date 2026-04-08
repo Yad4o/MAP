@@ -1,4 +1,5 @@
-# app/core/exceptions.py
+"""
+app/core/exceptions.py
 --------------------
 Domain-specific exceptions for the application.
 
@@ -7,6 +8,7 @@ to HTTP responses in the router layer.
 """
 
 import uuid
+
 
 class EmailAlreadyRegistered(Exception):
     def __init__(self, email: str):
