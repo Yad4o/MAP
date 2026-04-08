@@ -125,5 +125,5 @@ async def test_user(db_session):
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)
-    return str(user.id)
+    return user.id
 
