@@ -11,8 +11,8 @@ Phase 2 (Member building DB layer): Add foreign keys,
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, SmallInteger, Float, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, SmallInteger, Float, JSON, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,12 +23,12 @@ class Task(Base):
 
     # ── Primary Key ───────────────────────────────────────────
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
     # ── Ownership ─────────────────────────────────────────────
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # ── Task Definition ───────────────────────────────────────
@@ -72,12 +72,12 @@ class TaskStep(Base):
 
     # ── Primary Key ───────────────────────────────────────────
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
     # ── Foreign Key ────────────────────────────────────────────
     task_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # ── Step Definition ───────────────────────────────────────
@@ -87,7 +87,8 @@ class TaskStep(Base):
     # ── Agent Execution Fields ─────────────────────────────────
     step_index: Mapped[int] = mapped_column(Integer, nullable=False)
     step_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    agent_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    # nullable — agent may not be assigned at step creation time
+    agent_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     input_payload: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     output_payload: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)

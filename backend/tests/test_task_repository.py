@@ -95,8 +95,10 @@ class TestTaskRepository:
         print(f"Created times: {[task.created_at for task in all_tasks]}")
         
         task_titles = [task.title for task in all_tasks]
-        # For now, just check that we have all tasks, regardless of order
         assert set(task_titles) == {"Task 1", "Task 2", "Task 3"}
+        # verify descending order by created_at
+        for i in range(len(all_tasks) - 1):
+            assert all_tasks[i].created_at >= all_tasks[i + 1].created_at
 
     async def test_get_all_tasks_for_user_with_no_tasks(self, task_repo: TaskRepository, test_user: uuid.UUID):
         """Test retrieving tasks for user with no tasks."""
