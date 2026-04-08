@@ -20,12 +20,24 @@ from app.db.models.task import Task, TaskStep
 class TaskRepository:
     async def create(self, db: AsyncSession, user_id: uuid.UUID, data: Any) -> Task:
         """Create a new task. Returns the created Task instance."""
+        # Handle both dict and object data
+        if isinstance(data, dict):
+            title = data.get("title")
+            description = data.get("description")
+            priority = data.get("priority")
+            config = data.get("config")
+        else:
+            title = data.title
+            description = data.description
+            priority = data.priority
+            config = data.config
+            
         new_task = Task(
             user_id=user_id,
-            title=data.title,
-            description=data.description,
-            priority=data.priority,
-            config=data.config,
+            title=title,
+            description=description,
+            priority=priority,
+            config=config,
             status="PENDING"
         )
         db.add(new_task)
