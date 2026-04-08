@@ -3,7 +3,9 @@ db/repositories/protocols.py
 ---------------------------
 Repository protocols for dependency injection and testing.
 
-TaskRepositoryProtocol defines the interface that any task repository
+Task Repositories protocols for task management.
+
+This module defines the interfaces that all task repositories
 must implement, enabling easy mocking and swapping of implementations.
 """
 
@@ -12,32 +14,113 @@ import uuid
 
 
 class TaskRepositoryProtocol(Protocol):
-    """Protocol defining the interface for task repositories."""
+    """
+    Protocol defining the interface for task repositories.
+    
+    Note on Database Parameter:
+        - `db` must be a valid AsyncSession in production code
+        - `db=None` is only supported by MockTaskRepository for unit testing
+        - Real repository implementations (SQLAlchemy) must handle None gracefully
+          or tests must provide a real AsyncSession instance
+    
+    Note on ID Types:
+        - All task_id parameters expect uuid.UUID type
+        - User ID parameters expect uuid.UUID type  
+        - Return types should match the underlying storage (ORM objects or dicts)
+    """
 
     async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Any:
-        """Create a new task."""
+        """
+        Create a new task.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            user_id: UUID of the user creating the task
+            data: Task creation data (TaskCreateRequest or similar)
+        
+        Returns:
+            Created task (ORM object or dict representation)
+        """
         ...
 
     async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:
-        """Get a task by ID."""
+        """
+        Get a task by ID.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the task to retrieve
+        
+        Returns:
+            Task if found, None otherwise (ORM object or dict)
+        """
         ...
 
     async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> list:
-        """Get all tasks for a user."""
+        """
+        Get all tasks for a user.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            user_id: UUID of the user to fetch tasks for
+        
+        Returns:
+            List of tasks (ORM objects or dict representations)
+        """
         ...
 
     async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Any | None:
-        """Update a task."""
+        """
+        Update a task.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the task to update
+            data: Task update data (TaskUpdateRequest or similar)
+        
+        Returns:
+            Updated task if found, None otherwise (ORM object or dict)
+        """
         ...
 
     async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
-        """Update a task with ownership check atomically."""
+        """
+        Update a task with ownership check atomically.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the task to update
+            user_id: UUID of the user who must own the task
+            data: Task update data (TaskUpdateRequest or similar)
+        
+        Returns:
+            Updated task if found and owned, None otherwise (ORM object or dict)
+        """
         ...
 
     async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
-        """Delete a task."""
+        """
+        Delete a task.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the task to delete
+        
+        Returns:
+            True if deleted, False if not found
+        """
         ...
 
     async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        """Delete a task with ownership check atomically."""
+        """
+        Delete a task with ownership check atomically.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the task to delete
+            user_id: UUID of the user who must own the task
+        
+        Returns:
+            True if deleted, False if not found or not owned
+        """
         ...
