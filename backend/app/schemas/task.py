@@ -98,7 +98,7 @@ class TaskStepResponse(BaseModel):
 class TaskRead(BaseModel):
     """Task schema for service layer - includes user_id for ownership validation."""
     id: UUID
-    user_id: int
+    user_id: UUID
     title: str
     description: str
     status: TaskStatus
@@ -111,6 +111,8 @@ class TaskRead(BaseModel):
     completed_at: datetime | None
     result: dict[str, Any] | None
     error: dict[str, Any] | None
+
+    model_config = {"from_attributes": True}
 
 
 class TaskResponse(BaseModel):

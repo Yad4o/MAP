@@ -21,12 +21,12 @@ class TaskService:
     def __init__(self, repo: TaskRepositoryProtocol):
         self.repo = repo
 
-    async def create_task(self, db: Any, user_id: int, data: TaskCreateRequest) -> TaskRead:
+    async def create_task(self, db: Any, user_id: uuid.UUID, data: TaskCreateRequest) -> TaskRead:
         """Create a new task for a user."""
-        task_dict = await self.repo.create(db, user_id, data)
-        return TaskRead(**task_dict)
+        task = await self.repo.create(db, user_id, data)
+        return TaskRead.model_validate(task)
 
-    async def get_task(self, db: Any, task_id: uuid.UUID, user_id: int) -> TaskRead:
+    async def get_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskRead:
         """Get a task by ID, validating ownership."""
         task = await self.repo.get(db, task_id)
         if not task:
@@ -34,23 +34,35 @@ class TaskService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
-        if task["user_id"] != user_id:
+        
+        # Handle both dict and object responses
+        task_user_id = task.user_id if hasattr(task, 'user_id') else task['user_id']
+        if task_user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
-        return TaskRead(**task)
+        
+        return TaskRead.model_validate(task)
 
-    async def list_tasks(self, db: Any, user_id: int) -> List[TaskRead]:
+    async def list_tasks(self, db: Any, user_id: uuid.UUID) -> List[TaskRead]:
         """List all tasks for a user."""
         tasks = await self.repo.get_all_by_user(db, user_id)
-        return [TaskRead(**task) for task in tasks]
+        return [TaskRead.model_validate(task) for task in tasks]
 
-    async def update_task(self, db: Any, task_id: uuid.UUID, user_id: int, data: TaskUpdateRequest) -> TaskRead:
+    async def update_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
         """Update a task, validating ownership."""
         # First check if task exists and belongs to user
         existing_task = await self.repo.get(db, task_id)
-        if not existing_task or existing_task["user_id"] != user_id:
+        if not existing_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+        
+        # Handle both dict and object responses
+        task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
+        if task_user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
@@ -63,13 +75,21 @@ class TaskService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
-        return TaskRead(**updated_task)
+        return TaskRead.model_validate(updated_task)
 
-    async def delete_task(self, db: Any, task_id: uuid.UUID, user_id: int) -> bool:
+    async def delete_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a task, validating ownership."""
         # First check if task exists and belongs to user
         existing_task = await self.repo.get(db, task_id)
-        if not existing_task or existing_task["user_id"] != user_id:
+        if not existing_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+        
+        # Handle both dict and object responses
+        task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
+        if task_user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"

@@ -21,7 +21,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         # In-memory storage: {task_id: task_data}
         self._tasks: Dict[uuid.UUID, Dict[str, Any]] = {}
 
-    async def create(self, db: Any, user_id: int, data: Any) -> Dict[str, Any]:
+    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Dict[str, Any]:
         """Create a new task with UUID ID."""
         task_id = uuid.uuid4()
 
@@ -50,7 +50,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         """Get a task by ID, returns None if not found."""
         return self._tasks.get(task_id, None)
 
-    async def get_all_by_user(self, db: Any, user_id: int) -> List[Dict[str, Any]]:
+    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> List[Dict[str, Any]]:
         """Get all tasks for a specific user."""
         return [
             task.copy() 

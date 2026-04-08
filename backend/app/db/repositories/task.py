@@ -8,6 +8,7 @@ TaskStepRepository with: create, get_by_task, delete.
 """
 
 import uuid
+from typing import Any
 
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,49 +21,52 @@ class TaskRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, user_id: uuid.UUID, data: dict) -> Task:
+    async def create(self, db: AsyncSession, user_id: uuid.UUID, data: Any) -> Task:
         """Create a new task. Returns the created Task instance."""
         new_task = Task(
             user_id=user_id,
-            title=data["title"],
-            description=data.get("description"),
-            status="pending"
+            title=data.title,
+            description=data.description,
+            priority=data.priority,
+            config=data.config,
+            status="PENDING"
         )
-        self.db.add(new_task)
-        await self.db.flush()
-        await self.db.refresh(new_task)
+        db.add(new_task)
+        await db.flush()
+        await db.refresh(new_task)
         return new_task
 
-    async def get(self, task_id: uuid.UUID) -> Task | None:
+    async def get(self, db: AsyncSession, task_id: uuid.UUID) -> Task | None:
         """Fetch task by UUID. Returns None if not found."""
-        result = await self.db.execute(
+        result = await db.execute(
             select(Task).where(Task.id == task_id).options(selectinload(Task.steps))
         )
         return result.scalar_one_or_none()
 
-    async def get_all_by_user(self, user_id: uuid.UUID) -> list[Task]:
+    async def get_all_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> list[Task]:
         """Fetch all tasks for a user."""
-        result = await self.db.execute(
+        result = await db.execute(
             select(Task).where(Task.user_id == user_id).order_by(Task.created_at.desc())
         )
         return result.scalars().all()
 
-    async def update(self, task_id: uuid.UUID, data: dict) -> Task | None:
+    async def update(self, db: AsyncSession, task_id: uuid.UUID, data: Any) -> Task | None:
         """Update task. Returns updated Task or None if not found."""
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
         stmt = (
             update(Task)
             .where(Task.id == task_id)
-            .values(**data)
+            .values(**update_data)
             .returning(Task)
         )
-        result = await self.db.execute(stmt)
-        await self.db.flush()
+        result = await db.execute(stmt)
+        await db.flush()
         return result.scalar_one_or_none()
 
-    async def delete(self, task_id: uuid.UUID) -> bool:
+    async def delete(self, db: AsyncSession, task_id: uuid.UUID) -> bool:
         """Delete task. Returns True if deleted, False if not found."""
         stmt = delete(Task).where(Task.id == task_id)
-        result = await self.db.execute(stmt)
+        result = await db.execute(stmt)
         return result.rowcount > 0
 
 

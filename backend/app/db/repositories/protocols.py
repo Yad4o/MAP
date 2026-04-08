@@ -14,7 +14,7 @@ import uuid
 class TaskRepositoryProtocol(Protocol):
     """Protocol defining the interface for task repositories."""
 
-    async def create(self, db: Any, user_id: int, data: Any) -> Any:
+    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Any:
         """Create a new task."""
         ...
 
@@ -22,7 +22,7 @@ class TaskRepositoryProtocol(Protocol):
         """Get a task by ID."""
         ...
 
-    async def get_all_by_user(self, db: Any, user_id: int) -> list:
+    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> list:
         """Get all tasks for a user."""
         ...
 
