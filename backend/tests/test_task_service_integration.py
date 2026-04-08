@@ -8,12 +8,12 @@ when switching from MockTaskRepository to the real implementation.
 """
 
 import pytest
-from fastapi import HTTPException, status
 import uuid
 
 from app.services.task_service import TaskService
 from app.db.repositories.task import TaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 
 
 @pytest.fixture
@@ -85,19 +85,16 @@ class TestTaskServiceIntegration:
         assert retrieved_task.user_id == user_id
 
     @pytest.mark.asyncio
-    async def test_get_task_raises_404_for_wrong_user_real_db(self, task_service_with_real_repo, db_session, sample_task_data):
-        """Test that get_task raises 404 for wrong user with real database."""
+    async def test_get_task_raises_ownership_error_for_wrong_user_real_db(self, task_service_with_real_repo, db_session, sample_task_data):
+        """Test that get_task raises TaskOwnershipError for wrong user with real database."""
         # Arrange
         user1_id = uuid.uuid4()
         user2_id = uuid.uuid4()
         created_task = await task_service_with_real_repo.create_task(db_session, user_id=user1_id, data=sample_task_data)
         
         # Act & Assert
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(TaskOwnershipError):
             await task_service_with_real_repo.get_task(db_session, task_id=created_task.id, user_id=user2_id)
-        
-        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-        assert exc_info.value.detail == "Task not found"
 
     @pytest.mark.asyncio
     async def test_list_tasks_with_real_db(self, task_service_with_real_repo, db_session, sample_task_data):
@@ -151,16 +148,13 @@ class TestTaskServiceIntegration:
         assert result is True
         
         # Verify task is actually deleted
-        with pytest.raises(HTTPException):
+        with pytest.raises(TaskNotFoundError):
             await task_service_with_real_repo.get_task(db_session, task_id=created_task.id, user_id=user_id)
 
     @pytest.mark.asyncio
-    async def test_delete_task_raises_404_for_nonexistent_real_db(self, task_service_with_real_repo, db_session):
-        """Test that delete_task raises 404 for nonexistent task with real database."""
+    async def test_delete_task_raises_not_found_for_nonexistent_real_db(self, task_service_with_real_repo, db_session):
+        """Test that delete_task raises TaskNotFoundError for nonexistent task with real database."""
         fake_uuid = uuid.uuid4()
         fake_user_id = uuid.uuid4()
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(TaskNotFoundError):
             await task_service_with_real_repo.delete_task(db_session, task_id=fake_uuid, user_id=fake_user_id)
-        
-        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-        assert exc_info.value.detail == "Task not found"

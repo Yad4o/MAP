@@ -8,11 +8,11 @@ making it easy to test with mock repositories.
 """
 
 from typing import Any, List
-from fastapi import HTTPException, status
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
 from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 
 
 class TaskService:
@@ -30,18 +30,12 @@ class TaskService:
         """Get a task by ID, validating ownership."""
         task = await self.repo.get(db, task_id)
         if not task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskNotFoundError(task_id)
         
         # Handle both dict and object responses
         task_user_id = task.user_id if hasattr(task, 'user_id') else task['user_id']
         if task_user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskOwnershipError()
         
         return TaskRead.model_validate(task)
 
@@ -55,26 +49,17 @@ class TaskService:
         # First check if task exists and belongs to user
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskNotFoundError(task_id)
         
         # Handle both dict and object responses
         task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
         if task_user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskOwnershipError()
         
         # Update the task
         updated_task = await self.repo.update(db, task_id, data)
         if not updated_task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskNotFoundError(task_id)
         return TaskRead.model_validate(updated_task)
 
     async def delete_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
@@ -82,17 +67,11 @@ class TaskService:
         # First check if task exists and belongs to user
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskNotFoundError(task_id)
         
         # Handle both dict and object responses
         task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
         if task_user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task not found"
-            )
+            raise TaskOwnershipError()
         
         return await self.repo.delete(db, task_id)
