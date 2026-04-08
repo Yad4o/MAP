@@ -18,9 +18,6 @@ from app.db.models.task import Task, TaskStep
 
 
 class TaskRepository:
-    def __init__(self, db: AsyncSession):
-        self.db = db
-
     async def create(self, db: AsyncSession, user_id: uuid.UUID, data: Any) -> Task:
         """Create a new task. Returns the created Task instance."""
         new_task = Task(

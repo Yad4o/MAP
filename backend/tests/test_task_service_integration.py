@@ -17,9 +17,9 @@ from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 
 
 @pytest.fixture
-def real_task_repo(db_session):
-    """Fixture providing a real TaskRepository with test database."""
-    return TaskRepository(db_session)
+def real_task_repo():
+    """Fixture providing a real TaskRepository."""
+    return TaskRepository()
 
 
 @pytest.fixture
