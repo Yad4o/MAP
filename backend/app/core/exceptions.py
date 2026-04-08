@@ -1,3 +1,15 @@
+"""
+app/core/exceptions.py
+--------------------
+Domain-specific exceptions for the application.
+
+These exceptions are used by service layers and should be translated
+to HTTP responses in the router layer.
+"""
+
+import uuid
+
+
 class EmailAlreadyRegistered(Exception):
     def __init__(self, email: str):
         self.email = email
@@ -13,3 +25,26 @@ class UserNotFound(Exception):
 class InvalidCredentials(Exception):
     def __init__(self):
         super().__init__("Invalid email or password")
+
+
+class TaskNotFoundError(Exception):
+    """Raised when a task is not found."""
+    
+    def __init__(self, task_id: uuid.UUID):
+        super().__init__(f"Task {task_id} not found")
+
+
+class TaskOwnershipError(Exception):
+    """Raised when a user tries to access a task they don't own."""
+    
+    def __init__(self):
+        super().__init__("User does not have permission to access this task")
+
+
+class TaskStateTransitionError(Exception):
+    """Raised when an invalid task status transition is attempted."""
+    
+    def __init__(self, current_status, new_status):
+        super().__init__(f"Invalid task state transition: {current_status} -> {new_status}")
+        self.current_status = current_status
+        self.new_status = new_status
