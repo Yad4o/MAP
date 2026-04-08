@@ -45,33 +45,29 @@ class TaskService:
         return [TaskRead.model_validate(task) for task in tasks]
 
     async def update_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
-        """Update a task, validating ownership."""
-        # First check if task exists and belongs to user
+        """Update a task with atomic ownership validation."""
+        # First check if task exists to distinguish between not found and ownership errors
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
         
-        # Handle both dict and object responses
-        task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
-        if task_user_id != user_id:
-            raise TaskOwnershipError()
-        
-        # Update the task
-        updated_task = await self.repo.update(db, task_id, data)
+        # Update with atomic ownership check
+        updated_task = await self.repo.update_owned(db, task_id, user_id, data)
         if not updated_task:
-            raise TaskNotFoundError(task_id)
+            # Task exists but user doesn't own it
+            raise TaskOwnershipError()
         return TaskRead.model_validate(updated_task)
 
     async def delete_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
-        """Delete a task, validating ownership."""
-        # First check if task exists and belongs to user
+        """Delete a task with atomic ownership validation."""
+        # First check if task exists to distinguish between not found and ownership errors
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
         
-        # Handle both dict and object responses
-        task_user_id = existing_task.user_id if hasattr(existing_task, 'user_id') else existing_task['user_id']
-        if task_user_id != user_id:
+        # Delete with atomic ownership check
+        deleted = await self.repo.delete_owned(db, task_id, user_id)
+        if not deleted:
+            # Task exists but user doesn't own it
             raise TaskOwnershipError()
-        
-        return await self.repo.delete(db, task_id)
+        return True

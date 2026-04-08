@@ -30,6 +30,14 @@ class TaskRepositoryProtocol(Protocol):
         """Update a task."""
         ...
 
+    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
+        """Update a task with ownership check atomically."""
+        ...
+
     async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
         """Delete a task."""
+        ...
+
+    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete a task with ownership check atomically."""
         ...

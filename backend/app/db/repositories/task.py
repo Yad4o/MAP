@@ -60,9 +60,28 @@ class TaskRepository:
         await db.flush()
         return result.scalar_one_or_none()
 
+    async def update_owned(self, db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Task | None:
+        """Update task with ownership check atomically. Returns updated Task or None if not found or not owned."""
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
+        stmt = (
+            update(Task)
+            .where(Task.id == task_id, Task.user_id == user_id)
+            .values(**update_data)
+            .returning(Task)
+        )
+        result = await db.execute(stmt)
+        await db.flush()
+        return result.scalar_one_or_none()
+
     async def delete(self, db: AsyncSession, task_id: uuid.UUID) -> bool:
         """Delete task. Returns True if deleted, False if not found."""
         stmt = delete(Task).where(Task.id == task_id)
+        result = await db.execute(stmt)
+        return result.rowcount > 0
+
+    async def delete_owned(self, db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete task with ownership check atomically. Returns True if deleted, False if not found or not owned."""
+        stmt = delete(Task).where(Task.id == task_id, Task.user_id == user_id)
         result = await db.execute(stmt)
         return result.rowcount > 0
 

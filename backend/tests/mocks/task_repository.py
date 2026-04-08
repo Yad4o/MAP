@@ -68,9 +68,35 @@ class MockTaskRepository(TaskRepositoryProtocol):
         self._tasks[task_id].update(update_data)
         return self._tasks[task_id].copy()
 
+    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
+        """Update a task with ownership check atomically, returns None if not found or not owned."""
+        if task_id not in self._tasks:
+            return None
+        
+        # Check ownership atomically
+        if self._tasks[task_id]["user_id"] != user_id:
+            return None
+
+        # Convert TaskUpdate data to dict and update
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
+        self._tasks[task_id].update(update_data)
+        return self._tasks[task_id].copy()
+
     async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
         """Delete a task, returns False if not found."""
         if task_id not in self._tasks:
+            return False
+        
+        del self._tasks[task_id]
+        return True
+
+    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete a task with ownership check atomically, returns False if not found or not owned."""
+        if task_id not in self._tasks:
+            return False
+        
+        # Check ownership atomically
+        if self._tasks[task_id]["user_id"] != user_id:
             return False
         
         del self._tasks[task_id]
