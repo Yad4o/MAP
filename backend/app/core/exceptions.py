@@ -1,3 +1,13 @@
+# app/core/exceptions.py
+--------------------
+Domain-specific exceptions for the application.
+
+These exceptions are used by service layers and should be translated
+to HTTP responses in the router layer.
+"""
+
+import uuid
+
 class EmailAlreadyRegistered(Exception):
     def __init__(self, email: str):
         self.email = email
@@ -18,7 +28,7 @@ class InvalidCredentials(Exception):
 class TaskNotFoundError(Exception):
     """Raised when a task is not found."""
     
-    def __init__(self, task_id):
+    def __init__(self, task_id: uuid.UUID):
         super().__init__(f"Task {task_id} not found")
 
 

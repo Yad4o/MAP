@@ -53,6 +53,9 @@ class TaskService:
             return TaskRead.model_validate(updated_task)
         
         # If we get here, update failed - distinguish between not found and not owned
+        # NOTE: TOCTOU — task could be deleted between atomic op and this get().
+        # In that edge case we may raise TaskOwnershipError instead of TaskNotFoundError.
+        # Acceptable trade-off; revisit if strict error semantics are required.
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
@@ -69,6 +72,9 @@ class TaskService:
             return True
         
         # If we get here, delete failed - distinguish between not found and not owned
+        # NOTE: TOCTOU — task could be deleted between atomic op and this get().
+        # In that edge case we may raise TaskOwnershipError instead of TaskNotFoundError.
+        # Acceptable trade-off; revisit if strict error semantics are required.
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
@@ -85,6 +91,9 @@ class TaskService:
             return TaskRead.model_validate(updated)
         
         # If we get here, status update failed - distinguish reasons
+        # NOTE: TOCTOU — task could be deleted between atomic op and this get().
+        # In that edge case we may raise TaskOwnershipError instead of TaskNotFoundError.
+        # Acceptable trade-off; revisit if strict error semantics are required.
         existing = await self.repo.get(db, task_id)
         if not existing:
             raise TaskNotFoundError(task_id)

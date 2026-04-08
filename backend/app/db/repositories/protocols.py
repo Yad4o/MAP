@@ -9,15 +9,9 @@ This module defines the interfaces that all task repositories
 must implement, enabling easy mocking and swapping of implementations.
 """
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 import uuid
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
-
-
-def runtime_checkable(cls):
-    """Decorator to mark protocol methods as runtime-checkable."""
-    cls.__runtime_checkable__ = True
-    return cls
 
 
 @runtime_checkable

@@ -64,7 +64,7 @@ class TestTaskService:
         assert result.title == "Test Task"
         assert result.description == "This is a test task description"
         assert result.priority == 5
-        assert result.status == "PENDING"
+        assert result.status == TaskStatus.PENDING
         assert result.config == {"key": "value"}
         assert result.user_id == user_id
         assert result.id is not None

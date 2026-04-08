@@ -47,9 +47,8 @@ def sample_task_data():
 
 @pytest.fixture
 def sample_update_data():
-    """Sample task update data."""
+    """Sample task update data for integration tests."""
     return TaskUpdateRequest(
-        status=TaskStatus.COMPLETED,
         title="Updated Integration Task"
     )
 
@@ -70,7 +69,7 @@ class TestTaskServiceIntegration:
         assert result.title == "Integration Test Task"
         assert result.description == "This is an integration test task description"
         assert result.priority == 5
-        assert result.status == "PENDING"
+        assert result.status == TaskStatus.PENDING
         assert result.config == {"integration": "test"}
         assert result.user_id == user_id
         assert result.id is not None

@@ -48,7 +48,8 @@ class MockTaskRepository(TaskRepositoryProtocol):
 
     async def get(self, db: Any, task_id: uuid.UUID) -> Optional[Dict[str, Any]]:
         """Get a task by ID, returns None if not found."""
-        return self._tasks.get(task_id, None)
+        task = self._tasks.get(task_id, None)
+        return task.copy() if task is not None else None
 
     async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> List[Dict[str, Any]]:
         """Get all tasks for a specific user."""
