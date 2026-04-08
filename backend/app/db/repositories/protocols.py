@@ -14,6 +14,13 @@ import uuid
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
 
 
+def runtime_checkable(cls):
+    """Decorator to mark protocol methods as runtime-checkable."""
+    cls.__runtime_checkable__ = True
+    return cls
+
+
+@runtime_checkable
 class TaskRepositoryProtocol(Protocol):
     """
     Protocol defining the interface for task repositories.
@@ -21,13 +28,12 @@ class TaskRepositoryProtocol(Protocol):
     Note on Database Parameter:
         - `db` must be a valid AsyncSession in production code
         - `db=None` is only supported by MockTaskRepository for unit testing
-        - Real repository implementations (SQLAlchemy) must handle None gracefully
-          or tests must provide a real AsyncSession instance
+        - Real repository implementations require a valid AsyncSession for `db`
     
     Note on ID Types:
         - All task_id parameters expect uuid.UUID type
         - User ID parameters expect uuid.UUID type  
-        - Return types should match the underlying storage (ORM objects or dicts)
+        - Return types should match to underlying storage (ORM objects or dicts)
     """
 
     async def create(self, db: Any, user_id: uuid.UUID, data: TaskCreateRequest) -> Any:
@@ -36,9 +42,8 @@ class TaskRepositoryProtocol(Protocol):
         
         Args:
             db: AsyncSession for real repos, None for mock repos (tests only)
-            user_id: UUID of the user creating the task
+            user_id: UUID of the user creating the Task
             data: Task creation data (TaskCreateRequest)
-            data: Task creation data (TaskCreateRequest or similar)
         
         Returns:
             Created task (ORM object or dict representation)
@@ -85,15 +90,30 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
+    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
         """
         Update a task with ownership check atomically.
         
         Args:
             db: AsyncSession for real repos, None for mock repos (tests only)
-            task_id: UUID of the task to update
-            user_id: UUID of the user who must own the task
+            task_id: UUID of the Task to update
+            user_id: UUID of the user who must own the Task
             data: Task update data (TaskUpdateRequest or similar)
+        
+        Returns:
+            Updated task if found and owned, None otherwise (ORM object or dict)
+        """
+        ...
+
+    async def update_status_if_not_terminal(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Any | None:
+        """
+        Update task status atomically if current status is not terminal.
+        
+        Args:
+            db: AsyncSession for real repos, None for mock repos (tests only)
+            task_id: UUID of the Task to update
+            user_id: UUID of the user who must own the Task
+            new_status: New status string value
         
         Returns:
             Updated task if found and owned, None otherwise (ORM object or dict)

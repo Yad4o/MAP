@@ -44,7 +44,6 @@ def sample_task_data():
 def sample_update_data():
     """Sample task update data."""
     return TaskUpdateRequest(
-        status=TaskStatus.COMPLETED,
         title="Updated Task Title"
     )
 

@@ -46,53 +46,55 @@ class TaskService:
 
     async def update_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
         """Update a task with atomic ownership validation (only non-status fields)."""
-        # First check if task exists to distinguish between not found and ownership errors
+        # Try atomic update first
+        updated_task = await self.repo.update_owned(db, task_id, user_id, data)
+        if updated_task is not None:
+            # Success - task was found and user owned it
+            return TaskRead.model_validate(updated_task)
+        
+        # If we get here, update failed - distinguish between not found and not owned
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
         
-        # Update with atomic ownership check (status updates not allowed via API)
-        updated_task = await self.repo.update_owned(db, task_id, user_id, data)
-        if not updated_task:
-            # Task exists but user doesn't own it
-            raise TaskOwnershipError()
-        return TaskRead.model_validate(updated_task)
+        # Task exists but update failed - must be ownership issue
+        raise TaskOwnershipError()
 
     async def delete_task(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a task with atomic ownership validation."""
-        # First check if task exists to distinguish between not found and ownership errors
+        # Try atomic delete first
+        deleted = await self.repo.delete_owned(db, task_id, user_id)
+        if deleted:
+            # Success - task was found and user owned it
+            return True
+        
+        # If we get here, delete failed - distinguish between not found and not owned
         existing_task = await self.repo.get(db, task_id)
         if not existing_task:
             raise TaskNotFoundError(task_id)
         
-        # Delete with atomic ownership check
-        deleted = await self.repo.delete_owned(db, task_id, user_id)
-        if not deleted:
-            # Task exists but user doesn't own it
-            raise TaskOwnershipError()
-        return True
+        # Task exists but delete failed - must be ownership issue
+        raise TaskOwnershipError()
 
     async def update_task_status(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, status: TaskStatus) -> TaskRead:
         """Internal method for updating task status (used by workers, not API)."""
-        # First check if task exists and user owns it
-        existing_task = await self.repo.get(db, task_id)
-        if not existing_task:
+        # Try atomic status update first
+        updated = await self.repo.update_status_if_not_terminal(db, task_id, user_id, status.value)
+        if updated is not None:
+            # Success - task was found, owned, and status was updated
+            return TaskRead.model_validate(updated)
+        
+        # If we get here, status update failed - distinguish reasons
+        existing = await self.repo.get(db, task_id)
+        if not existing:
             raise TaskNotFoundError(task_id)
         
         # Check ownership
-        task_user_id = existing_task['user_id'] if isinstance(existing_task, dict) else existing_task.user_id
+        task_user_id = existing['user_id'] if isinstance(existing, dict) else existing.user_id
         if task_user_id != user_id:
             raise TaskOwnershipError()
         
-        # Validate status transitions
-        current_status = existing_task['status'] if isinstance(existing_task, dict) else existing_task.status
-        TERMINAL_STATES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
-        if current_status in TERMINAL_STATES:
-            raise TaskStateTransitionError(current_status, status)
-        
-        # Update status atomically
-        update_data = {"status": status}
-        updated_task = await self.repo.update_owned(db, task_id, user_id, update_data)
-        if not updated_task:
-            raise TaskOwnershipError()
-        return TaskRead.model_validate(updated_task)
+        # Task exists and user owns it - must be terminal state violation
+        current_status = existing['status'] if isinstance(existing, dict) else existing.status
+        current_status = TaskStatus(current_status) if isinstance(current_status, str) else current_status
+        raise TaskStateTransitionError(current_status, status)

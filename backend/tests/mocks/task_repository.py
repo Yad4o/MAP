@@ -107,3 +107,19 @@ class MockTaskRepository(TaskRepositoryProtocol):
         
         del self._tasks[task_id]
         return True
+
+    async def update_status_if_not_terminal(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Optional[Dict[str, Any]]:
+        """Update task status atomically if current status is not terminal."""
+        if task_id not in self._tasks:
+            return None
+        
+        task = self._tasks[task_id]
+        if task["user_id"] != user_id:
+            return None
+        
+        TERMINAL = {"COMPLETED", "FAILED", "CANCELLED"}
+        if task["status"] in TERMINAL:
+            return None
+        
+        task["status"] = new_status
+        return task.copy()

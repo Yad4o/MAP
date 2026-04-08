@@ -85,6 +85,19 @@ class TaskRepository:
         result = await db.execute(stmt)
         return result.rowcount > 0
 
+    async def update_status_if_not_terminal(self, db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Task | None:
+        """Update task status atomically if current status is not terminal."""
+        TERMINAL = ("COMPLETED", "FAILED", "CANCELLED")
+        stmt = (
+            update(Task)
+            .where(Task.id == task_id, Task.user_id == user_id, Task.status.notin_(TERMINAL))
+            .values(status=new_status)
+            .returning(Task)
+        )
+        result = await db.execute(stmt)
+        await db.flush()
+        return result.scalar_one_or_none()
+
 
 class TaskStepRepository:
     def __init__(self, db: AsyncSession):

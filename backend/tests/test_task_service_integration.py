@@ -17,16 +17,9 @@ from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskState
 
 # Skip integration tests if real DB session is not available
 # This ensures tests work when Prajwal's conftest.py is merged
-try:
-    import sqlalchemy
-    SQLALCHEMY_AVAILABLE = True
-except ImportError:
-    SQLALCHEMY_AVAILABLE = False
+pytestmark = pytest.mark.integration
 
-pytestmark = pytest.mark.skipif(
-    not SQLALCHEMY_AVAILABLE,
-    reason="Integration tests require real database session from conftest.py"
-)
+# Run with: pytest -m "not integration" to skip until conftest.py with db_session fixture is merged
 
 
 @pytest.fixture
