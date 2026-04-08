@@ -15,6 +15,19 @@ from app.db.repositories.task import TaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
+# Skip integration tests if real DB session is not available
+# This ensures tests work when Prajwal's conftest.py is merged
+try:
+    import sqlalchemy
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not SQLALCHEMY_AVAILABLE,
+    reason="Integration tests require real database session from conftest.py"
+)
+
 
 @pytest.fixture
 def real_task_repo():

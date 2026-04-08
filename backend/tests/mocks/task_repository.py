@@ -8,7 +8,7 @@ Returns dict objects matching TaskResponse schema shape.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
@@ -36,7 +36,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
             "status": "PENDING",
             "task_type": None,
             "retry_count": 0,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "started_at": None,
             "completed_at": None,
             "result": None,
