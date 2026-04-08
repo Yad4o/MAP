@@ -60,6 +60,14 @@ class TaskCreateRequest(BaseModel):
     config: dict[str, Any] | None = None
 
 
+class TaskUpdateRequest(BaseModel):
+    title: str | None = Field(None, min_length=3, max_length=500)
+    description: str | None = None
+    priority: int | None = Field(None, ge=1, le=10)
+    config: dict[str, Any] | None = None
+    status: TaskStatus | None = None
+
+
 class TaskListParams(BaseModel):
     status: TaskStatus | None = None
     task_type: TaskType | None = None
@@ -85,6 +93,24 @@ class TaskStepResponse(BaseModel):
     completed_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class TaskRead(BaseModel):
+    """Task schema for service layer - includes user_id for ownership validation."""
+    id: UUID
+    user_id: int
+    title: str
+    description: str
+    status: TaskStatus
+    task_type: TaskType | None
+    priority: int
+    retry_count: int
+    config: dict[str, Any] | None
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    result: dict[str, Any] | None
+    error: dict[str, Any] | None
 
 
 class TaskResponse(BaseModel):

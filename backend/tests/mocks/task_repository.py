@@ -1,0 +1,77 @@
+"""
+tests/mocks/task_repository.py
+------------------------------
+Mock implementation of TaskRepositoryProtocol for testing.
+
+Uses in-memory dict storage with auto-incrementing integer IDs.
+Returns dict objects matching TaskResponse schema shape.
+"""
+
+from typing import Any, Dict, List, Optional
+from datetime import datetime
+import uuid
+
+from app.db.repositories.protocols import TaskRepositoryProtocol
+
+
+class MockTaskRepository(TaskRepositoryProtocol):
+    """Mock task repository using in-memory storage for testing."""
+
+    def __init__(self):
+        # In-memory storage: {task_id: task_data}
+        self._tasks: Dict[uuid.UUID, Dict[str, Any]] = {}
+
+    async def create(self, db: Any, user_id: int, data: Any) -> Dict[str, Any]:
+        """Create a new task with UUID ID."""
+        task_id = uuid.uuid4()
+
+        # Convert TaskCreateRequest data to dict
+        task_data = {
+            "id": task_id,
+            "user_id": user_id,
+            "title": data.title,
+            "description": data.description,
+            "priority": data.priority,
+            "config": data.config,
+            "status": "PENDING",
+            "task_type": None,
+            "retry_count": 0,
+            "created_at": datetime.utcnow(),
+            "started_at": None,
+            "completed_at": None,
+            "result": None,
+            "error": None,
+        }
+
+        self._tasks[task_id] = task_data
+        return task_data.copy()
+
+    async def get(self, db: Any, task_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """Get a task by ID, returns None if not found."""
+        return self._tasks.get(task_id, None)
+
+    async def get_all_by_user(self, db: Any, user_id: int) -> List[Dict[str, Any]]:
+        """Get all tasks for a specific user."""
+        return [
+            task.copy() 
+            for task in self._tasks.values() 
+            if task["user_id"] == user_id
+        ]
+
+    async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
+        """Update a task, returns None if not found."""
+        if task_id not in self._tasks:
+            return None
+
+        # Convert TaskUpdate data to dict and update
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
+        self._tasks[task_id].update(update_data)
+        return self._tasks[task_id].copy()
+
+    async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
+        """Delete a task, returns False if not found."""
+        if task_id not in self._tasks:
+            return False
+        
+        del self._tasks[task_id]
+        return True
