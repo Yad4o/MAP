@@ -58,7 +58,7 @@ class TestTaskService:
         user_id = uuid.uuid4()
         
         # Act
-        result = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        result = await task_service.create_task(user_id=user_id, data=sample_task_data)
         
         # Assert
         assert result.title == "Test Task"
@@ -75,11 +75,11 @@ class TestTaskService:
         # Arrange - create task for user 1
         user1_id = uuid.uuid4()
         user2_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user1_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user1_id, data=sample_task_data)
         
         # Act & Assert - try to get task as user 2
         with pytest.raises(TaskOwnershipError):
-            await task_service.get_task(None, task_id=created_task.id, user_id=user2_id)
+            await task_service.get_task(task_id=created_task.id, user_id=user2_id)
 
     @pytest.mark.asyncio
     async def test_get_task_raises_not_found_for_nonexistent_task(self, task_service):
@@ -87,7 +87,7 @@ class TestTaskService:
         fake_uuid = uuid.uuid4()
         fake_user_id = uuid.uuid4()
         with pytest.raises(TaskNotFoundError):
-            await task_service.get_task(None, task_id=fake_uuid, user_id=fake_user_id)
+            await task_service.get_task(task_id=fake_uuid, user_id=fake_user_id)
 
     @pytest.mark.asyncio
     async def test_list_tasks_returns_only_user_tasks(self, task_service, mock_repo, sample_task_data):
@@ -95,13 +95,13 @@ class TestTaskService:
         # Arrange - create tasks for different users
         user1_id = uuid.uuid4()
         user2_id = uuid.uuid4()
-        task1 = await task_service.create_task(None, user_id=user1_id, data=sample_task_data)
-        task2 = await task_service.create_task(None, user_id=user1_id, data=sample_task_data)
-        task3 = await task_service.create_task(None, user_id=user2_id, data=sample_task_data)
+        task1 = await task_service.create_task(user_id=user1_id, data=sample_task_data)
+        task2 = await task_service.create_task(user_id=user1_id, data=sample_task_data)
+        task3 = await task_service.create_task(user_id=user2_id, data=sample_task_data)
         
         # Act
-        user1_tasks = await task_service.list_tasks(None, user_id=user1_id)
-        user2_tasks = await task_service.list_tasks(None, user_id=user2_id)
+        user1_tasks = await task_service.list_tasks(user_id=user1_id)
+        user2_tasks = await task_service.list_tasks(user_id=user2_id)
         
         # Assert
         assert len(user1_tasks) == 2
@@ -114,12 +114,12 @@ class TestTaskService:
         """Test that update_task successfully changes status via internal method."""
         # Arrange
         user_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user_id, data=sample_task_data)
         assert created_task.status == TaskStatus.PENDING
         
         # Act - use internal status update method
         updated_task = await task_service.update_task_status(
-            None, task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED
+            task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED
         )
         
         # Assert
@@ -131,11 +131,11 @@ class TestTaskService:
         """Test that update_task successfully changes title."""
         # Arrange
         user_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user_id, data=sample_task_data)
         
         # Act
         updated_task = await task_service.update_task(
-            None, task_id=created_task.id, user_id=user_id, data=sample_update_data
+            task_id=created_task.id, user_id=user_id, data=sample_update_data
         )
         
         # Assert
@@ -148,12 +148,12 @@ class TestTaskService:
         # Arrange
         user1_id = uuid.uuid4()
         user2_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user1_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user1_id, data=sample_task_data)
         
         # Act & Assert
         with pytest.raises(TaskOwnershipError):
             await task_service.update_task(
-                None, task_id=created_task.id, user_id=user2_id, data=sample_update_data
+                task_id=created_task.id, user_id=user2_id, data=sample_update_data
             )
 
     @pytest.mark.asyncio
@@ -161,16 +161,16 @@ class TestTaskService:
         """Test that update_task_status raises TaskStateTransitionError when trying to update a completed task."""
         # Arrange
         user_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user_id, data=sample_task_data)
         
         # First update task to COMPLETED state using internal method
-        await task_service.update_task_status(None, task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED)
+        await task_service.update_task_status(task_id=created_task.id, user_id=user_id, status=TaskStatus.COMPLETED)
         
         # Try to update completed task back to PENDING
         # Act & Assert
         with pytest.raises(TaskStateTransitionError) as exc_info:
             await task_service.update_task_status(
-                None, task_id=created_task.id, user_id=user_id, status=TaskStatus.PENDING
+                task_id=created_task.id, user_id=user_id, status=TaskStatus.PENDING
             )
         
         assert exc_info.value.current_status == TaskStatus.COMPLETED
@@ -181,17 +181,17 @@ class TestTaskService:
         """Test that delete_task returns True when successful."""
         # Arrange
         user_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user_id, data=sample_task_data)
         
         # Act
-        result = await task_service.delete_task(None, task_id=created_task.id, user_id=user_id)
+        result = await task_service.delete_task(task_id=created_task.id, user_id=user_id)
         
         # Assert
         assert result is True
         
         # Verify task is actually deleted
         with pytest.raises(TaskNotFoundError):
-            await task_service.get_task(None, task_id=created_task.id, user_id=user_id)
+            await task_service.get_task(task_id=created_task.id, user_id=user_id)
 
     @pytest.mark.asyncio
     async def test_delete_task_raises_not_found_for_nonexistent_task(self, task_service):
@@ -199,7 +199,7 @@ class TestTaskService:
         fake_uuid = uuid.uuid4()
         fake_user_id = uuid.uuid4()
         with pytest.raises(TaskNotFoundError):
-            await task_service.delete_task(None, task_id=fake_uuid, user_id=fake_user_id)
+            await task_service.delete_task(task_id=fake_uuid, user_id=fake_user_id)
 
     @pytest.mark.asyncio
     async def test_delete_task_raises_ownership_error_for_wrong_user(self, task_service, mock_repo, sample_task_data):
@@ -207,8 +207,8 @@ class TestTaskService:
         # Arrange
         user1_id = uuid.uuid4()
         user2_id = uuid.uuid4()
-        created_task = await task_service.create_task(None, user_id=user1_id, data=sample_task_data)
+        created_task = await task_service.create_task(user_id=user1_id, data=sample_task_data)
         
         # Act & Assert
         with pytest.raises(TaskOwnershipError):
-            await task_service.delete_task(None, task_id=created_task.id, user_id=user2_id)
+            await task_service.delete_task(task_id=created_task.id, user_id=user2_id)

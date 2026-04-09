@@ -41,7 +41,8 @@ class TaskService:
             raise TaskNotFoundError(task_id)
         
         # Check ownership
-        if task.user_id != user_id:
+        task_user_id = task['user_id'] if isinstance(task, dict) else task.user_id
+        if task_user_id != user_id:
             raise TaskOwnershipError()
         
         # Use Pydantic's ORM handling with from_attributes=True

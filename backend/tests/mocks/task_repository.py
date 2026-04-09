@@ -21,7 +21,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         # In-memory storage: {task_id: task_data}
         self._tasks: Dict[uuid.UUID, Dict[str, Any]] = {}
 
-    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Dict[str, Any]:
+    async def create(self, user_id: uuid.UUID, title: str, description: str, priority: int = 5, config: dict | None = None) -> Dict[str, Any]:
         """Create a new task with UUID ID."""
         task_id = uuid.uuid4()
 
@@ -29,10 +29,10 @@ class MockTaskRepository(TaskRepositoryProtocol):
         task_data = {
             "id": task_id,
             "user_id": user_id,
-            "title": data.title,
-            "description": data.description,
-            "priority": data.priority,
-            "config": data.config,
+            "title": title,
+            "description": description,
+            "priority": priority,
+            "config": config,
             "status": "PENDING",
             "task_type": None,
             "retry_count": 0,
@@ -46,12 +46,12 @@ class MockTaskRepository(TaskRepositoryProtocol):
         self._tasks[task_id] = task_data
         return task_data.copy()
 
-    async def get(self, db: Any, task_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+    async def get(self, task_id: uuid.UUID) -> Optional[Dict[str, Any]]:
         """Get a task by ID, returns None if not found."""
         task = self._tasks.get(task_id, None)
         return task.copy() if task is not None else None
 
-    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> List[Dict[str, Any]]:
+    async def get_all_by_user(self, user_id: uuid.UUID) -> List[Dict[str, Any]]:
         """Get all tasks for a specific user."""
         return [
             task.copy() 
@@ -59,7 +59,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
             if task["user_id"] == user_id
         ]
 
-    async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
+    async def update(self, task_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
         """Update a task, returns None if not found."""
         if task_id not in self._tasks:
             return None
@@ -72,7 +72,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         self._tasks[task_id].update(update_data)
         return self._tasks[task_id].copy()
 
-    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
+    async def update_owned(self, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Optional[Dict[str, Any]]:
         """Update a task with ownership check atomically, returns None if not found or not owned."""
         if task_id not in self._tasks:
             return None
@@ -89,7 +89,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         self._tasks[task_id].update(update_data)
         return self._tasks[task_id].copy()
 
-    async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
+    async def delete(self, task_id: uuid.UUID) -> bool:
         """Delete a task, returns False if not found."""
         if task_id not in self._tasks:
             return False
@@ -97,7 +97,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         del self._tasks[task_id]
         return True
 
-    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete_owned(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a task with ownership check atomically, returns False if not found or not owned."""
         if task_id not in self._tasks:
             return False
@@ -109,7 +109,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         del self._tasks[task_id]
         return True
 
-    async def update_status_if_not_terminal(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Optional[Dict[str, Any]]:
+    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Optional[Dict[str, Any]]:
         """Update task status atomically if current status is not terminal."""
         if task_id not in self._tasks:
             return None
