@@ -21,7 +21,7 @@ class MockTaskService:
         task_id = self.next_id()
         task_dict = {
             "id": task_id,
-            "user_id": uuid.UUID(int=user_id) if isinstance(user_id, int) else user_id,
+            "user_id": user_id,
             "title": data.title,
             "description": data.description,
             "status": "PENDING",  # Match canonical schema
@@ -42,10 +42,8 @@ class MockTaskService:
     
     async def get_task(self, db, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskRead:
         """Get a specific task by ID for a user."""
-        # Convert user_id to UUID if it's an integer
-        user_uuid = uuid.UUID(int=user_id) if isinstance(user_id, int) else user_id
         task = next(
-            (t for t in self.tasks if t["id"] == task_id and t["user_id"] == user_uuid),
+            (t for t in self.tasks if t["id"] == task_id and t["user_id"] == user_id),
             None
         )
         
@@ -56,17 +54,13 @@ class MockTaskService:
     
     async def list_tasks(self, db, user_id: uuid.UUID) -> List[TaskRead]:
         """List all tasks for a user."""
-        # Convert user_id to UUID if it's an integer
-        user_uuid = uuid.UUID(int=user_id) if isinstance(user_id, int) else user_id
-        user_tasks = [t for t in self.tasks if t["user_id"] == user_uuid]
+        user_tasks = [t for t in self.tasks if t["user_id"] == user_id]
         return [TaskRead(**task) for task in user_tasks]
     
     async def update_task(self, db, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> TaskRead:
         """Update a specific task for a user."""
-        # Convert user_id to UUID if it's an integer
-        user_uuid = uuid.UUID(int=user_id) if isinstance(user_id, int) else user_id
         task = next(
-            (t for t in self.tasks if t["id"] == task_id and t["user_id"] == user_uuid),
+            (t for t in self.tasks if t["id"] == task_id and t["user_id"] == user_id),
             None
         )
         
@@ -87,10 +81,8 @@ class MockTaskService:
     
     async def delete_task(self, db, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a specific task for a user."""
-        # Convert user_id to UUID if it's an integer
-        user_uuid = uuid.UUID(int=user_id) if isinstance(user_id, int) else user_id
         task_index = next(
-            (i for i, t in enumerate(self.tasks) if t["id"] == task_id and t["user_id"] == user_uuid),
+            (i for i, t in enumerate(self.tasks) if t["id"] == task_id and t["user_id"] == user_id),
             None
         )
         

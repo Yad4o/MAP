@@ -25,23 +25,24 @@ class TaskRepository(TaskRepositoryProtocol):
 
     async def create(
         self,
+        db: AsyncSession,
         user_id: uuid.UUID,
-        title: str,
-        description: str,
-        priority: int = 5,
-        config: dict | None = None,
+        data: Any,
     ) -> Task:
-        query = Task(
+        """Create a new task using the TaskCreateRequest schema."""
+        # Create a new task instance
+        task = Task(
             user_id=user_id,
-            title=title,
-            description=description,
-            priority=priority,
-            config=config
+            title=data.title,
+            description=data.description,
+            priority=data.priority,
+            config=data.config,
+            status="PENDING"  # Default status - uppercase to match TaskStatus enum
         )
-        self.db.add(query)
-        await self.db.commit()
-        await self.db.refresh(query)
-        return query
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+        return task
 
     async def get_by_id(self, task_id: uuid.UUID) -> Task | None:
         query = select(Task).options(selectinload(Task.steps)).where(Task.id == task_id)
@@ -102,22 +103,6 @@ class TaskRepository(TaskRepositoryProtocol):
         query = update(Task).where(Task.id == task_id).values(retry_count=Task.retry_count + 1)
         await self.db.execute(query)
         await self.db.commit()
-
-    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Any:
-        """Create a new task using the TaskCreateRequest schema."""
-        # Create a new task instance
-        task = Task(
-            user_id=user_id,
-            title=data.title,
-            description=data.description,
-            priority=data.priority,
-            config=data.config,
-            status="PENDING"  # Default status - uppercase to match TaskStatus enum
-        )
-        db.add(task)
-        await db.commit()
-        await db.refresh(task)
-        return task
 
     async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:
         """Get a task by ID."""

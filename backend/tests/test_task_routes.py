@@ -3,6 +3,7 @@ Integration tests for task routes.
 """
 
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
 from unittest.mock import Mock
@@ -15,7 +16,7 @@ from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
 
 # Mock user for authentication
 mock_user = Mock()
-mock_user.id = 1
+mock_user.id = uuid.UUID('12345678-1234-5678-9abc-123456789abc')
 mock_user.email = "test@example.com"
 mock_user.role = "USER"
 mock_user.is_active = True
@@ -99,8 +100,8 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
     print(f"Service instance: {override_dependencies}")
     print(f"Service tasks before: {override_dependencies.tasks}")
     
-    await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Task 1", description="Description 1"))
-    await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Task 2", description="Description 2"))
+    await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Task 1", description="Description 1"))
+    await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Task 2", description="Description 2"))
     
     print(f"Service tasks after: {override_dependencies.tasks}")
     
@@ -120,7 +121,7 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
 async def test_get_task_found(override_dependencies, test_client):
     """Test getting a specific task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Test Task", description="Test description"))
+    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
     
     response = test_client.get(f"/api/v1/tasks/{task.id}")
     
@@ -145,7 +146,7 @@ async def test_get_task_not_found(override_dependencies, test_client):
 async def test_update_task_found(override_dependencies, test_client):
     """Test updating a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Original Title", description="Original description"))
+    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Original Title", description="Original description"))
     
     update_data = {
         "title": "Updated Title"
@@ -179,7 +180,7 @@ async def test_update_task_not_found(override_dependencies, test_client):
 async def test_delete_task_found(override_dependencies, test_client):
     """Test deleting a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Test Task", description="Test description"))
+    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
     
     response = test_client.delete(f"/api/v1/tasks/{task.id}")
     
@@ -188,7 +189,7 @@ async def test_delete_task_found(override_dependencies, test_client):
     
     # Verify task is deleted
     with pytest.raises(HTTPException) as exc_info:
-        await override_dependencies.get_task(None, task.id, 1)
+        await override_dependencies.get_task(None, task.id, mock_user.id)
     assert exc_info.value.status_code == 404
 
 

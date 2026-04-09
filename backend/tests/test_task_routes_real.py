@@ -15,8 +15,6 @@ from app.db.repositories.user_repo import UserRepository
 import uuid
 
 
-# Test client setup
-client = TestClient(app)
 
 
 # Mock user for authentication
@@ -85,8 +83,15 @@ async def override_dependencies(db_session):
     app.dependency_overrides.clear()
 
 
+@pytest.fixture
+async def test_client(override_dependencies):
+    """Create test client with dependency overrides."""
+    with TestClient(app) as client:
+        yield client
+
+
 @pytest.mark.asyncio
-async def test_create_task_real_db(db_session, override_dependencies):
+async def test_create_task_real_db(db_session, override_dependencies, test_client):
     """Test creating a new task with real database."""
     task_data = {
         "title": "Test Task",
@@ -94,7 +99,7 @@ async def test_create_task_real_db(db_session, override_dependencies):
         "priority": 8
     }
     
-    response = client.post("/api/v1/tasks/", json=task_data)
+    response = test_client.post("/api/v1/tasks/", json=task_data)
     
     assert response.status_code == 201
     data = response.json()
@@ -107,9 +112,9 @@ async def test_create_task_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_list_tasks_empty_real_db(db_session, override_dependencies):
+async def test_list_tasks_empty_real_db(db_session, override_dependencies, test_client):
     """Test listing tasks when no tasks exist."""
-    response = client.get("/api/v1/tasks/")
+    response = test_client.get("/api/v1/tasks/")
     
     assert response.status_code == 200
     data = response.json()
@@ -117,7 +122,7 @@ async def test_list_tasks_empty_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_list_tasks_with_tasks_real_db(db_session, override_dependencies):
+async def test_list_tasks_with_tasks_real_db(db_session, override_dependencies, test_client):
     """Test listing tasks when tasks exist."""
     # Create some tasks first
     task_data1 = {
@@ -131,10 +136,10 @@ async def test_list_tasks_with_tasks_real_db(db_session, override_dependencies):
         "priority": 3
     }
     
-    client.post("/api/v1/tasks/", json=task_data1)
-    client.post("/api/v1/tasks/", json=task_data2)
+    test_client.post("/api/v1/tasks/", json=task_data1)
+    test_client.post("/api/v1/tasks/", json=task_data2)
     
-    response = client.get("/api/v1/tasks/")
+    response = test_client.get("/api/v1/tasks/")
     
     assert response.status_code == 200
     data = response.json()
@@ -144,7 +149,7 @@ async def test_list_tasks_with_tasks_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_get_task_found_real_db(db_session, override_dependencies):
+async def test_get_task_found_real_db(db_session, override_dependencies, test_client):
     """Test getting a specific task that exists."""
     # Create a task first
     task_data = {
@@ -153,10 +158,10 @@ async def test_get_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/v1/tasks/", json=task_data)
+    create_response = test_client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
-    response = client.get(f"/api/v1/tasks/{task_id}")
+    response = test_client.get(f"/api/v1/tasks/{task_id}")
     
     assert response.status_code == 200
     data = response.json()
@@ -166,10 +171,10 @@ async def test_get_task_found_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_get_task_not_found_real_db(db_session, override_dependencies):
+async def test_get_task_not_found_real_db(db_session, override_dependencies, test_client):
     """Test getting a task that doesn't exist."""
     fake_id = uuid.uuid4()
-    response = client.get(f"/api/v1/tasks/{fake_id}")
+    response = test_client.get(f"/api/v1/tasks/{fake_id}")
     
     assert response.status_code == 404
     data = response.json()
@@ -177,7 +182,7 @@ async def test_get_task_not_found_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_update_task_found_real_db(db_session, override_dependencies):
+async def test_update_task_found_real_db(db_session, override_dependencies, test_client):
     """Test updating a task that exists."""
     # Create a task first
     task_data = {
@@ -186,14 +191,14 @@ async def test_update_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/v1/tasks/", json=task_data)
+    create_response = test_client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
     update_data = {
         "title": "Updated Title"
     }
     
-    response = client.put(f"/api/v1/tasks/{task_id}", json=update_data)
+    response = test_client.put(f"/api/v1/tasks/{task_id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
@@ -203,21 +208,21 @@ async def test_update_task_found_real_db(db_session, override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_update_task_not_found_real_db(db_session, override_dependencies):
+async def test_update_task_not_found_real_db(db_session, override_dependencies, test_client):
     """Test updating a task that doesn't exist."""
     fake_id = uuid.uuid4()
     update_data = {
         "title": "Updated Title"
     }
     
-    response = client.put(f"/api/v1/tasks/{fake_id}", json=update_data)
+    response = test_client.put(f"/api/v1/tasks/{fake_id}", json=update_data)
     
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "Task not found"
 
 @pytest.mark.asyncio
-async def test_delete_task_found_real_db(db_session, override_dependencies):
+async def test_delete_task_found_real_db(db_session, override_dependencies, test_client):
     """Test deleting a task that exists."""
     # Create a task first
     task_data = {
@@ -226,24 +231,24 @@ async def test_delete_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/v1/tasks/", json=task_data)
+    create_response = test_client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
-    response = client.delete(f"/api/v1/tasks/{task_id}")
+    response = test_client.delete(f"/api/v1/tasks/{task_id}")
     
     assert response.status_code == 204
     assert response.content == b""
     
     # Verify task is deleted
-    response = client.get(f"/api/v1/tasks/{task_id}")
+    response = test_client.get(f"/api/v1/tasks/{task_id}")
     assert response.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_delete_task_not_found_real_db(db_session, override_dependencies):
+async def test_delete_task_not_found_real_db(db_session, override_dependencies, test_client):
     """Test deleting a task that doesn't exist."""
     fake_id = uuid.uuid4()
-    response = client.delete(f"/api/v1/tasks/{fake_id}")
+    response = test_client.delete(f"/api/v1/tasks/{fake_id}")
     
     assert response.status_code == 404
     data = response.json()
