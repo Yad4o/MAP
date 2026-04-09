@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasks, deleteTask } from '../api/tasks';
 import { Task, TaskStatus } from '../types/task';
-import { Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Loader2, AlertCircle, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const statusColors: Record<TaskStatus, string> = {
@@ -92,10 +92,11 @@ export default function TaskListPage() {
                       deleteMutation.mutate(task.id);
                     }
                   }}
-                  className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  disabled={deleteMutation.isPending}
+                  className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Delete task"
                 >
-                  <Trash2 size={18} />
+                  {deleteMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                 </button>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2 truncate" title={task.title}>{task.title}</h3>
@@ -112,23 +113,4 @@ export default function TaskListPage() {
   );
 }
 
-// Ensure the icon is imported for the empty state
-function CheckSquare(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 11 12 14 22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-  );
-}
+

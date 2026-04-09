@@ -44,10 +44,7 @@ export default function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/logs" element={<LogsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-      </Route>
-
-      <Route element={<AdminRoute><AppShell /></AdminRoute>}>
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
       </Route>
     </Routes>
   )

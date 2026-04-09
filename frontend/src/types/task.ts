@@ -8,7 +8,7 @@ export interface Task {
   id: number;
   title: string;
   description?: string;
-  status: TaskStatus | 'pending' | 'in_progress' | 'done';
+  status: TaskStatus;
   user_id: number;
   created_at: string;
 }
@@ -16,11 +16,11 @@ export interface Task {
 export interface TaskCreate {
   title: string;
   description?: string;
-  status?: TaskStatus | 'pending' | 'in_progress' | 'done';
+  status?: TaskStatus;
 }
 
 export interface TaskUpdate {
   title?: string;
   description?: string;
-  status?: TaskStatus | 'pending' | 'in_progress' | 'done';
+  status?: TaskStatus;
 }

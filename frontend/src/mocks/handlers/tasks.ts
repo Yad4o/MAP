@@ -11,15 +11,17 @@ let mockTasks: Task[] = [
   { id: 3, title: 'Write Tests', description: 'Using Vitest', status: TaskStatus.PENDING, user_id: 1, created_at: new Date().toISOString() },
 ]
 
+let nextId = 1000;
+
 export const taskHandlers = [
   http.get(`${API_BASE}/tasks`, () => {
     return HttpResponse.json<Task[]>(mockTasks)
   }),
 
-  http.post(`${API_BASE}/tasks`, async ({ request }: any) => {
+  http.post(`${API_BASE}/tasks`, async ({ request }) => {
     const data = await request.json() as TaskCreate
     const newTask: Task = {
-      id: 999,
+      id: nextId++,
       title: data.title,
       description: data.description || '',
       status: data.status || TaskStatus.PENDING,
@@ -30,14 +32,14 @@ export const taskHandlers = [
     return HttpResponse.json<Task>(newTask, { status: 201 })
   }),
 
-  http.get(`${API_BASE}/tasks/:id`, ({ params }: any) => {
+  http.get(`${API_BASE}/tasks/:id`, ({ params }) => {
     const { id } = params
     const task = mockTasks.find(t => t.id === Number(id))
     if (!task) return new HttpResponse(null, { status: 404 })
     return HttpResponse.json<Task>(task)
   }),
 
-  http.put(`${API_BASE}/tasks/:id`, async ({ params, request }: any) => {
+  http.put(`${API_BASE}/tasks/:id`, async ({ params, request }) => {
     const { id } = params
     const data = await request.json() as TaskUpdate
     const index = mockTasks.findIndex(t => t.id === Number(id))
@@ -47,7 +49,7 @@ export const taskHandlers = [
     return HttpResponse.json<Task>(mockTasks[index])
   }),
 
-  http.delete(`${API_BASE}/tasks/:id`, ({ params }: any) => {
+  http.delete(`${API_BASE}/tasks/:id`, ({ params }) => {
     const { id } = params
     mockTasks = mockTasks.filter(t => t.id !== Number(id))
     return new HttpResponse(null, { status: 204 })

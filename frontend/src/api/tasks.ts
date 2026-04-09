@@ -24,3 +24,9 @@ export const updateTask = async (id: number, task: TaskUpdate): Promise<Task> =>
 export const deleteTask = async (id: number): Promise<void> => {
   await apiClient.delete(`/tasks/${id}`);
 };
+
+// TODO (Task 2.3 integration): restore getStatus, getSteps, cancel, retry
+// export const getTaskStatus = async (id: number): Promise<TaskStatusResponse> => { ... };
+// export const getTaskSteps = async (id: number): Promise<TaskStepResponse[]> => { ... };
+// export const cancelTask = async (id: number): Promise<void> => { ... };
+// export const retryTask = async (id: number): Promise<Task> => { ... };
