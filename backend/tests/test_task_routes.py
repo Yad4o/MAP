@@ -21,9 +21,6 @@ mock_user.email = "test@example.com"
 mock_user.role = "USER"
 mock_user.is_active = True
 
-# Mock credentials for bearer scheme
-mock_credentials = Mock()
-mock_credentials.credentials = "test-token"
 
 
 @pytest.fixture

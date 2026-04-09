@@ -19,37 +19,33 @@ class TaskRepositoryProtocol(Protocol):
     """
     Protocol defining the interface for task repositories.
     
-    Note on Database Parameter:
-        - `db` must be a valid AsyncSession in production code
-        - `db=None` is only supported by MockTaskRepository for unit testing
-        - Real repository implementations require a valid AsyncSession for `db`
-    
     Note on ID Types:
         - All task_id parameters expect uuid.UUID type
         - User ID parameters expect uuid.UUID type  
         - Return types should match to underlying storage (ORM objects or dicts)
     """
 
-    async def create(self, db: Any, user_id: uuid.UUID, data: TaskCreateRequest) -> Any:
+    async def create(self, user_id: uuid.UUID, title: str, description: str, priority: int = 5, config: dict | None = None) -> Any:
         """
         Create a new task.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             user_id: UUID of the user creating the Task
-            data: Task creation data (TaskCreateRequest)
+            title: Title of the task
+            description: Description of the task
+            priority: Priority integer
+            config: Config dict
         
         Returns:
             Created task (ORM object or dict representation)
         """
         ...
 
-    async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:
+    async def get(self, task_id: uuid.UUID) -> Any | None:
         """
         Get a task by ID.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the task to retrieve
         
         Returns:
@@ -57,12 +53,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> list:
+    async def get_all_by_user(self, user_id: uuid.UUID) -> list:
         """
         Get all tasks for a user.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             user_id: UUID of the user to fetch tasks for
         
         Returns:
@@ -70,12 +65,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update(self, db: Any, task_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
+    async def update(self, task_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
         """
         Update a task.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the task to update
             data: Task update data (TaskUpdateRequest or similar)
         
@@ -84,12 +78,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
+    async def update_owned(self, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateRequest) -> Any | None:
         """
         Update a task with ownership check atomically.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the Task to update
             user_id: UUID of the user who must own the Task
             data: Task update data (TaskUpdateRequest or similar)
@@ -99,12 +92,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update_status_if_not_terminal(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Any | None:
+    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Any | None:
         """
         Update task status atomically if current status is not terminal.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the Task to update
             user_id: UUID of the user who must own the Task
             new_status: New status string value
@@ -114,12 +106,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
+    async def delete(self, task_id: uuid.UUID) -> bool:
         """
         Delete a task.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the task to delete
         
         Returns:
@@ -127,12 +118,11 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete_owned(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """
         Delete a task with ownership check atomically.
         
         Args:
-            db: AsyncSession for real repos, None for mock repos (tests only)
             task_id: UUID of the task to delete
             user_id: UUID of the user who must own the task
         

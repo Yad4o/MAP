@@ -109,11 +109,9 @@ class TaskService:
             raise TaskNotFoundError(task_id)
         
         # Check ownership
-        task_user_id = existing['user_id'] if isinstance(existing, dict) else existing.user_id
-        if task_user_id != user_id:
+        if existing.user_id != user_id:
             raise TaskOwnershipError()
         
         # Task exists and user owns it - must be terminal state violation
-        current_status = existing['status'] if isinstance(existing, dict) else existing.status
-        current_status = TaskStatus(current_status) if isinstance(current_status, str) else current_status
+        current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, status)

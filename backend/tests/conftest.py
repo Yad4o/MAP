@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from httpx import AsyncClient
 
 from app.main import app
@@ -30,7 +31,7 @@ def setup_test_mode():
 # ---------------------------------------------------------------------------
 @pytest.fixture
 def test_db_url():
-    return "sqlite+aiosqlite:///./test.db"
+    return "sqlite+aiosqlite:///:memory:"
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +40,16 @@ def test_db_url():
 # ---------------------------------------------------------------------------
 @pytest.fixture
 async def engine(test_db_url):
-    engine = create_async_engine(test_db_url, echo=False)
+    # Important: import models here or anywhere before create_all
+    from app.db.models.user import User
+    from app.db.models.task import Task, TaskStep
+    
+    engine = create_async_engine(
+        test_db_url, 
+        echo=False, 
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False}
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
