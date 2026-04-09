@@ -11,12 +11,15 @@ import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete, update
+from sqlalchemy.orm import selectinload
 
 from app.db.models.task import Task, TaskStep
 from app.schemas.task import TaskStatus
+from app.db.repositories.protocols import TaskRepositoryProtocol
 
 
-class TaskRepository:
+class TaskRepository(TaskRepositoryProtocol):
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -28,13 +31,27 @@ class TaskRepository:
         priority: int = 5,
         config: dict | None = None,
     ) -> Task:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = Task(
+            user_id=user_id,
+            title=title,
+            description=description,
+            priority=priority,
+            config=config
+        )
+        self.db.add(query)
+        await self.db.commit()
+        await self.db.refresh(query)
+        return query
 
     async def get_by_id(self, task_id: uuid.UUID) -> Task | None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = select(Task).options(selectinload(Task.steps)).where(Task.id == task_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
 
     async def get_by_id_and_user(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = select(Task).options(selectinload(Task.steps)).where(Task.id == task_id, Task.user_id == user_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
 
     async def list_by_user(
         self,
@@ -43,7 +60,12 @@ class TaskRepository:
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Task], int]:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = select(Task).options(selectinload(Task.steps)).where(Task.user_id == user_id)
+        if status is not None:
+            query = query.where(Task.status == status)
+        result = await self.db.execute(query)
+        tasks = result.scalars().all()
+        return tasks, len(tasks)
 
     async def update_status(
         self,
@@ -51,16 +73,108 @@ class TaskRepository:
         status: TaskStatus,
         extra_fields: dict[str, Any] | None = None,
     ) -> None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = update(Task).where(Task.id == task_id).values(status=status)
+        if extra_fields is not None:
+            query = query.values(**extra_fields)
+        await self.db.execute(query)
+        await self.db.commit()
 
     async def set_result(self, task_id: uuid.UUID, result: dict[str, Any]) -> None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = update(Task).where(Task.id == task_id).values(result=result)
+        await self.db.execute(query)
+        await self.db.commit()
 
     async def set_error(self, task_id: uuid.UUID, error: dict[str, Any]) -> None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = update(Task).where(Task.id == task_id).values(error=error)
+        await self.db.execute(query)
+        await self.db.commit()
 
     async def increment_retry(self, task_id: uuid.UUID) -> None:
-        raise NotImplementedError("Phase 2 — implement this")
+        query = update(Task).where(Task.id == task_id).values(retry_count=Task.retry_count + 1)
+        await self.db.execute(query)
+        await self.db.commit()
+
+    async def create(self, db: Any, user_id: uuid.UUID, data: Any) -> Any:
+        """Create a new task using the TaskCreateRequest schema."""
+        # Create a new task instance
+        task = Task(
+            user_id=user_id,
+            title=data.title,
+            description=data.description,
+            priority=data.priority,
+            config=data.config,
+            status="pending"  # Default status
+        )
+        self.db.add(task)
+        await self.db.commit()
+        await self.db.refresh(task)
+        return task
+
+    async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:
+        """Get a task by ID."""
+        return await self.get_by_id(task_id)
+
+    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> list:
+        """Get all tasks for a user."""
+        tasks, _ = await self.list_by_user(user_id)
+        return tasks
+
+    async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Any | None:
+        """Update a task."""
+        # For now, this is a basic implementation
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+        
+        # Update basic fields
+        if data.title is not None:
+            task.title = data.title
+        if data.description is not None:
+            task.description = data.description
+        if data.priority is not None:
+            task.priority = data.priority
+        
+        await self.db.commit()
+        await self.db.refresh(task)
+        return task
+
+    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
+        """Update a task with ownership check."""
+        task = await self.get_by_id_and_user(task_id, user_id)
+        if not task:
+            return None
+        
+        # Update basic fields
+        if data.title is not None:
+            task.title = data.title
+        if data.description is not None:
+            task.description = data.description
+        if data.priority is not None:
+            task.priority = data.priority
+        
+        await self.db.commit()
+        await self.db.refresh(task)
+        return task
+
+    async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
+        """Delete a task."""
+        task = await self.get_by_id(task_id)
+        if not task:
+            return False
+        
+        await self.db.delete(task)
+        await self.db.commit()
+        return True
+
+    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """Delete a task with ownership check."""
+        task = await self.get_by_id_and_user(task_id, user_id)
+        if not task:
+            return False
+        
+        await self.db.delete(task)
+        await self.db.commit()
+        return True
 
 
 class TaskStepRepository:
