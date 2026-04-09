@@ -34,7 +34,7 @@ class Task(Base):
     # ── Task Definition ───────────────────────────────────────
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING", index=True)
     
     # ── Execution Configuration ────────────────────────────────
     task_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
