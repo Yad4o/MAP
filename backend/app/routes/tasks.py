@@ -17,32 +17,30 @@ from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-def get_task_service() -> TaskService:
+def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
     """Dependency injection for task service."""
-    # Repository will be created per operation with the appropriate db session
-    return TaskService(None)
+    repo = TaskRepository(db)
+    return TaskService(repo)
 
 
 @router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task_data: TaskCreateRequest,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    task_service: TaskService = Depends(get_task_service)
 ):
     """Create a new task."""
-    repo = TaskRepository(db)
-    task_service = TaskService(repo)
     return await task_service.create_task(db, current_user.id, task_data)
 
 
 @router.get("/", response_model=list[TaskRead])
 async def list_tasks(
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    task_service: TaskService = Depends(get_task_service)
 ):
     """List all tasks for the current user."""
-    repo = TaskRepository(db)
-    task_service = TaskService(repo)
     return await task_service.list_tasks(db, current_user.id)
 
 
@@ -50,11 +48,10 @@ async def list_tasks(
 async def get_task(
     task_id: uuid.UUID,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    task_service: TaskService = Depends(get_task_service)
 ):
     """Get a specific task by ID."""
-    repo = TaskRepository(db)
-    task_service = TaskService(repo)
     try:
         return await task_service.get_task(db, task_id, current_user.id)
     except (TaskNotFoundError, TaskOwnershipError):
@@ -66,11 +63,10 @@ async def update_task(
     task_id: uuid.UUID,
     task_data: TaskUpdateRequest,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    task_service: TaskService = Depends(get_task_service)
 ):
     """Update a specific task."""
-    repo = TaskRepository(db)
-    task_service = TaskService(repo)
     try:
         return await task_service.update_task(db, task_id, current_user.id, task_data)
     except (TaskNotFoundError, TaskOwnershipError):
@@ -81,11 +77,10 @@ async def update_task(
 async def delete_task(
     task_id: uuid.UUID,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    task_service: TaskService = Depends(get_task_service)
 ):
     """Delete a specific task."""
-    repo = TaskRepository(db)
-    task_service = TaskService(repo)
     try:
         await task_service.delete_task(db, task_id, current_user.id)
         return None

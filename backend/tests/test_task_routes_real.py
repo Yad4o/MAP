@@ -75,7 +75,9 @@ async def override_dependencies(db_session):
     
     # Override get_db to return test session
     from app.db.base import get_db
-    app.dependency_overrides[get_db] = lambda: db_session
+    async def override_get_db():
+        yield db_session
+    app.dependency_overrides[get_db] = override_get_db
     
     yield
     
@@ -92,7 +94,7 @@ async def test_create_task_real_db(db_session, override_dependencies):
         "priority": 8
     }
     
-    response = client.post("/api/tasks/", json=task_data)
+    response = client.post("/api/v1/tasks/", json=task_data)
     
     assert response.status_code == 201
     data = response.json()
@@ -107,7 +109,7 @@ async def test_create_task_real_db(db_session, override_dependencies):
 @pytest.mark.asyncio
 async def test_list_tasks_empty_real_db(db_session, override_dependencies):
     """Test listing tasks when no tasks exist."""
-    response = client.get("/api/tasks/")
+    response = client.get("/api/v1/tasks/")
     
     assert response.status_code == 200
     data = response.json()
@@ -129,10 +131,10 @@ async def test_list_tasks_with_tasks_real_db(db_session, override_dependencies):
         "priority": 3
     }
     
-    client.post("/api/tasks/", json=task_data1)
-    client.post("/api/tasks/", json=task_data2)
+    client.post("/api/v1/tasks/", json=task_data1)
+    client.post("/api/v1/tasks/", json=task_data2)
     
-    response = client.get("/api/tasks/")
+    response = client.get("/api/v1/tasks/")
     
     assert response.status_code == 200
     data = response.json()
@@ -151,10 +153,10 @@ async def test_get_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/tasks/", json=task_data)
+    create_response = client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
-    response = client.get(f"/api/tasks/{task_id}")
+    response = client.get(f"/api/v1/tasks/{task_id}")
     
     assert response.status_code == 200
     data = response.json()
@@ -167,7 +169,7 @@ async def test_get_task_found_real_db(db_session, override_dependencies):
 async def test_get_task_not_found_real_db(db_session, override_dependencies):
     """Test getting a task that doesn't exist."""
     fake_id = uuid.uuid4()
-    response = client.get(f"/api/tasks/{fake_id}")
+    response = client.get(f"/api/v1/tasks/{fake_id}")
     
     assert response.status_code == 404
     data = response.json()
@@ -184,14 +186,14 @@ async def test_update_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/tasks/", json=task_data)
+    create_response = client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
     update_data = {
         "title": "Updated Title"
     }
     
-    response = client.put(f"/api/tasks/{task_id}", json=update_data)
+    response = client.put(f"/api/v1/tasks/{task_id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
@@ -208,7 +210,7 @@ async def test_update_task_not_found_real_db(db_session, override_dependencies):
         "title": "Updated Title"
     }
     
-    response = client.put(f"/api/tasks/{fake_id}", json=update_data)
+    response = client.put(f"/api/v1/tasks/{fake_id}", json=update_data)
     
     assert response.status_code == 404
     data = response.json()
@@ -224,16 +226,16 @@ async def test_delete_task_found_real_db(db_session, override_dependencies):
         "priority": 5
     }
     
-    create_response = client.post("/api/tasks/", json=task_data)
+    create_response = client.post("/api/v1/tasks/", json=task_data)
     task_id = create_response.json()["id"]
     
-    response = client.delete(f"/api/tasks/{task_id}")
+    response = client.delete(f"/api/v1/tasks/{task_id}")
     
     assert response.status_code == 204
     assert response.content == b""
     
     # Verify task is deleted
-    response = client.get(f"/api/tasks/{task_id}")
+    response = client.get(f"/api/v1/tasks/{task_id}")
     assert response.status_code == 404
 
 
@@ -241,7 +243,7 @@ async def test_delete_task_found_real_db(db_session, override_dependencies):
 async def test_delete_task_not_found_real_db(db_session, override_dependencies):
     """Test deleting a task that doesn't exist."""
     fake_id = uuid.uuid4()
-    response = client.delete(f"/api/tasks/{fake_id}")
+    response = client.delete(f"/api/v1/tasks/{fake_id}")
     
     assert response.status_code == 404
     data = response.json()

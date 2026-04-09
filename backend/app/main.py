@@ -52,7 +52,7 @@ def create_app() -> FastAPI:
 
     # Phase 2 — Tasks
     from app.routes.tasks import router as tasks_router
-    app.include_router(tasks_router, prefix="/api")
+    app.include_router(tasks_router, prefix="/api/v1")
 
     # Phase 4 — Agents
     # from app.api.v1.agents import router as agents_router

@@ -11,7 +11,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from sqlalchemy.orm import selectinload
 
 from app.db.models.task import Task, TaskStep
@@ -60,12 +60,21 @@ class TaskRepository(TaskRepositoryProtocol):
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Task], int]:
+        # Get total count first
+        count_query = select(func.count()).select_from(Task).where(Task.user_id == user_id)
+        if status is not None:
+            count_query = count_query.where(Task.status == status)
+        total = (await self.db.execute(count_query)).scalar_one()
+        
+        # Get paginated results
         query = select(Task).options(selectinload(Task.steps)).where(Task.user_id == user_id)
         if status is not None:
             query = query.where(Task.status == status)
+        query = query.offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         tasks = result.scalars().all()
-        return tasks, len(tasks)
+        
+        return tasks, total
 
     async def update_status(
         self,
@@ -73,10 +82,10 @@ class TaskRepository(TaskRepositoryProtocol):
         status: TaskStatus,
         extra_fields: dict[str, Any] | None = None,
     ) -> None:
-        query = update(Task).where(Task.id == task_id).values(status=status)
+        values = {"status": status}
         if extra_fields is not None:
-            query = query.values(**extra_fields)
-        await self.db.execute(query)
+            values.update(extra_fields)
+        await self.db.execute(update(Task).where(Task.id == task_id).values(**values))
         await self.db.commit()
 
     async def set_result(self, task_id: uuid.UUID, result: dict[str, Any]) -> None:
@@ -103,11 +112,11 @@ class TaskRepository(TaskRepositoryProtocol):
             description=data.description,
             priority=data.priority,
             config=data.config,
-            status="pending"  # Default status
+            status="PENDING"  # Default status - uppercase to match TaskStatus enum
         )
-        self.db.add(task)
-        await self.db.commit()
-        await self.db.refresh(task)
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
         return task
 
     async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:

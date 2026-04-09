@@ -8,13 +8,9 @@ from fastapi import HTTPException
 from unittest.mock import Mock
 
 from app.main import app
-from tests.mocks.task_service import MockTaskService
-from app.schemas.task_simple import TaskCreate, TaskUpdate
 from app.routes.tasks import get_task_service
-
-
-# Test client setup
-client = TestClient(app)
+from tests.mocks.task_service import MockTaskService
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
 
 
 # Mock user for authentication
@@ -56,48 +52,40 @@ def test_client(override_dependencies):
         yield client
 
 
-def get_task_service():
-    """Helper function for dependency override."""
-    from app.routes.tasks import get_task_service
-    return get_task_service()
-
-
-def get_current_user():
-    """Helper function for dependency override."""
-    return mock_user
-
-
 def get_token_payload():
     """Helper function for dependency override."""
     return {"sub": "1", "jti": "test-jti", "role": "USER"}
 
 
 @pytest.mark.asyncio
-async def test_create_task(override_dependencies):
+async def test_create_task(override_dependencies, test_client):
     """Test creating a new task."""
     task_data = {
         "title": "Test Task",
-        "description": "Test description",
-        "status": "pending",
-        "priority": "high"
+        "description": "Test description for task",
+        "status": "PENDING",
+        "priority": 5
     }
     
-    response = client.post("/api/tasks/", json=task_data)
+    response = test_client.post("/api/v1/tasks/", json=task_data)
+    
+    if response.status_code != 201:
+        print(f"Error response: {response.json()}")
     
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Test Task"
-    assert data["description"] == "Test description"
-    assert data["status"] == "pending"
-    assert data["priority"] == "high"
+    assert data["description"] == "Test description for task"
+    assert data["status"] == "PENDING"
+    assert data["priority"] == 5
     assert "id" in data
     assert "user_id" in data
 
 
 @pytest.mark.asyncio
-async def test_list_tasks_empty(override_dependencies):
+async def test_list_tasks_empty(override_dependencies, test_client):
     """Test listing tasks when no tasks exist."""
-    response = client.get("/api/tasks/")
+    response = test_client.get("/api/v1/tasks/")
     
     assert response.status_code == 200
     data = response.json()
@@ -111,12 +99,12 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
     print(f"Service instance: {override_dependencies}")
     print(f"Service tasks before: {override_dependencies.tasks}")
     
-    await override_dependencies.create_task(None, 1, TaskCreate(title="Task 1", description="Desc 1"))
-    await override_dependencies.create_task(None, 1, TaskCreate(title="Task 2", description="Desc 2"))
+    await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Task 1", description="Description 1"))
+    await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Task 2", description="Description 2"))
     
     print(f"Service tasks after: {override_dependencies.tasks}")
     
-    response = test_client.get("/api/tasks/")
+    response = test_client.get("/api/v1/tasks/")
     
     print(f"Response status: {response.status_code}")
     print(f"Response data: {response.json()}")
@@ -129,24 +117,24 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
 
 
 @pytest.mark.asyncio
-async def test_get_task_found(override_dependencies):
+async def test_get_task_found(override_dependencies, test_client):
     """Test getting a specific task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreate(title="Test Task", description="Test desc"))
+    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Test Task", description="Test description"))
     
-    response = client.get(f"/api/tasks/{task.id}")
+    response = test_client.get(f"/api/v1/tasks/{task.id}")
     
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == task.id
+    assert data["id"] == str(task.id)
     assert data["title"] == "Test Task"
-    assert data["description"] == "Test desc"
+    assert data["description"] == "Test description"
 
 
 @pytest.mark.asyncio
-async def test_get_task_not_found(override_dependencies):
+async def test_get_task_not_found(override_dependencies, test_client):
     """Test getting a task that doesn't exist."""
-    response = client.get("/api/tasks/999")
+    response = test_client.get("/api/v1/tasks/00000000-0000-0000-0000-000000000999")
     
     assert response.status_code == 404
     data = response.json()
@@ -154,34 +142,33 @@ async def test_get_task_not_found(override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_update_task_found(override_dependencies):
+async def test_update_task_found(override_dependencies, test_client):
     """Test updating a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreate(title="Original Title", description="Original desc"))
+    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Original Title", description="Original description"))
     
     update_data = {
-        "title": "Updated Title",
-        "status": "completed"
+        "title": "Updated Title"
     }
     
-    response = client.put(f"/api/tasks/{task.id}", json=update_data)
+    response = test_client.put(f"/api/v1/tasks/{task.id}", json=update_data)
     
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == task.id
+    assert data["id"] == str(task.id)
     assert data["title"] == "Updated Title"
-    assert data["description"] == "Original desc"  # Unchanged
-    assert data["status"] == "completed"
+    assert data["description"] == "Original description"  # Unchanged
+    assert data["status"] == "PENDING"
 
 
 @pytest.mark.asyncio
-async def test_update_task_not_found(override_dependencies):
+async def test_update_task_not_found(override_dependencies, test_client):
     """Test updating a task that doesn't exist."""
     update_data = {
         "title": "Updated Title"
     }
     
-    response = client.put("/api/tasks/999", json=update_data)
+    response = test_client.put("/api/v1/tasks/00000000-0000-0000-0000-000000000999", json=update_data)
     
     assert response.status_code == 404
     data = response.json()
@@ -189,12 +176,12 @@ async def test_update_task_not_found(override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_delete_task_found(override_dependencies):
+async def test_delete_task_found(override_dependencies, test_client):
     """Test deleting a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, 1, TaskCreate(title="Test Task", description="Test desc"))
+    task = await override_dependencies.create_task(None, 1, TaskCreateRequest(title="Test Task", description="Test description"))
     
-    response = client.delete(f"/api/tasks/{task.id}")
+    response = test_client.delete(f"/api/v1/tasks/{task.id}")
     
     assert response.status_code == 204
     assert response.content == b""
@@ -206,9 +193,9 @@ async def test_delete_task_found(override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_delete_task_not_found(override_dependencies):
+async def test_delete_task_not_found(override_dependencies, test_client):
     """Test deleting a task that doesn't exist."""
-    response = client.delete("/api/tasks/999")
+    response = test_client.delete("/api/v1/tasks/00000000-0000-0000-0000-000000000999")
     
     assert response.status_code == 404
     data = response.json()
@@ -216,26 +203,26 @@ async def test_delete_task_not_found(override_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_task_response_shapes(override_dependencies):
+async def test_task_response_shapes(override_dependencies, test_client):
     """Test that all endpoints return correct response shapes."""
     # Create task
-    create_response = client.post("/api/tasks/", json={"title": "Test", "description": "Desc"})
+    create_response = test_client.post("/api/v1/tasks/", json={"title": "Test", "description": "Test description"})
     task_data = create_response.json()
     
     # Test create response shape
-    required_fields = {"id", "user_id", "title", "description", "status", "priority"}
+    required_fields = {"id", "user_id", "title", "description", "status", "task_type", "priority", "retry_count", "config", "created_at", "started_at", "completed_at", "result", "error"}
     assert set(task_data.keys()) == required_fields
     
     # Test get response shape
-    get_response = client.get(f"/api/tasks/{task_data['id']}")
+    get_response = test_client.get(f"/api/v1/tasks/{task_data['id']}")
     assert set(get_response.json().keys()) == required_fields
     
     # Test list response shape
-    list_response = client.get("/api/tasks/")
+    list_response = test_client.get("/api/v1/tasks/")
     assert isinstance(list_response.json(), list)
     if list_response.json():
         assert set(list_response.json()[0].keys()) == required_fields
     
     # Test update response shape
-    update_response = client.put(f"/api/tasks/{task_data['id']}", json={"title": "Updated"})
+    update_response = test_client.put(f"/api/v1/tasks/{task_data['id']}", json={"title": "Updated"})
     assert set(update_response.json().keys()) == required_fields
