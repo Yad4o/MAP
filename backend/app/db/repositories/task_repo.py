@@ -25,23 +25,23 @@ class TaskRepository(TaskRepositoryProtocol):
 
     async def create(
         self,
-        db: AsyncSession,
         user_id: uuid.UUID,
-        data: Any,
+        title: str,
+        description: str,
+        priority: int = 5,
+        config: dict | None = None,
     ) -> Task:
-        """Create a new task using the TaskCreateRequest schema."""
-        # Create a new task instance
+        """Create a new task with individual parameters."""
         task = Task(
             user_id=user_id,
-            title=data.title,
-            description=data.description,
-            priority=data.priority,
-            config=data.config,
-            status="PENDING"  # Default status - uppercase to match TaskStatus enum
+            title=title,
+            description=description,
+            priority=priority,
+            config=config
         )
-        db.add(task)
-        await db.commit()
-        await db.refresh(task)
+        self.db.add(task)
+        await self.db.commit()
+        await self.db.refresh(task)
         return task
 
     async def get_by_id(self, task_id: uuid.UUID) -> Task | None:
@@ -104,35 +104,32 @@ class TaskRepository(TaskRepositoryProtocol):
         await self.db.execute(query)
         await self.db.commit()
 
-    async def get(self, db: Any, task_id: uuid.UUID) -> Any | None:
+    async def get(self, task_id: uuid.UUID) -> Any | None:
         """Get a task by ID."""
         return await self.get_by_id(task_id)
 
-    async def get_all_by_user(self, db: Any, user_id: uuid.UUID) -> list:
+    async def get_all_by_user(self, user_id: uuid.UUID) -> list:
         """Get all tasks for a user."""
         tasks, _ = await self.list_by_user(user_id)
         return tasks
 
-    async def update(self, db: Any, task_id: uuid.UUID, data: Any) -> Any | None:
+    async def update(self, task_id: uuid.UUID, data: Any) -> Any | None:
         """Update a task."""
         # For now, this is a basic implementation
         task = await self.get_by_id(task_id)
         if not task:
             return None
         
-        # Update basic fields
-        if data.title is not None:
-            task.title = data.title
-        if data.description is not None:
-            task.description = data.description
-        if data.priority is not None:
-            task.priority = data.priority
+        # Update all provided fields dynamically
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(task, field, value)
         
         await self.db.commit()
         await self.db.refresh(task)
         return task
 
-    async def update_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
+    async def update_owned(self, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
         """Update a task with ownership check."""
         task = await self.get_by_id_and_user(task_id, user_id)
         if not task:
@@ -160,7 +157,7 @@ class TaskRepository(TaskRepositoryProtocol):
         await self.db.commit()
         return True
 
-    async def delete_owned(self, db: Any, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete_owned(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Delete a task with ownership check."""
         task = await self.get_by_id_and_user(task_id, user_id)
         if not task:

@@ -27,33 +27,30 @@ def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
 async def create_task(
     task_data: TaskCreateRequest,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     task_service: TaskService = Depends(get_task_service)
 ):
     """Create a new task."""
-    return await task_service.create_task(db, current_user.id, task_data)
+    return await task_service.create_task(current_user.id, task_data)
 
 
 @router.get("/", response_model=list[TaskRead])
 async def list_tasks(
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     task_service: TaskService = Depends(get_task_service)
 ):
     """List all tasks for the current user."""
-    return await task_service.list_tasks(db, current_user.id)
+    return await task_service.list_tasks(current_user.id)
 
 
 @router.get("/{task_id}", response_model=TaskRead)
 async def get_task(
     task_id: uuid.UUID,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     task_service: TaskService = Depends(get_task_service)
 ):
     """Get a specific task by ID."""
     try:
-        return await task_service.get_task(db, task_id, current_user.id)
+        return await task_service.get_task(task_id, current_user.id)
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -63,12 +60,11 @@ async def update_task(
     task_id: uuid.UUID,
     task_data: TaskUpdateRequest,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     task_service: TaskService = Depends(get_task_service)
 ):
     """Update a specific task."""
     try:
-        return await task_service.update_task(db, task_id, current_user.id, task_data)
+        return await task_service.update_task(task_id, current_user.id, task_data)
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -77,12 +73,11 @@ async def update_task(
 async def delete_task(
     task_id: uuid.UUID,
     current_user = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     task_service: TaskService = Depends(get_task_service)
 ):
     """Delete a specific task."""
     try:
-        await task_service.delete_task(db, task_id, current_user.id)
+        await task_service.delete_task(task_id, current_user.id)
         return None
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")

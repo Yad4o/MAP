@@ -34,7 +34,6 @@ def override_dependencies():
     
     # Override the dependency to return the same instance
     def debug_service():
-        print(f"Dependency override called, returning: {shared_service}")
         return shared_service
     
     app.dependency_overrides[get_task_service] = debug_service
@@ -58,8 +57,7 @@ def get_token_payload():
     return {"sub": "1", "jti": "test-jti", "role": "USER"}
 
 
-@pytest.mark.asyncio
-async def test_create_task(override_dependencies, test_client):
+def test_create_task(override_dependencies, test_client):
     """Test creating a new task."""
     task_data = {
         "title": "Test Task",
@@ -83,8 +81,7 @@ async def test_create_task(override_dependencies, test_client):
     assert "user_id" in data
 
 
-@pytest.mark.asyncio
-async def test_list_tasks_empty(override_dependencies, test_client):
+def test_list_tasks_empty(override_dependencies, test_client):
     """Test listing tasks when no tasks exist."""
     response = test_client.get("/api/v1/tasks/")
     
@@ -97,18 +94,10 @@ async def test_list_tasks_empty(override_dependencies, test_client):
 async def test_list_tasks_with_tasks(override_dependencies, test_client):
     """Test listing tasks when tasks exist."""
     # Create some tasks first using the shared service
-    print(f"Service instance: {override_dependencies}")
-    print(f"Service tasks before: {override_dependencies.tasks}")
-    
-    await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Task 1", description="Description 1"))
-    await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Task 2", description="Description 2"))
-    
-    print(f"Service tasks after: {override_dependencies.tasks}")
+    await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Task 1", description="Description 1"))
+    await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Task 2", description="Description 2"))
     
     response = test_client.get("/api/v1/tasks/")
-    
-    print(f"Response status: {response.status_code}")
-    print(f"Response data: {response.json()}")
     
     assert response.status_code == 200
     data = response.json()
@@ -121,7 +110,7 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
 async def test_get_task_found(override_dependencies, test_client):
     """Test getting a specific task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
+    task = await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
     
     response = test_client.get(f"/api/v1/tasks/{task.id}")
     
@@ -132,8 +121,7 @@ async def test_get_task_found(override_dependencies, test_client):
     assert data["description"] == "Test description"
 
 
-@pytest.mark.asyncio
-async def test_get_task_not_found(override_dependencies, test_client):
+def test_get_task_not_found(override_dependencies, test_client):
     """Test getting a task that doesn't exist."""
     response = test_client.get("/api/v1/tasks/00000000-0000-0000-0000-000000000999")
     
@@ -146,7 +134,7 @@ async def test_get_task_not_found(override_dependencies, test_client):
 async def test_update_task_found(override_dependencies, test_client):
     """Test updating a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Original Title", description="Original description"))
+    task = await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Original Title", description="Original description"))
     
     update_data = {
         "title": "Updated Title"
@@ -162,8 +150,7 @@ async def test_update_task_found(override_dependencies, test_client):
     assert data["status"] == "PENDING"
 
 
-@pytest.mark.asyncio
-async def test_update_task_not_found(override_dependencies, test_client):
+def test_update_task_not_found(override_dependencies, test_client):
     """Test updating a task that doesn't exist."""
     update_data = {
         "title": "Updated Title"
@@ -180,7 +167,7 @@ async def test_update_task_not_found(override_dependencies, test_client):
 async def test_delete_task_found(override_dependencies, test_client):
     """Test deleting a task that exists."""
     # Create a task first using the shared service
-    task = await override_dependencies.create_task(None, mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
+    task = await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Test Task", description="Test description"))
     
     response = test_client.delete(f"/api/v1/tasks/{task.id}")
     
@@ -189,12 +176,11 @@ async def test_delete_task_found(override_dependencies, test_client):
     
     # Verify task is deleted
     with pytest.raises(HTTPException) as exc_info:
-        await override_dependencies.get_task(None, task.id, mock_user.id)
+        await override_dependencies.get_task(task.id, mock_user.id)
     assert exc_info.value.status_code == 404
 
 
-@pytest.mark.asyncio
-async def test_delete_task_not_found(override_dependencies, test_client):
+def test_delete_task_not_found(override_dependencies, test_client):
     """Test deleting a task that doesn't exist."""
     response = test_client.delete("/api/v1/tasks/00000000-0000-0000-0000-000000000999")
     
@@ -203,8 +189,7 @@ async def test_delete_task_not_found(override_dependencies, test_client):
     assert data["detail"] == "Task not found"
 
 
-@pytest.mark.asyncio
-async def test_task_response_shapes(override_dependencies, test_client):
+def test_task_response_shapes(override_dependencies, test_client):
     """Test that all endpoints return correct response shapes."""
     # Create task
     create_response = test_client.post("/api/v1/tasks/", json={"title": "Test", "description": "Test description"})

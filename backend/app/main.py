@@ -50,7 +50,9 @@ def create_app() -> FastAPI:
     from app.api.v1.auth import router as auth_router
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
-    # Phase 2 — Tasks
+    # Phase 2 - Tasks
+    # Note: Router has prefix="/tasks" and tags=["tasks"] in routes/tasks.py
+    # Combined with prefix="/api/v1" here results in /api/v1/tasks endpoint
     from app.routes.tasks import router as tasks_router
     app.include_router(tasks_router, prefix="/api/v1")
 
