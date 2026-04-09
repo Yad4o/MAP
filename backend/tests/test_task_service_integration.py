@@ -15,9 +15,9 @@ from app.db.repositories.task_repo import TaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
-# Skip integration tests if real DB session is not available
-# This ensures tests work when Prajwal's conftest.py is merged
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.skip(
+    reason="Requires PostgreSQL — run against TEST_DATABASE_URL only"
+)
 
 # Run with: pytest -m "not integration" to skip until conftest.py with db_session fixture is merged
 
