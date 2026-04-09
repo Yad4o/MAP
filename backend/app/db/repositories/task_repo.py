@@ -135,19 +135,16 @@ class TaskRepository(TaskRepositoryProtocol):
         if not task:
             return None
         
-        # Update basic fields
-        if data.title is not None:
-            task.title = data.title
-        if data.description is not None:
-            task.description = data.description
-        if data.priority is not None:
-            task.priority = data.priority
+        # Update all provided fields dynamically
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(task, field, value)
         
         await self.db.commit()
         await self.db.refresh(task)
         return task
 
-    async def delete(self, db: Any, task_id: uuid.UUID) -> bool:
+    async def delete(self, task_id: uuid.UUID) -> bool:
         """Delete a task."""
         task = await self.get_by_id(task_id)
         if not task:

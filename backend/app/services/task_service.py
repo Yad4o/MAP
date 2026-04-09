@@ -98,7 +98,7 @@ class TaskService:
         updated = await self.repo.update_status_if_not_terminal(task_id, user_id, status.value)
         if updated is not None:
             # Success - task was found, owned, and status was updated
-            return TaskRead.model_validate(updated)
+            return TaskRead.model_validate(updated, from_attributes=True)
         
         # If we get here, status update failed - distinguish reasons
         # NOTE: TOCTOU — task could be deleted between atomic op and this get().

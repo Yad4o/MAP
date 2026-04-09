@@ -5,8 +5,8 @@ Mock task service for testing.
 import uuid
 import datetime
 from typing import List
-from fastapi import HTTPException
 from app.schemas.task import TaskCreateRequest, TaskRead, TaskUpdateRequest
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 
 
 class MockTaskService:
@@ -28,7 +28,7 @@ class MockTaskService:
             "priority": data.priority or 5,
             "retry_count": 0,
             "config": None,
-            "created_at": datetime.datetime.utcnow().isoformat(),
+            "created_at": datetime.datetime.utcnow(),
             "started_at": None,
             "completed_at": None,
             "result": None,
@@ -47,7 +47,7 @@ class MockTaskService:
         )
         
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         
         return TaskRead(**task)
     
@@ -64,7 +64,7 @@ class MockTaskService:
         )
         
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         
         # Update fields that are provided in data
         if data.title is not None:
@@ -86,7 +86,7 @@ class MockTaskService:
         )
         
         if task_index is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFoundError(task_id)
         
         del self.tasks[task_index]
         return True

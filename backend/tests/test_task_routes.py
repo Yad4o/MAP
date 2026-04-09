@@ -52,9 +52,6 @@ def test_client(override_dependencies):
         yield client
 
 
-def get_token_payload():
-    """Helper function for dependency override."""
-    return {"sub": "1", "jti": "test-jti", "role": "USER"}
 
 
 def test_create_task(override_dependencies, test_client):
@@ -175,9 +172,9 @@ async def test_delete_task_found(override_dependencies, test_client):
     assert response.content == b""
     
     # Verify task is deleted
-    with pytest.raises(HTTPException) as exc_info:
+    from app.core.exceptions import TaskNotFoundError
+    with pytest.raises(TaskNotFoundError):
         await override_dependencies.get_task(task.id, mock_user.id)
-    assert exc_info.value.status_code == 404
 
 
 def test_delete_task_not_found(override_dependencies, test_client):
