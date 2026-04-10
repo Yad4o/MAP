@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { createTask } from '../api/tasks';
-import { TaskCreate, TaskStatus } from '../types/task';
+import { TaskCreate } from '../types/task';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 
 export default function TaskCreatePage() {
@@ -14,7 +14,7 @@ export default function TaskCreatePage() {
     defaultValues: {
       title: '',
       description: '',
-      status: TaskStatus.PENDING,
+      priority: 5,
     }
   });
 
@@ -85,17 +85,17 @@ export default function TaskCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-              Status
+            <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+              Priority
             </label>
             <select
-              id="status"
-              {...register('status')}
+              id="priority"
+              {...register('priority', { valueAsNumber: true })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors bg-white appearance-none"
             >
-              <option value={TaskStatus.PENDING}>Pending</option>
-              <option value={TaskStatus.IN_PROGRESS}>In Progress</option>
-              <option value={TaskStatus.DONE}>Done</option>
+              {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                <option key={n} value={n}>{n}{n === 1 ? ' (Lowest)' : n === 5 ? ' (Default)' : n === 10 ? ' (Highest)' : ''}</option>
+              ))}
             </select>
           </div>
 

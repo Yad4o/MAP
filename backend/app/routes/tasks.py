@@ -10,7 +10,7 @@ from app.db.base import get_db
 from app.dependencies import get_current_user
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead
 from app.services.task_service import TaskService
-from app.db.repositories.task_repo import TaskRepository
+from app.db.repositories.task import TaskRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
 
 

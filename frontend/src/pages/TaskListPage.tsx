@@ -7,8 +7,11 @@ import { Link } from 'react-router-dom';
 
 const statusColors: Record<TaskStatus, string> = {
   [TaskStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
-  [TaskStatus.IN_PROGRESS]: 'bg-blue-100 text-blue-800',
-  [TaskStatus.DONE]: 'bg-green-100 text-green-800',
+  [TaskStatus.PROCESSING]: 'bg-blue-100 text-blue-800',
+  [TaskStatus.COMPLETED]: 'bg-green-100 text-green-800',
+  [TaskStatus.FAILED]: 'bg-red-100 text-red-800',
+  [TaskStatus.CANCELLED]: 'bg-gray-100 text-gray-800',
+  [TaskStatus.RETRYING]: 'bg-orange-100 text-orange-800',
 };
 
 export default function TaskListPage() {
@@ -19,7 +22,7 @@ export default function TaskListPage() {
     queryFn: getTasks,
   });
 
-  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
