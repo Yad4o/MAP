@@ -1,51 +1,32 @@
-/**
- * frontend/src/api/tasks.ts
- * ──────────────────────────
- * All task-related API calls.
- */
+import apiClient from './client';
+import { Task, TaskCreate, TaskUpdate } from '../types/task';
 
-import apiClient from "./client";
-import type {
-  PaginatedResponse,
-  TaskCreateRequest,
-  TaskDetailResponse,
-  TaskResponse,
-  TaskStatusResponse,
-  TaskStepResponse,
-} from "../types";
-
-export const tasksApi = {
-  create: async (data: TaskCreateRequest): Promise<TaskResponse> => {
-    const res = await apiClient.post("/tasks", data);
-    return res.data;
-  },
-
-  list: async (page = 1, pageSize = 20): Promise<PaginatedResponse<TaskResponse>> => {
-    const res = await apiClient.get("/tasks", { params: { page, page_size: pageSize } });
-    return res.data;
-  },
-
-  getById: async (taskId: string): Promise<TaskDetailResponse> => {
-    const res = await apiClient.get(`/tasks/${taskId}`);
-    return res.data;
-  },
-
-  getStatus: async (taskId: string): Promise<TaskStatusResponse> => {
-    const res = await apiClient.get(`/tasks/${taskId}/status`);
-    return res.data;
-  },
-
-  getSteps: async (taskId: string): Promise<TaskStepResponse[]> => {
-    const res = await apiClient.get(`/tasks/${taskId}/steps`);
-    return res.data;
-  },
-
-  cancel: async (taskId: string): Promise<void> => {
-    await apiClient.delete(`/tasks/${taskId}`);
-  },
-
-  retry: async (taskId: string): Promise<TaskResponse> => {
-    const res = await apiClient.post(`/tasks/${taskId}/retry`);
-    return res.data;
-  },
+export const getTasks = async (): Promise<Task[]> => {
+  const { data } = await apiClient.get<Task[]>('/tasks');
+  return data;
 };
+
+export const getTask = async (id: number): Promise<Task> => {
+  const { data } = await apiClient.get<Task>(`/tasks/${id}`);
+  return data;
+};
+
+export const createTask = async (task: TaskCreate): Promise<Task> => {
+  const { data } = await apiClient.post<Task>('/tasks', task);
+  return data;
+};
+
+export const updateTask = async (id: number, task: TaskUpdate): Promise<Task> => {
+  const { data } = await apiClient.put<Task>(`/tasks/${id}`, task);
+  return data;
+};
+
+export const deleteTask = async (id: number): Promise<void> => {
+  await apiClient.delete(`/tasks/${id}`);
+};
+
+// TODO (Task 2.3 integration): restore getStatus, getSteps, cancel, retry
+// export const getTaskStatus = async (id: number): Promise<TaskStatusResponse> => { ... };
+// export const getTaskSteps = async (id: number): Promise<TaskStepResponse[]> => { ... };
+// export const cancelTask = async (id: number): Promise<void> => { ... };
+// export const retryTask = async (id: number): Promise<Task> => { ... };

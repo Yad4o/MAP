@@ -11,6 +11,7 @@ import HistoryPage from './pages/HistoryPage'
 import LogsPage from './pages/LogsPage'
 import AdminPage from './pages/AdminPage'
 import SettingsPage from './pages/SettingsPage'
+import AppShell from './components/layout/AppShell'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
@@ -36,13 +37,15 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      <Route path="/tasks" element={<ProtectedRoute><TaskListPage /></ProtectedRoute>} />
-      <Route path="/tasks/new" element={<ProtectedRoute><TaskCreatePage /></ProtectedRoute>} />
-      <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetailPage /></ProtectedRoute>} />
-      <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
-      <Route path="/logs" element={<ProtectedRoute><LogsPage /></ProtectedRoute>} />
-      <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+        <Route path="/tasks" element={<TaskListPage />} />
+        <Route path="/tasks/new" element={<TaskCreatePage />} />
+        <Route path="/tasks/:id" element={<TaskDetailPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/logs" element={<LogsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+      </Route>
     </Routes>
   )
 }
