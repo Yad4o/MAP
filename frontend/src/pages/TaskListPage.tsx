@@ -19,10 +19,16 @@ export default function TaskListPage() {
     queryFn: getTasks,
   });
 
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
+      setDeletingId(null);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: () => {
+      setDeletingId(null);
     },
   });
 
@@ -89,14 +95,15 @@ export default function TaskListPage() {
                 <button
                   onClick={() => {
                     if (window.confirm('Are you sure you want to delete this task?')) {
+                      setDeletingId(task.id);
                       deleteMutation.mutate(task.id);
                     }
                   }}
-                  disabled={deleteMutation.isPending}
+                  disabled={deletingId === task.id}
                   className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Delete task"
                 >
-                  {deleteMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                  {deletingId === task.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                 </button>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2 truncate" title={task.title}>{task.title}</h3>
@@ -112,5 +119,3 @@ export default function TaskListPage() {
     </div>
   );
 }
-
-

@@ -5,7 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TaskCreatePage from '../TaskCreatePage';
 
 const renderWithProviders = (component: React.ReactElement) => {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>

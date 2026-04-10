@@ -19,12 +19,7 @@ export default function AppShell() {
         </div>
         
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {/* TODO: replace with <NavLink to="/dashboard"> once DashboardPage is implemented */}
-          <NavLink to="/tasks" end className={navLinkClass}>
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </NavLink>
-          
+          {/* TODO: add <NavLink to="/dashboard"> once DashboardPage is implemented */}
           <NavLink to="/tasks" className={navLinkClass}>
             <CheckSquare size={20} />
             <span>Tasks</span>
