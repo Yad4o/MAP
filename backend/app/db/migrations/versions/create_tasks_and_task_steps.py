@@ -20,7 +20,7 @@ def upgrade() -> None:
         sa.Column('user_id', sa.Uuid(), nullable=False),
         sa.Column('title', sa.String(length=500), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('status', sa.String(length=30), nullable=False, server_default='pending'),
+        sa.Column('status', sa.String(length=30), nullable=False, server_default='PENDING'),
         sa.Column('task_type', sa.String(length=50), nullable=True),
         sa.Column('priority', sa.SmallInteger(), nullable=False, server_default='5'),
         sa.Column('retry_count', sa.SmallInteger(), nullable=False, server_default='0'),
