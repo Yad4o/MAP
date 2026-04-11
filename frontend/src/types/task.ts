@@ -5,8 +5,6 @@ export enum TaskStatus {
   FAILED = 'FAILED',
   CANCELLED = 'CANCELLED',
   RETRYING = 'RETRYING',
-  // Keep lowercase versions for compatibility if needed, but the backend uses uppercase
-  DONE = 'done' 
 }
 
 export enum StepType {
@@ -24,6 +22,12 @@ export enum StepStatus {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
   SKIPPED = 'SKIPPED'
+}
+
+export interface TaskError {
+  type: string;
+  message: string;
+  traceback?: string;
 }
 
 export interface TaskStepResponse {
@@ -56,7 +60,7 @@ export interface Task {
   started_at?: string;
   completed_at?: string;
   result?: any;
-  error?: any;
+  error?: TaskError;
 }
 
 export interface TaskDetailResponse extends Task {

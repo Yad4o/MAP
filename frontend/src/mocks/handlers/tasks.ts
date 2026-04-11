@@ -50,7 +50,11 @@ let mockTasks: Task[] = [
 let nextId = 1000
 
 // Request counts for stateful status polling
-const statusRequestCounts: Record<string | number, number> = {}
+let statusRequestCounts: Record<string | number, number> = {}
+
+export const resetStatusCounts = () => {
+  statusRequestCounts = {}
+}
 
 export const taskHandlers = [
   // GET /api/v1/tasks — list all tasks

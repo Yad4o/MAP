@@ -12,11 +12,6 @@ export const getTasks = async (): Promise<Task[]> => {
   return data;
 };
 
-export const getTask = async (id: string | number): Promise<Task> => {
-  const { data } = await apiClient.get<Task>(`/tasks/${id}`);
-  return data;
-};
-
 export const getTaskDetail = async (id: string | number): Promise<TaskDetailResponse> => {
   const { data } = await apiClient.get<TaskDetailResponse>(`/tasks/${id}`);
   return data;

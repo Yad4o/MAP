@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTaskDetail } from '../hooks/usePollTaskStatus';
 import { cancelTask, retryTask } from '../api/tasks';
 import { TaskStatus, StepStatus, TaskDetailResponse, StepType } from '../types/task';
@@ -40,14 +41,37 @@ import {
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: task, isLoading: isQueryLoading, error, refetch } = useTaskDetail(id);
+  const queryClient = useQueryClient();
+  const { data: task, isLoading: isQueryLoading, error } = useTaskDetail(id);
   const [copied, setCopied] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
 
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelTask(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
+    },
+    onError: (err) => {
+      console.error('Failed to cancel task', err);
+    }
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: () => retryTask(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
+    },
+    onError: (err) => {
+      console.error('Failed to retry task', err);
+    }
+  });
+
   // Logic for elapsed time counter
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (task && (task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING)) {
       const start = task.started_at ? new Date(task.started_at).getTime() : new Date(task.created_at).getTime();
       interval = setInterval(() => {
@@ -141,19 +165,29 @@ export default function TaskDetailPage() {
           <div className="flex items-center gap-3">
             {(task.status === TaskStatus.PENDING || task.status === TaskStatus.PROCESSING) && (
               <button 
-                onClick={async () => { await cancelTask(id!); refetch(); }}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300"
+                onClick={() => cancelMutation.mutate()}
+                disabled={cancelMutation.isPending}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Ban className="w-4 h-4" />
+                {cancelMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Ban className="w-4 h-4" />
+                )}
                 Cancel Task
               </button>
             )}
             {task.status === TaskStatus.FAILED && (
               <button 
-                onClick={async () => { await retryTask(id!); refetch(); }}
-                className="btn-primary flex items-center gap-2"
+                onClick={() => retryMutation.mutate()}
+                disabled={retryMutation.isPending}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCcw className="w-4 h-4" />
+                {retryMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="w-4 h-4" />
+                )}
                 Retry Task
               </button>
             )}
