@@ -219,3 +219,77 @@ class TestTaskService:
         # Act & Assert
         with pytest.raises(TaskOwnershipError):
             await task_service.delete_task(task_id=created_task.id, user_id=user2_id)
+    @pytest.mark.asyncio
+    async def test_get_task_status_returns_correct_status(self, task_service, mock_repo, sample_task_data):
+        """Test happy path for get_task_status."""
+        user_id = uuid.uuid4()
+        created = await task_service.create_task(user_id=user_id, data=sample_task_data)
+        
+        status_resp = await task_service.get_task_status(created.id, user_id)
+        
+        assert status_resp.task_id == created.id
+        assert status_resp.status == TaskStatus.PENDING
+
+    @pytest.mark.asyncio
+    async def test_get_task_status_raises_not_found(self, task_service):
+        """Test get_task_status for nonexistent task."""
+        with pytest.raises(TaskNotFoundError):
+            await task_service.get_task_status(uuid.uuid4(), uuid.uuid4())
+
+    @pytest.mark.asyncio
+    async def test_get_task_status_raises_ownership_error(self, task_service, sample_task_data):
+        """Test get_task_status for wrong user."""
+        user1 = uuid.uuid4()
+        user2 = uuid.uuid4()
+        created = await task_service.create_task(user_id=user1, data=sample_task_data)
+        
+        with pytest.raises(TaskOwnershipError):
+            await task_service.get_task_status(created.id, user2)
+
+    @pytest.mark.asyncio
+    async def test_update_status_if_not_terminal_updates_pending(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task_status works for PENDING -> COMPLETED."""
+        user_id = uuid.uuid4()
+        created = await task_service.create_task(user_id=user_id, data=sample_task_data)
+        
+        updated = await task_service.update_task_status(created.id, user_id, TaskStatus.COMPLETED)
+        
+        assert updated is not None
+        assert updated.status == TaskStatus.COMPLETED
+
+    @pytest.mark.asyncio
+    async def test_update_status_if_not_terminal_blocks_completed(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task_status fails for COMPLETED task."""
+        user_id = uuid.uuid4()
+        created = await task_service.create_task(user_id=user_id, data=sample_task_data)
+        
+        # Set to COMPLETED
+        await task_service.update_task_status(created.id, user_id, TaskStatus.COMPLETED)
+        
+        # Try to update again - should raise TaskStateTransitionError due to terminal state
+        with pytest.raises(TaskStateTransitionError):
+            await task_service.update_task_status(created.id, user_id, TaskStatus.PROCESSING)
+
+    @pytest.mark.asyncio
+    async def test_update_status_if_not_terminal_blocks_failed(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task_status fails for FAILED task."""
+        user_id = uuid.uuid4()
+        created = await task_service.create_task(user_id=user_id, data=sample_task_data)
+        
+        # Set to FAILED
+        await task_service.update_task_status(created.id, user_id, TaskStatus.FAILED)
+        
+        with pytest.raises(TaskStateTransitionError):
+            await task_service.update_task_status(created.id, user_id, TaskStatus.PROCESSING)
+
+    @pytest.mark.asyncio
+    async def test_update_status_if_not_terminal_blocks_cancelled(self, task_service, mock_repo, sample_task_data):
+        """Test that update_task_status fails for CANCELLED task."""
+        user_id = uuid.uuid4()
+        created = await task_service.create_task(user_id=user_id, data=sample_task_data)
+        
+        # Set to CANCELLED
+        await task_service.update_task_status(created.id, user_id, TaskStatus.CANCELLED)
+        
+        with pytest.raises(TaskStateTransitionError):
+            await task_service.update_task_status(created.id, user_id, TaskStatus.PROCESSING)
