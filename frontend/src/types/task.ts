@@ -59,3 +59,12 @@ export interface TaskUpdate {
   priority?: number;
   config?: Record<string, unknown>;
 }
+
+export interface TaskStatusResponse {
+  id: string;
+  status: TaskStatus;
+}
+
+export interface TaskDetailResponse extends Task {
+  steps: TaskStep[];
+}

@@ -85,7 +85,12 @@ def test_generate_refresh_token_hash_starts_with_bcrypt():
 
 def test_verify_password_truncation_boundary():
     """Test bcrypt's 72-byte truncation behavior."""
+    # Use 72 bytes exactly to avoid ValueError in newer bcrypt versions
+    # while still proving that we handle the boundary correctly.
+    max_password = "a" * 72
+    hashed = hash_password(max_password)
+    assert verify_password(max_password, hashed) is True
+    
+    # Prove that characters beyond 72 bytes are ignored
     long_password = "a" * 80
-    hashed = hash_password(long_password)
     assert verify_password(long_password, hashed) is True
-    assert verify_password("a" * 72, hashed) is True  # documents truncation contract

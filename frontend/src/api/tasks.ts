@@ -1,13 +1,18 @@
 import apiClient from './client';
-import { Task, TaskCreate, TaskUpdate } from '../types/task';
+import { Task, TaskCreate, TaskUpdate, TaskStatusResponse, TaskDetailResponse } from '../types/task';
 
 export const getTasks = async (): Promise<Task[]> => {
   const { data } = await apiClient.get<Task[]>('/tasks');
   return data;
 };
 
-export const getTask = async (id: string): Promise<Task> => {
-  const { data } = await apiClient.get<Task>(`/tasks/${id}`);
+export const getTask = async (id: string): Promise<TaskDetailResponse> => {
+  const { data } = await apiClient.get<TaskDetailResponse>(`/tasks/${id}`);
+  return data;
+};
+
+export const getTaskStatus = async (id: string): Promise<TaskStatusResponse> => {
+  const { data } = await apiClient.get<TaskStatusResponse>(`/tasks/${id}/status`);
   return data;
 };
 

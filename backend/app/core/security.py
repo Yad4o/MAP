@@ -20,8 +20,10 @@ def hash_password(plain_password: str) -> str:
     Hash a plain text password using bcrypt with cost factor 12.
     Returns the hash string to store in the database.
     """
-    # Truncate to 72 bytes max for bcrypt compatibility
-    return pwd_context.hash(plain_password[:72])
+    # Truncate to 72 bytes max for bcrypt compatibility.
+    # We encode then slice to ensure multi-byte characters don't exceed the limit.
+    pw_bytes = plain_password.encode("utf-8")[:72]
+    return pwd_context.hash(pw_bytes)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -30,7 +32,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns True if match, False otherwise.
     """
     # Truncate to 72 bytes max for bcrypt compatibility (same as hashing)
-    return pwd_context.verify(plain_password[:72], hashed_password)
+    pw_bytes = plain_password.encode("utf-8")[:72]
+    return pwd_context.verify(pw_bytes, hashed_password)
 
 
 def create_access_token(user_id: uuid.UUID, role: str) -> tuple[str, str, datetime]:
@@ -76,8 +79,10 @@ def generate_refresh_token() -> tuple[str, str]:
         - hashed_token → store in the database; never persist the raw value
     """
     raw_token = secrets.token_urlsafe(64)
-    # Truncate to 72 bytes max for bcrypt compatibility and return truncated version
-    # to ensure raw_token and hashed_token are consistent
-    raw_token = raw_token[:72]
-    hashed_token = pwd_context.hash(raw_token)
+    # Truncate to 72 bytes max for bcrypt compatibility.
+    # We encode then slice to ensures consistency between raw and hashed values.
+    # passlib/bcrypt will handle the bytes directly.
+    raw_bytes = raw_token.encode("utf-8")[:72]
+    raw_token = raw_bytes.decode("utf-8", errors="ignore")  # convert back to string for return
+    hashed_token = pwd_context.hash(raw_bytes)
     return raw_token, hashed_token
