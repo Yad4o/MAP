@@ -6,7 +6,9 @@ import App from './App'
 import './index.css'
 
 (async () => {
-  if (import.meta.env.DEV) {
+  // Only start MSW if explicitly enabled in environment variables
+  // This allows developers to toggle between mock and real backend easily.
+  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MSW === 'true') {
     const { worker } = await import('./mocks/browser')
     await worker.start({ onUnhandledRequest: 'warn' })
   }
