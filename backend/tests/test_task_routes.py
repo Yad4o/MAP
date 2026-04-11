@@ -52,7 +52,7 @@ def test_client(override_dependencies):
 @pytest.fixture(autouse=True)
 def mock_celery():
     """Mock Celery apply_async for all route tests."""
-    with patch("app.worker.tasks.process_task.apply_async") as mocked:
+    with patch("app.routes.tasks.process_task.apply_async") as mocked:
         yield mocked
 
 

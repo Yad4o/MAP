@@ -54,6 +54,19 @@ async def _set_task_failed(task_id: str):
         await repo.update_status(uuid.UUID(task_id), TaskStatus.FAILED)
 
 
+def _run_async(coro):
+    """Helper to run a coroutine, handling existing event loops (e.g. in tests)."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(asyncio.run, coro).result()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
+
+
 @celery_app.task(
     name="app.worker.tasks.process_task",
     bind=True,
@@ -66,44 +79,16 @@ def process_task(self, task_id: str) -> dict:
     """
     logger.info(f"[worker] Received task {task_id}")
     
-    coro = _run_agent_task(task_id)
-    
     try:
-        # Check if we are already in an event loop (common in tests with task_always_eager)
-        asyncio.get_running_loop()
-        # If we are here, we are in a running loop and cannot call asyncio.run()
-        # We run the coroutine in a separate thread to avoid "cannot be called from a running event loop"
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, coro)
-            return future.result()
-    except RuntimeError:
-        # No running event loop, safe to use asyncio.run()
-        try:
-            return asyncio.run(coro)
-        except Exception as exc:
-            # Check if we should retry
-            if self.request.retries >= self.max_retries:
-                logger.error(f"[worker] Task {task_id} failed after {self.max_retries} retries")
-                asyncio.run(_set_task_failed(task_id))
-                raise exc
-            
-            logger.warning(f"[worker] Retrying task {task_id} due to: {exc}")
-            raise self.retry(exc=exc)
+        return _run_async(_run_agent_task(task_id))
     except Exception as exc:
-        # Error from the thread pool execution
+        # Check if we should retry
         if self.request.retries >= self.max_retries:
-            logger.error(f"[worker] Task {task_id} failed after {self.max_retries} retries (thread pool)")
-            # Try to set failed status, might need its own thread if loop still running
-            try:
-                asyncio.run(_set_task_failed(task_id))
-            except RuntimeError:
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    executor.submit(asyncio.run, _set_task_failed(task_id)).result()
+            logger.error(f"[worker] Task {task_id} failed after {self.max_retries} retries")
+            _run_async(_set_task_failed(task_id))
             raise exc
         
-        logger.warning(f"[worker] Retrying task {task_id} (thread pool) due to: {exc}")
+        logger.warning(f"[worker] Retrying task {task_id} due to: {exc}")
         raise self.retry(exc=exc)
 
 

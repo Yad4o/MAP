@@ -12,6 +12,7 @@ from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, Tas
 from app.services.task_service import TaskService
 from app.db.repositories.task_repo import TaskRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.worker.tasks import process_task
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -33,7 +34,6 @@ async def create_task(
     task = await task_service.create_task(current_user.id, task_data)
     
     # Dispatch Celery job for processing here in the route layer
-    from app.worker.tasks import process_task
     process_task.apply_async(args=[str(task.id)])
     
     return task

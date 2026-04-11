@@ -55,7 +55,7 @@ class TestTaskService:
     @pytest.fixture(autouse=True)
     def mock_celery(self):
         """Automatically mock the Celery task for all tests in this class."""
-        with patch("app.worker.tasks.process_task.apply_async") as mocked:
+        with patch("app.routes.tasks.process_task.apply_async") as mocked:
             yield mocked
 
     @pytest.mark.asyncio
