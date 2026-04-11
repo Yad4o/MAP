@@ -31,10 +31,6 @@ class TaskService:
             config=data.config
         )
         
-        # Dispatch Celery job for processing
-        from app.worker.tasks import process_task
-        process_task.apply_async(args=[str(task.id)])
-        
         # Use Pydantic's ORM handling with from_attributes=True
         return TaskRead.model_validate(task, from_attributes=True)
 
@@ -44,9 +40,7 @@ class TaskService:
         if not task:
             raise TaskNotFoundError(task_id)
         
-        # Check ownership
-        if task.user_id != user_id:
-            raise TaskOwnershipError()
+        self._verify_ownership(task, user_id)
         
         # Use Pydantic's ORM handling with from_attributes=True
         return TaskRead.model_validate(task, from_attributes=True)
@@ -57,9 +51,7 @@ class TaskService:
         if not task:
             raise TaskNotFoundError(task_id)
         
-        # Check ownership
-        if task.user_id != user_id:
-            raise TaskOwnershipError()
+        self._verify_ownership(task, user_id)
             
         return TaskStatusResponse(task_id=task.id, status=task.status)
 
@@ -111,7 +103,7 @@ class TaskService:
     async def update_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID, status: TaskStatus) -> TaskRead:
         """Internal method for updating task status (used by workers, not API)."""
         # Try atomic status update first
-        updated = await self.repo.update_status_if_not_terminal(task_id, user_id, status.value)
+        updated = await self.repo.update_status_if_not_terminal(task_id, user_id, status)
         if updated is not None:
             # Success - task was found, owned, and status was updated
             return TaskRead.model_validate(updated, from_attributes=True)
@@ -124,10 +116,13 @@ class TaskService:
         if not existing:
             raise TaskNotFoundError(task_id)
         
-        # Check ownership
-        if existing.user_id != user_id:
-            raise TaskOwnershipError()
+        self._verify_ownership(existing, user_id)
         
         # Task exists and user owns it - must be terminal state violation
         current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, status)
+
+    def _verify_ownership(self, task: Any, user_id: uuid.UUID) -> None:
+        """Helper to verify task ownership."""
+        if task.user_id != user_id:
+            raise TaskOwnershipError()

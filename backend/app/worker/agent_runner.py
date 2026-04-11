@@ -7,6 +7,8 @@ Phase 4 will replace this with real LangGraph logic.
 
 import asyncio
 import logging
+import os
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,9 @@ class AgentRunner:
         """
         logger.info(f"AgentRunner: starting execution for task {self.task_id}")
         
-        # Simulate work
-        await asyncio.sleep(2)
+        # Simulate work (configurable delay for tests)
+        delay = float(os.getenv("AGENT_RUN_DELAY", 2 if settings.is_development else 0))
+        await asyncio.sleep(delay)
         
         logger.info(f"AgentRunner: completed execution for task {self.task_id}")
         

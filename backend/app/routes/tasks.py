@@ -30,7 +30,13 @@ async def create_task(
     task_service: TaskService = Depends(get_task_service)
 ):
     """Create a new task."""
-    return await task_service.create_task(current_user.id, task_data)
+    task = await task_service.create_task(current_user.id, task_data)
+    
+    # Dispatch Celery job for processing here in the route layer
+    from app.worker.tasks import process_task
+    process_task.apply_async(args=[str(task.id)])
+    
+    return task
 
 
 @router.get("", response_model=list[TaskRead])

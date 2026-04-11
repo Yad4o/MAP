@@ -168,7 +168,7 @@ class TaskRepository(TaskRepositoryProtocol):
         self,
         task_id: uuid.UUID,
         user_id: uuid.UUID,
-        new_status: str,
+        new_status: TaskStatus,
     ) -> Task | None:
         """Atomically update task status only if not in a terminal state (COMPLETED, FAILED, CANCELLED)."""
         terminal_states = [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.CANCELLED.value]
@@ -180,7 +180,7 @@ class TaskRepository(TaskRepositoryProtocol):
                 Task.user_id == user_id,
                 Task.status.notin_(terminal_states)
             )
-            .values(status=new_status)
+            .values(status=new_status.value)
             .returning(Task)
         )
         

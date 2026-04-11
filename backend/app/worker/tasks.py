@@ -43,6 +43,7 @@ async def _run_agent_task(task_id: str):
         except Exception as e:
             logger.error(f"Task {task_id}: error -> {str(e)}")
             await repo.set_error(tid, {"error": str(e)})
+            await repo.update_status(tid, TaskStatus.FAILED)
             raise e
 
 

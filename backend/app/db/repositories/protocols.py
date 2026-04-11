@@ -11,7 +11,7 @@ must implement, enabling easy mocking and swapping of implementations.
 
 from typing import Any, Protocol, runtime_checkable
 import uuid
-from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus
 
 
 @runtime_checkable
@@ -92,7 +92,7 @@ class TaskRepositoryProtocol(Protocol):
         """
         ...
 
-    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Any | None:
+    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: TaskStatus) -> Any | None:
         """
         Update task status atomically if current status is not terminal.
         
