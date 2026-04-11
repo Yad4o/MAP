@@ -7,6 +7,7 @@ Phase 0: Config defined, app created. No tasks yet.
 Phase 3 (Member building queue): Tasks will be registered in tasks.py.
 """
 
+import ssl
 from celery import Celery
 from app.config import settings
 
@@ -18,6 +19,14 @@ celery_app = Celery(
 )
 
 celery_app.conf.update(
+    # Upstash Redis SSL configuration (guard CERT_NONE to development)
+    broker_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED},
+    redis_backend_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED},
+
+    # Development: Run tasks synchronously without a worker
+    task_always_eager=settings.is_development,
+    task_eager_propagates=True,  # Propagate exceptions in eager mode
+
     # Serialization
     task_serializer="json",
     result_serializer="json",

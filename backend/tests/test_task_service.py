@@ -15,6 +15,7 @@ from app.services.task_service import TaskService
 from tests.mocks.task_repository import MockTaskRepository
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskRead
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -50,6 +51,12 @@ def sample_update_data():
 
 class TestTaskService:
     """Test suite for TaskService."""
+
+    @pytest.fixture(autouse=True)
+    def mock_celery(self):
+        """Automatically mock the Celery task for all tests in this class."""
+        with patch("app.routes.tasks.process_task.apply_async") as mocked:
+            yield mocked
 
     @pytest.mark.asyncio
     async def test_create_task_returns_correct_shape(self, task_service, mock_repo, sample_task_data):

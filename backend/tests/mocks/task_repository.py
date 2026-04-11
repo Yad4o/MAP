@@ -13,6 +13,7 @@ import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
 from app.db.models.task import Task
+from app.schemas.task import TaskStatus
 
 
 class MockTaskRepository(TaskRepositoryProtocol):
@@ -110,7 +111,7 @@ class MockTaskRepository(TaskRepositoryProtocol):
         del self._tasks[task_id]
         return True
 
-    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: str) -> Optional[Task]:
+    async def update_status_if_not_terminal(self, task_id: uuid.UUID, user_id: uuid.UUID, new_status: TaskStatus) -> Optional[Task]:
         """Update task status atomically if current status is not terminal."""
         if task_id not in self._tasks:
             return None
@@ -123,5 +124,5 @@ class MockTaskRepository(TaskRepositoryProtocol):
         if task.status in TERMINAL:
             return None
         
-        task.status = new_status
+        task.status = new_status.value
         return task

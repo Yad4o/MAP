@@ -6,7 +6,7 @@ import pytest
 import uuid
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from app.main import app
 from app.routes.tasks import get_task_service
@@ -47,6 +47,13 @@ def test_client(override_dependencies):
     """Create test client with dependency overrides."""
     with TestClient(app) as client:
         yield client
+
+
+@pytest.fixture(autouse=True)
+def mock_celery():
+    """Mock Celery apply_async for all route tests."""
+    with patch("app.routes.tasks.process_task.apply_async") as mocked:
+        yield mocked
 
 
 

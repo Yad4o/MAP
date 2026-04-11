@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # ── Enums ─────────────────────────────────────────────────────
@@ -140,8 +140,7 @@ class TaskDetailResponse(TaskResponse):
 
 class TaskStatusResponse(BaseModel):
     """Lightweight status-only response for polling."""
-    id: UUID
+    task_id: UUID = Field(..., alias="id")
     status: TaskStatus
-    retry_count: int
-    started_at: datetime | None
-    completed_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

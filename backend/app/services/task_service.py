@@ -11,7 +11,7 @@ from typing import Any, List
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
-from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus
+from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskStatusResponse
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
 
@@ -40,12 +40,20 @@ class TaskService:
         if not task:
             raise TaskNotFoundError(task_id)
         
-        # Check ownership
-        if task.user_id != user_id:
-            raise TaskOwnershipError()
+        self._verify_ownership(task, user_id)
         
         # Use Pydantic's ORM handling with from_attributes=True
         return TaskRead.model_validate(task, from_attributes=True)
+
+    async def get_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskStatusResponse:
+        """Fetch only the task's status, enforcing ownership."""
+        task = await self.repo.get(task_id)
+        if not task:
+            raise TaskNotFoundError(task_id)
+        
+        self._verify_ownership(task, user_id)
+            
+        return TaskStatusResponse(task_id=task.id, status=task.status)
 
     async def list_tasks(self, user_id: uuid.UUID) -> List[TaskRead]:
         """List all tasks for a user."""
@@ -95,7 +103,7 @@ class TaskService:
     async def update_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID, status: TaskStatus) -> TaskRead:
         """Internal method for updating task status (used by workers, not API)."""
         # Try atomic status update first
-        updated = await self.repo.update_status_if_not_terminal(task_id, user_id, status.value)
+        updated = await self.repo.update_status_if_not_terminal(task_id, user_id, status)
         if updated is not None:
             # Success - task was found, owned, and status was updated
             return TaskRead.model_validate(updated, from_attributes=True)
@@ -108,10 +116,13 @@ class TaskService:
         if not existing:
             raise TaskNotFoundError(task_id)
         
-        # Check ownership
-        if existing.user_id != user_id:
-            raise TaskOwnershipError()
+        self._verify_ownership(existing, user_id)
         
         # Task exists and user owns it - must be terminal state violation
         current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, status)
+
+    def _verify_ownership(self, task: Any, user_id: uuid.UUID) -> None:
+        """Helper to verify task ownership."""
+        if task.user_id != user_id:
+            raise TaskOwnershipError()

@@ -8,10 +8,11 @@ import uuid
 
 from app.db.base import get_db
 from app.dependencies import get_current_user
-from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskStatusResponse
 from app.services.task_service import TaskService
 from app.db.repositories.task_repo import TaskRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.worker.tasks import process_task
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -30,7 +31,12 @@ async def create_task(
     task_service: TaskService = Depends(get_task_service)
 ):
     """Create a new task."""
-    return await task_service.create_task(current_user.id, task_data)
+    task = await task_service.create_task(current_user.id, task_data)
+    
+    # Dispatch Celery job for processing here in the route layer
+    process_task.apply_async(args=[str(task.id)])
+    
+    return task
 
 
 @router.get("", response_model=list[TaskRead])
@@ -51,6 +57,19 @@ async def get_task(
     """Get a specific task by ID."""
     try:
         return await task_service.get_task(task_id, current_user.id)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+
+
+@router.get("/{task_id}/status", response_model=TaskStatusResponse)
+async def get_task_status(
+    task_id: uuid.UUID,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """Get the status of a specific task (lightweight endpoint)."""
+    try:
+        return await task_service.get_task_status(task_id, current_user.id)
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
 

@@ -164,6 +164,35 @@ class TaskRepository(TaskRepositoryProtocol):
         await self.db.commit()
         return True
 
+    async def update_status_if_not_terminal(
+        self,
+        task_id: uuid.UUID,
+        user_id: uuid.UUID,
+        new_status: TaskStatus,
+    ) -> Task | None:
+        """Atomically update task status only if not in a terminal state (COMPLETED, FAILED, CANCELLED)."""
+        terminal_states = [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.CANCELLED.value]
+        
+        query = (
+            update(Task)
+            .where(
+                Task.id == task_id,
+                Task.user_id == user_id,
+                Task.status.notin_(terminal_states)
+            )
+            .values(status=new_status.value)
+            .returning(Task)
+        )
+        
+        result = await self.db.execute(query)
+        updated_task = result.scalar_one_or_none()
+        
+        if updated_task:
+            await self.db.commit()
+            return updated_task
+            
+        return None
+
 
 class TaskStepRepository:
     def __init__(self, db: AsyncSession):
