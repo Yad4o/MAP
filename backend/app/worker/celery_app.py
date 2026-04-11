@@ -17,7 +17,20 @@ celery_app = Celery(
     include=["app.worker.tasks"],
 )
 
+# SSL configuration for Upstash Redis
+redis_ssl_params = {
+    "ssl_cert_reqs": None
+}
+
 celery_app.conf.update(
+    # Broker and Backend SSL
+    broker_use_ssl=redis_ssl_params if settings.CELERY_BROKER_URL.startswith("rediss://") else None,
+    redis_backend_use_ssl=redis_ssl_params if settings.CELERY_RESULT_BACKEND.startswith("rediss://") else None,
+
+    # Development mode: run tasks synchronously
+    task_always_eager=settings.is_development,
+    task_eager_propagates=settings.is_development,
+
     # Serialization
     task_serializer="json",
     result_serializer="json",

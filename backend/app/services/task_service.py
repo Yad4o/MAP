@@ -13,6 +13,7 @@ import uuid
 from app.db.repositories.protocols import TaskRepositoryProtocol
 from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
+from app.worker.tasks import process_task
 
 
 class TaskService:
@@ -30,6 +31,9 @@ class TaskService:
             priority=data.priority,
             config=data.config
         )
+        
+        # Dispatch Celery task
+        process_task.apply_async(args=[str(task.id)])
         
         # Use Pydantic's ORM handling with from_attributes=True
         return TaskRead.model_validate(task, from_attributes=True)
@@ -115,3 +119,14 @@ class TaskService:
         # Task exists and user owns it - must be terminal state violation
         current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, status)
+
+    async def get_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Any:
+        """Fetch only the task's status with ownership validation."""
+        task = await self.repo.get(task_id)
+        if not task:
+            raise TaskNotFoundError(task_id)
+        
+        if task.user_id != user_id:
+            raise TaskOwnershipError()
+            
+        return task

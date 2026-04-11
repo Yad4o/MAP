@@ -8,7 +8,7 @@ import uuid
 
 from app.db.base import get_db
 from app.dependencies import get_current_user
-from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskStatusResponse
 from app.services.task_service import TaskService
 from app.db.repositories.task import TaskRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
@@ -51,6 +51,19 @@ async def get_task(
     """Get a specific task by ID."""
     try:
         return await task_service.get_task(task_id, current_user.id)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+
+
+@router.get("/{task_id}/status", response_model=TaskStatusResponse)
+async def get_task_status(
+    task_id: uuid.UUID,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """Get the status of a specific task."""
+    try:
+        return await task_service.get_task_status(task_id, current_user.id)
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
 
