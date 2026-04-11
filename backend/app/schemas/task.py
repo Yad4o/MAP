@@ -140,8 +140,7 @@ class TaskDetailResponse(TaskResponse):
 
 class TaskStatusResponse(BaseModel):
     """Lightweight status-only response for polling."""
-    id: UUID
+    task_id: UUID
     status: TaskStatus
-    retry_count: int
-    started_at: datetime | None
-    completed_at: datetime | None
+
+    model_config = {"from_attributes": True}
