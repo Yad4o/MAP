@@ -1,0 +1,7 @@
+/**
+ * src/mocks/handlers/index.ts
+ * ────────────────────────────
+ * Barrel export for all MSW mock handlers.
+ * Add new handler arrays here as features are added.
+ */
+export { taskHandlers } from './tasks';

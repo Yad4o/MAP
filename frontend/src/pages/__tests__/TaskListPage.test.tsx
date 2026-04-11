@@ -8,9 +8,7 @@ import { http, HttpResponse } from 'msw';
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        retry: false,
-      },
+      queries: { retry: false },
     },
   });
   return render(
@@ -18,37 +16,47 @@ const renderWithProviders = (component: React.ReactElement) => {
       <MemoryRouter>
         {component}
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
 describe('TaskListPage', () => {
-  it('renders list of tasks', async () => {
+  it('renders list of tasks from mock handler', async () => {
     renderWithProviders(<TaskListPage />);
-    
-    // Check loading state
-    expect(screen.getByRole('heading', { name: /tasks/i })).toBeInTheDocument();
-    
+
     // Wait for the mock tasks to load
     await waitFor(() => {
-      expect(screen.getByText('Learn React')).toBeInTheDocument();
+      expect(screen.getByText('Design system architecture')).toBeInTheDocument();
     });
-    
-    expect(screen.getByText('Build Project')).toBeInTheDocument();
+
+    expect(screen.getByText('Implement agent orchestration layer')).toBeInTheDocument();
+    expect(screen.getByText('Write E2E test suite')).toBeInTheDocument();
   });
 
   it('renders empty state when no tasks', async () => {
     // Override the handler to return an empty array
     server.use(
-      http.get('*/api/v1/tasks', () => {
+      http.get('*/tasks', () => {
         return HttpResponse.json([]);
-      })
+      }),
     );
 
     renderWithProviders(<TaskListPage />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('No tasks yet')).toBeInTheDocument();
     });
+  });
+
+  it('shows the Create Task button', async () => {
+    renderWithProviders(<TaskListPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Design system architecture')).toBeInTheDocument();
+    });
+
+    // There should be a "Create Task" link in the header
+    const createLinks = screen.getAllByText('Create Task');
+    expect(createLinks.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -6,11 +6,11 @@
  * Phase 0: Store shape defined. Actions are stubs.
  * Phase 1: Fill in login/logout actions using authApi.
  *
- * Tokens are stored in memory only (never localStorage).
- * This protects against XSS token theft.
+ * Persisted: Tokens and user info are stored in localStorage to survive page refreshes.
  */
 
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { authApi } from "../api/auth";
 import type { UserResponse } from "../types";
 
@@ -32,79 +32,84 @@ interface AuthState {
   setError: (error: string | null) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  // ── Initial State ─────────────────────────────────────────
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
-
-  // ── Actions (implement in Phase 1) ────────────────────────
-
-  login: async (email: string, password: string) => {
-    // TODO Phase 1:
-    // 1. Call authApi.login({ email, password })
-    // 2. Call setTokens with the returned pair
-    // 3. Call authApi.getMe() to fetch user profile
-    // 4. Call setUser with profile
-    
-    try {
-      set({ isLoading: true, error: null });
-      // Call the login API
-      const tokenPair = await authApi.login({ email, password });
-      // Store tokens in memory
-      get().setTokens(tokenPair.access_token, tokenPair.refresh_token);
-      // Fetch the user profile
-      const user = await authApi.getMe();
-      // Store the user
-      get().setUser(user);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      set({ error: errorMessage });
-      get().clearAuth();
-      throw error;
-    } finally {
-      set({ isLoading: false });
-    }
-    
-  },
-
-  logout: async () => {
-    // TODO Phase 1:
-    // 1. Call authApi.logout()
-    // 2. Call clearAuth()
-    try {
-      // Try to call logout API
-      await authApi.logout();
-    } catch {
-      // Even if the API call fails, clear local auth state
-    } finally {
-      // Always clear auth state regardless
-      get().clearAuth();
-    }
-  },
-
-  setTokens: (accessToken, refreshToken) => {
-    set({ accessToken, refreshToken, isAuthenticated: true, error: null });
-  },
-
-  setUser: (user) => {
-    set({ user });
-  },
-
-  clearAuth: () => {
-    set({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      // ── Initial State ─────────────────────────────────────────
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      isLoading: false,
       error: null,
-    });
-  },
 
-  setError: (error: string | null) => {
-    set({ error });
-  },
-}));
+      // ── Actions ───────────────────────────────────────────────
+
+      login: async (email: string, password: string) => {
+        try {
+          set({ isLoading: true, error: null });
+          // Call the login API
+          const tokenPair = await authApi.login({ email, password });
+          // Store tokens (will be persisted by middleware)
+          get().setTokens(tokenPair.access_token, tokenPair.refresh_token);
+          // Fetch the user profile
+          const user = await authApi.getMe();
+          // Store the user
+          get().setUser(user);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Login failed';
+          set({ error: errorMessage });
+          get().clearAuth();
+          throw error;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      logout: async () => {
+        try {
+          // Try to call logout API
+          await authApi.logout();
+        } catch {
+          // Even if the API call fails, clear local auth state
+        } finally {
+          // Always clear auth state regardless
+          get().clearAuth();
+        }
+      },
+
+      setTokens: (accessToken, refreshToken) => {
+        set({ accessToken, refreshToken, isAuthenticated: true, error: null });
+      },
+
+      setUser: (user) => {
+        set({ user });
+      },
+
+      clearAuth: () => {
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          error: null,
+        });
+      },
+
+      setError: (error: string | null) => {
+        set({ error });
+      },
+    }),
+    {
+      name: "map-auth-storage", // unique name for the storage
+      storage: createJSONStorage(() => localStorage),
+      // Only persist the following fields:
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);
