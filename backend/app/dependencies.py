@@ -34,10 +34,18 @@ async def get_current_user(
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token payload format")
 
-    redis = await get_redis()
-    is_revoked = await redis.exists(f"revoked:{jti}")
-    if is_revoked:
-        raise HTTPException(status_code=401, detail="Token has been revoked")
+    try:
+        redis = await get_redis()
+        is_revoked = await redis.exists(f"revoked:{jti}")
+        if is_revoked:
+            raise HTTPException(status_code=401, detail="Token has been revoked")
+    except HTTPException:
+        # Re-raise authentication errors so they reach the client
+        raise
+    except Exception as e:
+        # Catch other errors (like Redis connection failure) and continue
+        import logging
+        logging.getLogger("uvicorn").error(f"Redis connection failed: {e}")
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id(user_id)
     if not user:

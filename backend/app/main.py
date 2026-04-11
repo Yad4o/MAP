@@ -13,6 +13,7 @@ Usage:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
 from app.config import settings
 from app.core.redis import close_redis
 
@@ -35,12 +36,14 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ──────────────────────────────────────────────────
+    # Flexible CORS for development
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins_list,
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 
     # ── Routers ───────────────────────────────────────────────

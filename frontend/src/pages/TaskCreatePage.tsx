@@ -76,7 +76,10 @@ export default function TaskCreatePage() {
             <input
               id="title"
               type="text"
-              {...register('title', { required: 'Title is required' })}
+              {...register('title', { 
+                required: 'Title is required',
+                minLength: { value: 1, message: 'Title is too short' }
+              })}
               placeholder="e.g. Update database schema"
               className={`form-input ${
                 errors.title
@@ -98,15 +101,28 @@ export default function TaskCreatePage() {
               htmlFor="description"
               className="block text-sm font-medium text-slate-300"
             >
-              Description
+              Description <span className="text-red-400">*</span>
             </label>
             <textarea
               id="description"
               rows={4}
-              {...register('description')}
+              {...register('description', { 
+                required: 'Description is required',
+                minLength: { value: 1, message: 'Description is too short' }
+              })}
               placeholder="Detailed explanation of the task…"
-              className="form-input resize-y"
+              className={`form-input resize-y ${
+                errors.description
+                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
+                  : ''
+              }`}
             />
+            {errors.description && (
+              <p className="text-sm text-red-400 flex items-center gap-1.5">
+                <AlertTriangle size={14} />
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           {/* Status field */}

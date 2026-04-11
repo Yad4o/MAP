@@ -23,7 +23,7 @@ def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
     return TaskService(repo)
 
 
-@router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task_data: TaskCreateRequest,
     current_user = Depends(get_current_user),
@@ -33,7 +33,7 @@ async def create_task(
     return await task_service.create_task(current_user.id, task_data)
 
 
-@router.get("/", response_model=list[TaskRead])
+@router.get("", response_model=list[TaskRead])
 async def list_tasks(
     current_user = Depends(get_current_user),
     task_service: TaskService = Depends(get_task_service)
