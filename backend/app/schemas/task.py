@@ -140,7 +140,7 @@ class TaskDetailResponse(TaskResponse):
 
 class TaskStatusResponse(BaseModel):
     """Lightweight status-only response for polling."""
-    task_id: UUID = Field(..., alias="id")
+    task_id: UUID = Field(..., validation_alias="id")
     status: TaskStatus
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

@@ -24,10 +24,8 @@ def mock_session():
     """Mock database session for worker tasks."""
     with patch("app.worker.tasks.AsyncSessionLocal") as mock:
         session_instance = AsyncMock()
-        # Mocking the async context manager
-        context_manager = MagicMock()
-        context_manager.__aenter__.return_value = session_instance
-        mock.return_value = context_manager
+        mock.return_value.__aenter__ = AsyncMock(return_value=session_instance)
+        mock.return_value.__aexit__ = AsyncMock(return_value=False)
         yield session_instance
 
 @pytest.fixture
@@ -72,9 +70,9 @@ def test_process_task_retries_before_failing():
     """Verify that the task calls self.retry on exception before reaching max retries."""
     task_id = str(uuid.uuid4())
     
-    # We mock the internal _run_async to simulate a failure early
-    with patch("app.worker.tasks._run_async") as mock_run_async:
-        mock_run_async.side_effect = Exception("Transient failure")
+    # We mock the internal _run_agent_task to simulate a failure early
+    with patch("app.worker.tasks._run_agent_task") as mock_run_agent_task:
+        mock_run_agent_task.side_effect = Exception("Transient failure")
         
         # We need to mock the bound 'self' object for the task
         # In this case, 'self' will be the process_task instance itself when calling .run()

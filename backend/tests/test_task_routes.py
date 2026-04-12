@@ -224,7 +224,7 @@ async def test_get_task_status_returns_200(override_dependencies, test_client):
     
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == str(task.id)
+    assert data["task_id"] == str(task.id)
     assert data["status"] == "PENDING"
 
 
