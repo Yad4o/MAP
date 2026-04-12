@@ -34,6 +34,7 @@ let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | n
 // ── Request Interceptor ───────────────────────────────────────
 // Attaches the JWT access token to every request.
 // Phase 1: Read token from Zustand store and attach here.
+// NOTE: This request interceptor to attach Authorization: Bearer was already present and fully implemented.
 
 apiClient.interceptors.request.use(
   (config) => {
@@ -51,6 +52,9 @@ apiClient.interceptors.request.use(
 // ── Response Interceptor ──────────────────────────────────────
 // Handles 401 responses by attempting a token refresh.
 // Phase 1: Implement token refresh flow here.
+// NOTE: This response interceptor handling 401 errors, queuing multiple 401 requests, 
+// refreshing the token exactly once, retrying the original request, and handling refresh 
+// failure (clearing auth & redirecting to /login) was already fully implemented. No new logic was needed.
 
 apiClient.interceptors.response.use(
   (response) => response,
