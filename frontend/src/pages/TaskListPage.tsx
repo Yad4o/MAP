@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasks, deleteTask } from '../api/tasks';
 import { Task, TaskStatus } from '../types/task';
-import { Plus, Trash2, Loader2, AlertCircle, CheckSquare, Clock, Zap } from 'lucide-react';
+import { Plus, Trash2, Loader2, AlertCircle, CheckSquare, Clock, Zap, RefreshCcw, Ban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const statusConfig: Record<TaskStatus, { bg: string; text: string; dot: string; icon: typeof Clock }> = {
@@ -12,23 +12,41 @@ const statusConfig: Record<TaskStatus, { bg: string; text: string; dot: string; 
     dot: 'bg-amber-400',
     icon: Clock,
   },
-  [TaskStatus.IN_PROGRESS]: {
+  [TaskStatus.PROCESSING]: {
     bg: 'bg-blue-500/10 border-blue-500/20',
     text: 'text-blue-400',
     dot: 'bg-blue-400 animate-pulse',
     icon: Zap,
   },
-  [TaskStatus.DONE]: {
+  [TaskStatus.RETRYING]: {
+    bg: 'bg-indigo-500/10 border-indigo-500/20',
+    text: 'text-indigo-400',
+    dot: 'bg-indigo-400 animate-pulse',
+    icon: RefreshCcw,
+  },
+  [TaskStatus.COMPLETED]: {
     bg: 'bg-emerald-500/10 border-emerald-500/20',
     text: 'text-emerald-400',
     dot: 'bg-emerald-400',
     icon: CheckSquare,
   },
+  [TaskStatus.FAILED]: {
+    bg: 'bg-red-500/10 border-red-500/20',
+    text: 'text-red-400',
+    dot: 'bg-red-400',
+    icon: AlertCircle,
+  },
+  [TaskStatus.CANCELLED]: {
+    bg: 'bg-slate-500/10 border-slate-500/20',
+    text: 'text-slate-400',
+    dot: 'bg-slate-400',
+    icon: Ban,
+  },
 };
 
 export default function TaskListPage() {
   const queryClient = useQueryClient();
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
   const { data: tasks, isLoading, isError } = useQuery({
     queryKey: ['tasks'],
