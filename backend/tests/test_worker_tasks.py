@@ -70,9 +70,13 @@ def test_process_task_retries_before_failing():
     """Verify that the task calls self.retry on exception before reaching max retries."""
     task_id = str(uuid.uuid4())
     
-    # We mock the internal _run_agent_task to simulate a failure early
-    with patch("app.worker.tasks._run_agent_task") as mock_run_agent_task:
-        mock_run_agent_task.side_effect = Exception("Transient failure")
+    # We mock _run_async to simulate a failure during async execution
+    def mock_run_async_impl(coro):
+        if hasattr(coro, "close"):
+            coro.close()
+        raise Exception("Transient failure")
+
+    with patch("app.worker.tasks._run_async", side_effect=mock_run_async_impl) as mock_run_async:
         
         # We need to mock the bound 'self' object for the task
         # In this case, 'self' will be the process_task instance itself when calling .run()
