@@ -137,14 +137,16 @@ export default function TaskDetailPage() {
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(task.result, null, 2))
+    navigator.clipboard
+      .writeText(JSON.stringify(task.result, null, 2))
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
+        // Clipboard can fail on HTTP or when browser permission is denied.
+        // A toast notification should replace this in the next pass.
         console.error('Clipboard write failed:', err);
-        // Replace with a toast notification in the next pass
       });
   };
 

@@ -37,9 +37,11 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
+      {/* All authenticated routes are rendered inside the AppShell layout */}
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/tasks" element={<TaskListPage />} />
         <Route path="/tasks/new" element={<TaskCreatePage />} />
+        {/* PR fix: register TaskDetailPage under AppShell for polling, cancel/retry */}
         <Route path="/tasks/:id" element={<TaskDetailPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/logs" element={<LogsPage />} />
