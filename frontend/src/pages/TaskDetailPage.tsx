@@ -137,9 +137,15 @@ export default function TaskDetailPage() {
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(task.result, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard.writeText(JSON.stringify(task.result, null, 2))
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch((err) => {
+        console.error('Clipboard write failed:', err);
+        // Replace with a toast notification in the next pass
+      });
   };
 
   return (

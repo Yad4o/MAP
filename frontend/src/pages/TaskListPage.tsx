@@ -5,7 +5,7 @@ import { Task, TaskStatus } from '../types/task';
 import { Plus, Trash2, Loader2, AlertCircle, CheckSquare, Clock, Zap, RefreshCcw, Ban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const statusConfig: Record<string, { bg: string; text: string; dot: string; icon: typeof Clock }> = {
+const statusConfig: Record<TaskStatus, { bg: string; text: string; dot: string; icon: typeof Clock }> = {
   [TaskStatus.PENDING]: {
     bg: 'bg-amber-500/10 border-amber-500/20',
     text: 'text-amber-400',
