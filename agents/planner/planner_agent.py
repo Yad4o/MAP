@@ -11,7 +11,7 @@ import uuid
 from typing import Any
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 # Importing settings from the backend app
 from backend.app.config import settings
@@ -48,16 +48,17 @@ class PlannerAgent(BaseAgent):
         if not task_description:
             return self.build_error("No task_description provided in payload.")
 
-        start_time = time.time()
         messages = [
             SystemMessage(content=PLANNER_SYSTEM_PROMPT),
             HumanMessage(content=build_planner_prompt(task_description))
         ]
 
         retries = 1
-        last_error = None
+        content = ""
+        last_error = "Unknown error"
 
         while retries >= 0:
+            start_time = time.time()
             try:
                 # Call LLM
                 response = await self.llm.ainvoke(messages)
@@ -66,10 +67,8 @@ class PlannerAgent(BaseAgent):
                 # Strip markdown fences if present
                 if content.strip().startswith("```"):
                     lines = content.strip().split("\n")
-                    if lines[0].startswith("```"):
-                        lines = lines[1:]
-                    if lines and lines[-1].strip() == "```":
-                        lines = lines[:-1]
+                    # Remove lines that are just ``` or ```json
+                    lines = [l for l in lines if not l.strip().startswith("```")]
                     content = "\n".join(lines).strip()
 
                 # Parse JSON
@@ -81,7 +80,8 @@ class PlannerAgent(BaseAgent):
 
                 # Populate metadata
                 latency_ms = int((time.time() - start_time) * 1000)
-                usage = response.response_metadata.get("token_usage", {})
+                metadata_raw = getattr(response, "response_metadata", {}) or {}
+                usage = metadata_raw.get("token_usage", {})
                 
                 metadata = AgentMetadata(
                     model_used=settings.DEFAULT_MODEL,
@@ -101,11 +101,20 @@ class PlannerAgent(BaseAgent):
                 last_error = str(e)
                 logger.warning(f"PlannerAgent: Parse/Validation failure (attempts left: {retries}). Error: {last_error}")
                 
-                if retries > 0:
-                    # Pass the error feedback back to the LLM in the message chain
-                    messages.append(HumanMessage(content=content)) # Add the bad response
-                    messages.append(HumanMessage(content=f"The previous response failed validation: {last_error}. Please provide a corrected JSON execution plan following the schema strictly."))
+            except Exception as e:
+                last_error = f"LLM call failed: {e}"
+                logger.error(f"PlannerAgent: Unexpected LLM error: {e}", exc_info=True)
                 retries -= 1
+                continue
 
-        # On 2nd failure, return error response
+            # If we're here, we caught (json.JSONDecodeError, ValueError)
+            # Add feedback for next attempt
+            messages.append(AIMessage(content=content)) # Add the bad response with correct role
+            messages.append(HumanMessage(
+                content=f"The previous response failed validation: {last_error}. "
+                "Please provide a corrected JSON execution plan following the schema strictly."
+            ))
+            retries -= 1
+
+        # On persistent failure, return error response
         return self.build_error(f"Planner failed to generate a valid JSON plan after retries. Last error: {last_error}")

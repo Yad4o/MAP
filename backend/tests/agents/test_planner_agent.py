@@ -17,8 +17,6 @@ from agents.shared.message import AgentMessage, AgentMetadata
 def planner_agent():
     # Patch ChatOpenAI to avoid real API calls
     with patch("agents.planner.planner_agent.ChatOpenAI") as mock_llm_class:
-        mock_llm_instance = mock_llm_class.return_value
-        mock_llm_instance.ainvoke = AsyncMock()
         task_id = uuid.uuid4()
         agent = PlannerAgent(task_id=task_id)
         yield agent
@@ -62,7 +60,7 @@ async def test_planner_returns_valid_plan(planner_agent):
             "completion_tokens": 100
         }
     }
-    planner_agent.llm.ainvoke.return_value = mock_response
+    planner_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
     
     result = await planner_agent.run(message)
     
@@ -98,7 +96,7 @@ async def test_planner_retries_on_bad_json(planner_agent):
     good_response.content = "```json\n{\"steps\": [{\"step_id\": \"step_1\", \"description\": \"Final Step\", \"assigned_agent\": \"executor\", \"tool_names\": []}]}\n```"
     good_response.response_metadata = {"token_usage": {}}
     
-    planner_agent.llm.ainvoke.side_effect = [bad_response, good_response]
+    planner_agent.llm.ainvoke = AsyncMock(side_effect=[bad_response, good_response])
     
     result = await planner_agent.run(message)
     
@@ -114,13 +112,13 @@ async def test_planner_fails_after_max_retries(planner_agent):
     
     bad_response = MagicMock()
     bad_response.content = "Invalid JSON again"
-    planner_agent.llm.ainvoke.return_value = bad_response
+    planner_agent.llm.ainvoke = AsyncMock(return_value=bad_response)
     
     result = await planner_agent.run(message)
     
     assert result.message_type == "error"
-    assert "failed to generate" in result.payload["error"]
-    assert planner_agent.llm.ainvoke.call_count == 2
+    assert "failed to generate" in result.payload["error"].lower()
+    assert planner_agent.llm.ainvoke.call_count == 2  # exactly 1 original + 1 retry
 
 def test_planner_prompt_logic():
     """Verify prompt utility and system prompt content."""
@@ -144,7 +142,7 @@ async def test_planner_strips_markdown_fences(planner_agent):
     mock_response = MagicMock()
     mock_response.content = "```json\n{\"steps\": [{\"step_id\": \"step_1\", \"description\": \"X\", \"assigned_agent\": \"executor\", \"tool_names\": []}]}\n```"
     mock_response.response_metadata = {}
-    planner_agent.llm.ainvoke.return_value = mock_response
+    planner_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
     
     result = await planner_agent.run(message)
     assert result.message_type == "plan"
@@ -158,7 +156,7 @@ async def test_planner_retry_contains_feedback(planner_agent):
     bad_resp = MagicMock(content="bad json")
     good_resp = MagicMock(content=json.dumps({"steps": [{"step_id": "step_1", "description": "X", "assigned_agent": "executor", "tool_names": []}]}), response_metadata={})
     
-    planner_agent.llm.ainvoke.side_effect = [bad_resp, good_resp]
+    planner_agent.llm.ainvoke = AsyncMock(side_effect=[bad_resp, good_resp])
     
     await planner_agent.run(message)
     
@@ -178,8 +176,24 @@ async def test_planner_uses_default_model_in_metadata(planner_agent):
     mock_response = MagicMock()
     mock_response.content = json.dumps({"steps": [{"step_id": "step_1", "description": "X", "assigned_agent": "executor", "tool_names": []}]})
     mock_response.response_metadata = {}
-    planner_agent.llm.ainvoke.return_value = mock_response
+    planner_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
     
     from backend.app.config import settings
     result = await planner_agent.run(message)
     assert result.metadata.model_used == settings.DEFAULT_MODEL
+
+@pytest.mark.asyncio
+async def test_simple_task_sends_one_step_constraint(planner_agent):
+    task_id = planner_agent.task_id
+    message = build_test_message("What is the capital of France?", task_id)
+    
+    mock_resp = MagicMock()
+    mock_resp.content = json.dumps({"steps": [{"step_id": "step_1", "description": "X", "assigned_agent": "executor", "tool_names": []}]})
+    mock_resp.response_metadata = {}
+    planner_agent.llm.ainvoke = AsyncMock(return_value=mock_resp)
+    
+    await planner_agent.run(message)
+    
+    call_messages = planner_agent.llm.ainvoke.call_args[0][0]
+    system_content = call_messages[0].content
+    assert "output exactly 1 step" in system_content
