@@ -1,4 +1,3 @@
-import asyncio
 import ssl
 import redis.asyncio as aioredis
 from app.config import settings

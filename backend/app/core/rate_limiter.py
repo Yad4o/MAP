@@ -25,6 +25,7 @@ async def rate_limiter(current_user: User = Depends(get_current_user)):
     lua = textwrap.dedent("""
         local current = redis.call('INCR', KEYS[1])
         if current == 1 then
+            -- TTL is 120s (2x the window) so the key survives the full minute
             redis.call('EXPIRE', KEYS[1], 120)
         end
         return current
