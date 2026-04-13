@@ -25,8 +25,8 @@ async def cache_delete(key: str) -> None:
     await redis.delete(key)
     
 async def add_to_revoked_tokens(jti: str, expire_seconds: int) -> None:
-    redis = await get_redis()
-    await redis.set(f"revoked:{jti}", "1", ex=expire_seconds)
+    # Use cache_set for consistency with the serialization contract
+    await cache_set(f"revoked:{jti}", "revoked", expire_seconds)
     
 async def is_token_revoked(jti: str) -> bool:
     redis = await get_redis()
