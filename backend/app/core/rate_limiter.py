@@ -9,6 +9,7 @@ from app.db.models.user import User
 
 async def rate_limiter(current_user: User = Depends(get_current_user)):
     redis = await get_redis()
+    # Note: bucket is wall-clock minute; minor over-counting possible across NTP corrections
     current_minute = int(time.time() // 60)
     key = f"rate_limit:{current_user.id}:{current_minute}"
     

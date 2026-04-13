@@ -8,6 +8,8 @@ _redis_client = None
 async def init_redis():
     """Call once from lifespan before yielding."""
     global _redis_client
+    if not settings.REDIS_URL:
+        raise RuntimeError("REDIS_URL is not set in settings. Cannot initialise Redis.")
     # Connect to the Upstash URL from settings with SSL cert reqs set to None and decode responses as UTF-8
     # We use ssl.CERT_NONE for ssl_cert_reqs per redis-py API
     _redis_client = aioredis.from_url(
