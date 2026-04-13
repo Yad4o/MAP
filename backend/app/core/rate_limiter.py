@@ -1,12 +1,11 @@
 import time
-from fastapi import Request, HTTPException, Depends
+from fastapi import HTTPException, Depends
 from app.config import settings
 from app.core.redis_client import get_redis
 
-from app.dependencies import get_current_user
 from app.db.models.user import User
 
-async def rate_limiter(request: Request, current_user: User = Depends(get_current_user)):
+async def rate_limiter(current_user: User):
     redis = await get_redis()
     current_minute = int(time.time() // 60)
     key = f"rate_limit:{current_user.id}:{current_minute}"
@@ -20,11 +19,14 @@ async def rate_limiter(request: Request, current_user: User = Depends(get_curren
     else:
         limit = settings.RATE_LIMIT_FREE_RPM
         
-    pipe = redis.pipeline()
-    pipe.incr(key)
-    pipe.expire(key, 65)
-    results = await pipe.execute()
-    requests = results[0]
+    lua = """
+    local current = redis.call('INCR', KEYS[1])
+    if current == 1 then
+        redis.call('EXPIRE', KEYS[1], 65)
+    end
+    return current
+    """
+    requests = await redis.eval(lua, 1, key)
         
     if requests > limit:
         raise HTTPException(

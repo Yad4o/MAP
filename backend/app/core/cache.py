@@ -10,9 +10,15 @@ async def cache_set(key: str, value: Any, expire_seconds: Optional[int] = None) 
     else:
         await redis.set(key, serialised)
         
-async def cache_get(key: str) -> Optional[str]:
+async def cache_get(key: str) -> Optional[Any]:
     redis = await get_redis()
-    return await redis.get(key)
+    value = await redis.get(key)
+    if value is None:
+        return None
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
     
 async def cache_delete(key: str) -> None:
     redis = await get_redis()
