@@ -1,12 +1,14 @@
 from typing import Any, Optional
+import json
 from app.core.redis_client import get_redis
 
 async def cache_set(key: str, value: Any, expire_seconds: Optional[int] = None) -> None:
     redis = await get_redis()
-    if expire_seconds:
-        await redis.set(key, value, ex=expire_seconds)
+    serialised = json.dumps(value) if not isinstance(value, (str, bytes, int, float)) else value
+    if expire_seconds is not None:
+        await redis.set(key, serialised, ex=expire_seconds)
     else:
-        await redis.set(key, value)
+        await redis.set(key, serialised)
         
 async def cache_get(key: str) -> Optional[str]:
     redis = await get_redis()
