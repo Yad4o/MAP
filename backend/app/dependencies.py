@@ -7,7 +7,7 @@ from app.db.base import get_db
 from app.core.security import decode_access_token
 from app.db.repositories.user_repo import UserRepository
 from app.db.models.user import User
-from app.core.redis import get_redis
+from app.core.cache import is_token_revoked
 
 bearer_scheme = HTTPBearer()
 
@@ -35,8 +35,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid token payload format")
 
     try:
-        redis = await get_redis()
-        is_revoked = await redis.exists(f"revoked:{jti}")
+        is_revoked = await is_token_revoked(jti)
         if is_revoked:
             raise HTTPException(status_code=401, detail="Token has been revoked")
     except HTTPException:
