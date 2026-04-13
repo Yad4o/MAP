@@ -91,4 +91,15 @@ class MockTaskService:
         del self.tasks[task_index]
         return True
 
+    async def get_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID):
+        """Mock status polling."""
+        from app.schemas.task import TaskStatusResponse
+        task = next(
+            (t for t in self.tasks if t["id"] == task_id and t["user_id"] == user_id),
+            None
+        )
+        if not task:
+            raise TaskNotFoundError(task_id)
+        return TaskStatusResponse(task_id=task["id"], status=task["status"])
+
 

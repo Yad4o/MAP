@@ -15,10 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.core.redis import close_redis
+from app.core.redis_client import init_redis, close_redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_redis()
     yield
     await close_redis()
 

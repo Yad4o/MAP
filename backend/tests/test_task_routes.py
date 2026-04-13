@@ -213,3 +213,38 @@ def test_task_response_shapes(override_dependencies, test_client):
     # Test update response shape
     update_response = test_client.put(f"/api/v1/tasks/{task_data['id']}", json={"title": "Updated"})
     assert set(update_response.json().keys()) == required_fields
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_returns_200(override_dependencies, test_client):
+    """Test GET /{task_id}/status returns 200 with task_id and status."""
+    task = await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Test", description="Test"))
+    
+    response = test_client.get(f"/api/v1/tasks/{task.id}/status")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_id"] == str(task.id)
+    assert data["status"] == "PENDING"
+
+
+def test_get_task_status_returns_404_not_found(override_dependencies, test_client):
+    """Test GET /{task_id}/status returns 404 for nonexistent task."""
+    response = test_client.get("/api/v1/tasks/00000000-0000-0000-0000-000000000999/status")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
+
+
+@pytest.mark.asyncio
+async def test_get_task_status_returns_404_wrong_owner(override_dependencies, test_client):
+    """Test GET /{task_id}/status returns 404 for wrong user."""
+    # Create task with a different user ID using the mock repo directly if needed, 
+    # but override_dependencies.create_task uses mock_user.id.
+    # Let's use a different user_id for creation.
+    other_user = uuid.uuid4()
+    task = await override_dependencies.create_task(other_user, TaskCreateRequest(title="Other", description="Other"))
+    
+    # client is logged in as mock_user
+    response = test_client.get(f"/api/v1/tasks/{task.id}/status")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Task not found"
