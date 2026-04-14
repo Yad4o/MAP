@@ -48,7 +48,7 @@ class PlannerAgent(BaseAgent):
         retries = 1
         content = ""
         last_error = "Unknown error"
-        fallback_used = False
+        overall_fallback_used = False
 
         while retries >= 0:
             start_time = time.time()
@@ -61,7 +61,11 @@ class PlannerAgent(BaseAgent):
                     messages=messages,
                     model=settings.DEFAULT_MODEL,
                     temperature=settings.PLANNER_TEMPERATURE,
+                    max_tokens=settings.MAX_TOKENS,
                 )
+                
+                # Track if fallback was used in any attempt
+                overall_fallback_used = overall_fallback_used or fallback_used
                 
                 # Strip markdown fences if present
                 if content.strip().startswith("```"):
@@ -87,7 +91,7 @@ class PlannerAgent(BaseAgent):
                     tokens_in=tokens_in,
                     tokens_out=tokens_out,
                     latency_ms=latency_ms,
-                    fallback_used=fallback_used
+                    fallback_used=overall_fallback_used
                 )
 
                 return self.build_response(
@@ -114,9 +118,7 @@ class PlannerAgent(BaseAgent):
                     "content": f"The previous response failed validation: {last_error}. "
                     "Please provide a corrected JSON execution plan following the schema strictly."
                 })
-                # Update fallback_used flag if fallback was used in this attempt
-                if fallback_used:
-                    fallback_used = True
+                # Note: overall_fallback_used already tracks fallback usage across retries
             
             retries -= 1
 

@@ -193,7 +193,7 @@ class TestFallbackChatModel:
             
             # Verify result
             assert result.generations[0].message.content == "Test response"
-            assert model.fallback_used is True
+            assert result.llm_output["fallback_used"] is True
     
     @pytest.mark.asyncio
     async def test_fallback_chat_model_message_conversion(self):

@@ -15,69 +15,74 @@ from app.config import settings
 class TestCircuitBreaker:
     """Test the CircuitBreaker class."""
     
-    def test_circuit_breaker_initial_state(self):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_initial_state(self):
         """Test that circuit breaker starts in CLOSED state."""
-        breaker = CircuitBreaker()
+        breaker = CircuitBreaker(failure_threshold=3)
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
-        assert breaker.is_available() is True
+        assert await breaker.is_available() is True
     
-    def test_circuit_breaker_success(self):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_success(self):
         """Test that success keeps circuit closed."""
         breaker = CircuitBreaker(failure_threshold=3)
-        breaker.record_success()
+        await breaker.record_success()
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
-        assert breaker.is_available() is True
+        assert await breaker.is_available() is True
     
-    def test_circuit_breaker_failure_threshold(self):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_failure_threshold(self):
         """Test that circuit opens after failure threshold."""
         breaker = CircuitBreaker(failure_threshold=3)
         
         # Record failures up to threshold
         for i in range(3):
-            breaker.record_failure()
+            await breaker.record_failure()
         
         assert breaker.state == "OPEN"
         assert breaker.failure_count == 3
-        assert breaker.is_available() is False
+        assert await breaker.is_available() is False
     
-    def test_circuit_breaker_half_open_after_timeout(self):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_half_open_after_timeout(self):
         """Test that circuit transitions to HALF_OPEN after timeout."""
         breaker = CircuitBreaker(failure_threshold=2, timeout=1)
         
         # Trigger circuit open
-        breaker.record_failure()
-        breaker.record_failure()
+        await breaker.record_failure()
+        await breaker.record_failure()
         assert breaker.state == "OPEN"
-        assert breaker.is_available() is False
+        assert await breaker.is_available() is False
         
         # Wait for timeout
         time.sleep(1.1)
         
         # Should now be HALF_OPEN
-        assert breaker.is_available() is True
+        assert await breaker.is_available() is True
         assert breaker.state == "HALF_OPEN"
     
-    def test_circuit_breaker_closes_on_success(self):
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_closes_on_success(self):
         """Test that circuit closes after success in HALF_OPEN state."""
         breaker = CircuitBreaker(failure_threshold=2, timeout=1)
         
         # Trigger circuit open
-        breaker.record_failure()
-        breaker.record_failure()
+        await breaker.record_failure()
+        await breaker.record_failure()
         assert breaker.state == "OPEN"
         
         # Wait for timeout
         time.sleep(1.1)
-        assert breaker.is_available() is True
+        assert await breaker.is_available() is True
         assert breaker.state == "HALF_OPEN"
         
         # Record success should close circuit
-        breaker.record_success()
+        await breaker.record_success()
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
-        assert breaker.is_available() is True
+        assert await breaker.is_available() is True
 
 
 class TestFallbackEngine:
@@ -169,10 +174,10 @@ class TestFallbackEngine:
         
         # Force circuit open
         for i in range(5):
-            engine.breaker.record_failure()
+            await engine.breaker.record_failure()
         
         assert engine.breaker.state == "OPEN"
-        assert engine.breaker.is_available() is False
+        assert await engine.breaker.is_available() is False
         
         # Mock fallback response with usage
         mock_client.chat.completions.create.return_value = MagicMock(
@@ -197,7 +202,7 @@ class TestFallbackEngine:
         
         # Verify fallback model was used
         call_args = mock_client.chat.completions.create.call_args
-        assert call_args[1]['model'] == "gpt-4o-mini"
+        assert call_args[1]['model'] == settings.FALLBACK_MODEL
     
     @pytest.mark.asyncio
     async def test_both_primary_and_fallback_fail(self, fallback_engine_with_mocks):
@@ -262,27 +267,25 @@ class TestFallbackEngineIntegration:
         assert hasattr(fallback_engine, 'chat_completion')
         assert hasattr(fallback_engine, 'breaker')
     
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_circuit_breaker_state_persistence(self):
-        """Test that circuit breaker state persists across calls."""
-        from app.core.fallback_engine import FallbackEngine
-        
-        # Use fresh instance instead of singleton
+        """Test that circuit breaker state persists across instances."""
+        # Create a fresh instance (not the singleton)
         engine = FallbackEngine()
         
-        # Get initial state
-        initial_state = engine.breaker.state
+        # Get initial failure count
         initial_failures = engine.breaker.failure_count
         
-        # Record some failures
+        # Record failures
         for i in range(2):
-            engine.breaker.record_failure()
+            await engine.breaker.record_failure()
         
-        # Check state changed
+        # Verify state
         assert engine.breaker.failure_count == initial_failures + 2
+        assert engine.breaker.state == "CLOSED"  # Should still be closed (threshold is 5)
         
         # Reset for other tests
-        engine.breaker.record_success()
+        await engine.breaker.record_success()
 
 
 if __name__ == "__main__":

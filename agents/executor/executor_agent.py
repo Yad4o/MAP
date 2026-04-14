@@ -13,12 +13,11 @@ import time
 import warnings
 import logging
 import traceback
-import asyncio
 from typing import Dict, Any, List, Optional
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.outputs import ChatResult, ChatGeneration
 from pydantic import Field
@@ -41,9 +40,7 @@ class FallbackChatModel(BaseChatModel):
     
     model_name: str = Field(default="fallback-wrapper")
     temperature: float = Field(default=0.2)
-    fallback_used: bool = Field(default=False)
-    tokens_in: int = Field(default=0)
-    tokens_out: int = Field(default=0)
+    last_llm_output: Dict[str, Any] = Field(default_factory=dict, init=False)
     
     async def _generate(
         self,
@@ -51,31 +48,45 @@ class FallbackChatModel(BaseChatModel):
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
-    ) -> AIMessage:
+    ) -> ChatResult:
         """Generate response using fallback_engine."""
         # Convert LangChain messages to fallback_engine format
         fallback_messages = []
         for msg in messages:
             if isinstance(msg, HumanMessage):
-                fallback_messages.append({"role": "user", "content": msg.content})
+                role = "user"
             elif isinstance(msg, AIMessage):
-                fallback_messages.append({"role": "assistant", "content": msg.content})
+                role = "assistant"
+            elif isinstance(msg, SystemMessage):
+                role = "system"
             else:
-                # Handle other message types (system, etc.)
-                fallback_messages.append({"role": "user", "content": msg.content})
+                # Handle other message types
+                role = "user"
+            
+            fallback_messages.append({"role": role, "content": msg.content})
         
         # Call fallback engine directly with await
-        content, self.fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
+        content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
             messages=fallback_messages,
             model=settings.DEFAULT_MODEL,
             temperature=self.temperature,
+            max_tokens=getattr(settings, 'MAX_TOKENS', None),
         )
         
-        # Store token counts for metadata access
-        self.tokens_in = tokens_in
-        self.tokens_out = tokens_out
+        # Store metadata in ChatResult's llm_output for access by executor
+        llm_output = {
+            "fallback_used": fallback_used,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out
+        }
         
-        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=content))])
+        # Store in instance field for access by executor
+        self.last_llm_output = llm_output
+        
+        return ChatResult(
+            generations=[ChatGeneration(message=AIMessage(content=content))],
+            llm_output=llm_output
+        )
     
     @property
     def _llm_type(self) -> str:
@@ -224,14 +235,27 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "trace": [msg.content for msg in messages if hasattr(msg, 'content')]
             }
 
+            # Extract metadata from ChatResult's llm_output (if available)
+            # Note: LangGraph wraps the ChatResult, so we need to extract from the actual result
+            fallback_used = False
+            tokens_in = 0
+            tokens_out = 0
+            
+            # Try to get metadata from the LLM's llm_output if accessible
+            if hasattr(llm, 'last_llm_output'):
+                llm_output = llm.last_llm_output
+                fallback_used = llm_output.get('fallback_used', False)
+                tokens_in = llm_output.get('tokens_in', 0)
+                tokens_out = llm_output.get('tokens_out', 0)
+            
             # Create metadata with fallback information
             from agents.shared.message import AgentMetadata
             metadata = AgentMetadata(
                 model_used=settings.DEFAULT_MODEL,
-                tokens_in=llm.tokens_in,
-                tokens_out=llm.tokens_out,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
                 latency_ms=int((end_time - start_time) * 1000),
-                fallback_used=llm.fallback_used
+                fallback_used=fallback_used
             )
 
             return self.build_response(
