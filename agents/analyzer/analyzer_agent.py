@@ -61,6 +61,14 @@ class AnalyzerAgent(BaseAgent):
     name = "analyzer"
     description = "Validates executor outputs and scores confidence."
 
+    def __init__(self, task_id: uuid.UUID):
+        super().__init__(task_id)
+        self._llm = ChatOpenAI(
+            model=_MODEL,
+            temperature=_TEMPERATURE,
+            api_key=os.getenv("OPENAI_API_KEY", ""),
+        )
+
     async def run(self, message: AgentMessage) -> AgentMessage:
         """
         Input payload:  { "step_results": list[dict], "plan": dict }
@@ -86,23 +94,20 @@ class AnalyzerAgent(BaseAgent):
         )
 
         # ── Call LLM ─────────────────────────────────────────────────────────
-        llm = ChatOpenAI(
-            model=_MODEL,
-            temperature=_TEMPERATURE,
-            api_key=os.getenv("OPENAI_API_KEY", ""),
-        )
-
         t0 = time.time()
+        tokens_in = 0
+        tokens_out = 0
         try:
-            response = await llm.ainvoke(
+            response = await self._llm.ainvoke(
                 [
                     SystemMessage(content=ANALYZER_SYSTEM_PROMPT),
                     HumanMessage(content=user_content),
                 ]
             )
             raw_content: str = response.content
-            tokens_in = response.usage_metadata.get("input_tokens", 0) if response.usage_metadata else 0
-            tokens_out = response.usage_metadata.get("output_tokens", 0) if response.usage_metadata else 0
+            if response.usage_metadata:
+                tokens_in = response.usage_metadata.get("input_tokens", 0)
+                tokens_out = response.usage_metadata.get("output_tokens", 0)
         except Exception as exc:
             logger.error("AnalyzerAgent LLM call failed: %s", exc)
             return self.build_error(f"LLM call failed: {exc}")
@@ -116,11 +121,15 @@ class AnalyzerAgent(BaseAgent):
         try:
             report: dict = json.loads(clean_content)
 
+            # Enforce passed/failed invariants
+            step_scores = report.get("step_scores", {})
+            failed = [sid for sid, score in step_scores.items() if score < _DEFAULT_THRESHOLD]
+            report["failed_steps"] = failed
+            report["passed"] = len(failed) == 0
+
             # Ensure required keys exist with safe defaults
-            report.setdefault("passed", True)
             report.setdefault("confidence", 1.0)
             report.setdefault("step_scores", {})
-            report.setdefault("failed_steps", [])
             report.setdefault("critique", "")
             report.setdefault("summary", "")
 
@@ -131,14 +140,14 @@ class AnalyzerAgent(BaseAgent):
                 exc,
                 raw_content,
             )
-            # Graceful fallback: mark as passed so the pipeline is not blocked
+            # Graceful fallback: return a low-confidence failed report
             report = {
-                "passed": True,
-                "confidence": 1.0,
+                "passed": False,
+                "confidence": 0.0,
                 "step_scores": {},
                 "failed_steps": [],
-                "critique": raw_content,
-                "summary": raw_content,
+                "critique": f"Analyzer parse failure: {raw_content}",
+                "summary": "Analyzer could not parse LLM response.",
             }
 
         logger.info(

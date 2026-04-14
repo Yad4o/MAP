@@ -82,7 +82,7 @@ class MemoryAgent(BaseAgent):
             top_k,
         )
 
-        results = await self.retrieve(uuid.UUID(user_id) if _is_uuid(user_id) else user_id, query, top_k)
+        results = await self.retrieve(user_id, query, top_k)
 
         return self.build_response(
             recipient="controller",
@@ -107,7 +107,7 @@ class MemoryAgent(BaseAgent):
         )
 
         await self.store(
-            uuid.UUID(user_id) if _is_uuid(user_id) else user_id,  # type: ignore[arg-type]
+            user_id,
             self.task_id,
             text,
             extra_metadata=metadata,
@@ -137,12 +137,4 @@ class MemoryAgent(BaseAgent):
         await vector_store.add(str(user_id), content, metadata=metadata)
 
 
-# ── Utility ───────────────────────────────────────────────────────────────────
 
-def _is_uuid(value: str) -> bool:
-    """Return True if the string is a valid UUID."""
-    try:
-        uuid.UUID(value)
-        return True
-    except ValueError:
-        return False

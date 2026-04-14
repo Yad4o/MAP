@@ -213,7 +213,7 @@ class TestVectorStore:
     async def test_add_embeds_and_inserts(self, fresh_vector_store, user_id):
         await fresh_vector_store.add(user_id, "Hello world", {"source": "test"})
 
-        entry = fresh_vector_store._cache[user_id]
+        entry = fresh_vector_store._load_or_create(user_id)
         assert entry["index"].ntotal == 1
         assert entry["metadata"][0]["text"] == "Hello world"
         assert entry["metadata"][0]["source"] == "test"
@@ -251,25 +251,18 @@ class TestVectorStore:
             return_value=_mock_embedding_response(_FAKE_EMBEDDING)
         )
 
-        import agents.memory.vector_store as vs_module
-        original_dir = vs_module.FAISS_DATA_DIR
-        vs_module.FAISS_DATA_DIR = tmp_faiss_dir
+        await store_a.add(user_id, "persistent memory", {"task_id": "t1"})
 
-        try:
-            await store_a.add(user_id, "persistent memory", {"task_id": "t1"})
+        # Second store: fresh instance — must load from disk
+        store_b = VectorStore()
+        store_b._client = MagicMock()
+        store_b._client.embeddings.create = AsyncMock(
+            return_value=_mock_embedding_response(_FAKE_EMBEDDING)
+        )
 
-            # Second store: fresh instance — must load from disk
-            store_b = VectorStore()
-            store_b._client = MagicMock()
-            store_b._client.embeddings.create = AsyncMock(
-                return_value=_mock_embedding_response(_FAKE_EMBEDDING)
-            )
-
-            entry = store_b._load_or_create(user_id)
-            assert entry["index"].ntotal == 1
-            assert entry["metadata"][0]["text"] == "persistent memory"
-        finally:
-            vs_module.FAISS_DATA_DIR = original_dir
+        entry = store_b._load_or_create(user_id)
+        assert entry["index"].ntotal == 1
+        assert entry["metadata"][0]["text"] == "persistent memory"
 
     # 8. search() on empty index returns []
     async def test_search_empty_index_returns_empty_list(self, fresh_vector_store, user_id):
@@ -313,18 +306,11 @@ class TestVectorStore:
 
     # 12. metadata.json content matches added items
     async def test_metadata_json_content(self, fresh_vector_store, user_id, tmp_faiss_dir):
-        import agents.memory.vector_store as vs_module
-        original_dir = vs_module.FAISS_DATA_DIR
-        vs_module.FAISS_DATA_DIR = tmp_faiss_dir
+        await fresh_vector_store.add(user_id, "check metadata", {"key": "value"})
+        meta_path = tmp_faiss_dir / user_id / "metadata.json"
+        with open(meta_path) as f:
+            data = json.load(f)
 
-        try:
-            await fresh_vector_store.add(user_id, "check metadata", {"key": "value"})
-            meta_path = tmp_faiss_dir / user_id / "metadata.json"
-            with open(meta_path) as f:
-                data = json.load(f)
-
-            assert len(data) == 1
-            assert data[0]["text"] == "check metadata"
-            assert data[0]["key"] == "value"
-        finally:
-            vs_module.FAISS_DATA_DIR = original_dir
+        assert len(data) == 1
+        assert data[0]["text"] == "check metadata"
+        assert data[0]["key"] == "value"

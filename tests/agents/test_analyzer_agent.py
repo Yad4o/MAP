@@ -24,6 +24,10 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import os
+os.environ["OPENAI_API_KEY"] = "dummy_for_tests"
+import os
+os.environ["OPENAI_API_KEY"] = "dummy"
 
 from agents.analyzer.analyzer_agent import AnalyzerAgent, _strip_markdown_fences
 from agents.shared.message import AgentMessage, AgentMetadata
@@ -112,13 +116,13 @@ class TestAnalyzerAgentRun:
 
     # 1. Returns AgentMessage with message_type="validation"
     async def test_returns_validation_message_type(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_VALID_REPORT))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         assert isinstance(result, AgentMessage)
@@ -126,13 +130,13 @@ class TestAnalyzerAgentRun:
 
     # 2. Validation report contains all required fields
     async def test_report_contains_required_fields(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_VALID_REPORT))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         report = result.payload["validation_report"]
@@ -141,22 +145,21 @@ class TestAnalyzerAgentRun:
 
     # 3. Invalid JSON from LLM falls back gracefully — passed=True, no exception raised
     async def test_invalid_json_fallback_no_exception(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response("This is not JSON at all — narrative text.")
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         assert result.message_type == "validation"
         report = result.payload["validation_report"]
-        assert report["passed"] is True
+        assert report["passed"] is False
 
     # 4. Markdown fences in LLM response are stripped before parse attempt
     async def test_markdown_fences_stripped_before_parse(self):
-        agent = _make_agent()
         message = _make_message()
         fenced = f"```json\n{json.dumps(_VALID_REPORT)}\n```"
 
@@ -164,6 +167,7 @@ class TestAnalyzerAgentRun:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(fenced)
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         assert result.message_type == "validation"
@@ -173,7 +177,6 @@ class TestAnalyzerAgentRun:
 
     # 5. Fallback: raw content is used as critique and summary
     async def test_fallback_uses_raw_content_as_critique_and_summary(self):
-        agent = _make_agent()
         message = _make_message()
         bad_content = "Sorry, I cannot produce JSON right now."
 
@@ -181,21 +184,22 @@ class TestAnalyzerAgentRun:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(bad_content)
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         report = result.payload["validation_report"]
-        assert report["critique"] == bad_content
-        assert report["summary"] == bad_content
+        assert report["critique"] == f"Analyzer parse failure: {bad_content}"
+        assert report["summary"] == "Analyzer could not parse LLM response."
 
     # 6. Valid report with a failing step → passed=False and failed_steps populated
     async def test_failing_step_sets_passed_false(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_FAIL_REPORT))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         report = result.payload["validation_report"]
@@ -204,13 +208,13 @@ class TestAnalyzerAgentRun:
 
     # 7. Confidence is a float (0.0–1.0)
     async def test_confidence_is_float_in_range(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_VALID_REPORT))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         confidence = result.payload["validation_report"]["confidence"]
@@ -219,13 +223,13 @@ class TestAnalyzerAgentRun:
 
     # 8. LLM error returns error AgentMessage
     async def test_llm_exception_returns_error_message(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 side_effect=RuntimeError("API unavailable")
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         assert result.message_type == "error"
@@ -233,7 +237,6 @@ class TestAnalyzerAgentRun:
 
     # 9. Step scores are forwarded verbatim
     async def test_step_scores_forwarded_verbatim(self):
-        agent = _make_agent()
         message = _make_message()
         report_with_scores = {**_VALID_REPORT, "step_scores": {"step_1": 0.88, "step_2": 0.95}}
 
@@ -241,6 +244,7 @@ class TestAnalyzerAgentRun:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(report_with_scores))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         scores = result.payload["validation_report"]["step_scores"]
@@ -249,13 +253,13 @@ class TestAnalyzerAgentRun:
 
     # 10. Sender is "analyzer", recipient is "controller"
     async def test_sender_and_recipient(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_VALID_REPORT))
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         assert result.sender == "analyzer"
@@ -264,30 +268,31 @@ class TestAnalyzerAgentRun:
     # 11. task_id is preserved from inbound message
     async def test_task_id_preserved(self):
         task_id = uuid.uuid4()
-        agent = _make_agent(task_id=task_id)
         message = _make_message()
+
         message.task_id = task_id
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response(json.dumps(_VALID_REPORT))
             )
+            agent = _make_agent(task_id=task_id)
             result = await agent.run(message)
 
         assert result.task_id == task_id
 
     # 12. Fallback defaults: step_scores={}, failed_steps=[], confidence=1.0
     async def test_fallback_defaults(self):
-        agent = _make_agent()
         message = _make_message()
 
         with patch("agents.analyzer.analyzer_agent.ChatOpenAI") as MockLLM:
             MockLLM.return_value.ainvoke = AsyncMock(
                 return_value=_llm_response("not json")
             )
+            agent = _make_agent()
             result = await agent.run(message)
 
         report = result.payload["validation_report"]
         assert report["step_scores"] == {}
         assert report["failed_steps"] == []
-        assert report["confidence"] == pytest.approx(1.0)
+        assert report["confidence"] == pytest.approx(0.0)

@@ -15,15 +15,18 @@ Storage layout:
 Embedding model: text-embedding-3-small  (dimension = 1536)
 """
 
+import asyncio
 import json
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import faiss
 import numpy as np
 from openai import AsyncOpenAI
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,8 @@ _DIM = 1536  # dimension for text-embedding-3-small
 # Root path for all FAISS data.  Override via FAISS_DATA_DIR env var.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 FAISS_DATA_DIR = Path(os.getenv("FAISS_DATA_DIR", str(_PROJECT_ROOT / "data" / "faiss")))
+
+_MAX_CACHED_USERS = int(os.getenv("FAISS_CACHE_MAX_USERS", "100"))
 
 
 class VectorStore:
@@ -48,9 +53,27 @@ class VectorStore:
     """
 
     def __init__(self) -> None:
-        # In-memory cache: user_id str → {"index": faiss.Index, "metadata": list[dict]}
-        self._cache: dict[str, dict[str, Any]] = {}
-        self._client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+        self._initial_client: AsyncOpenAI | None = None
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    @property
+    def _client(self) -> AsyncOpenAI:
+        if self._initial_client is not None:
+            return self._initial_client
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is not set — VectorStore cannot initialize")
+        self._initial_client = AsyncOpenAI(api_key=api_key)
+        return self._initial_client
+
+    @_client.setter
+    def _client(self, value: AsyncOpenAI | None) -> None:
+        self._initial_client = value
+
+    def _get_lock(self, user_id: str) -> asyncio.Lock:
+        if user_id not in self._locks:
+            self._locks[user_id] = asyncio.Lock()
+        return self._locks[user_id]
 
     # ── Internal helpers ─────────────────────────────────────────────────────
 
@@ -63,13 +86,12 @@ class VectorStore:
     def _meta_path(self, user_id: str) -> Path:
         return self._user_dir(user_id) / "metadata.json"
 
+    @lru_cache(maxsize=_MAX_CACHED_USERS)
     def _load_or_create(self, user_id: str) -> dict[str, Any]:
         """
         Load index + metadata from disk if they exist, otherwise create fresh.
-        Result is cached in self._cache for the lifetime of this process.
+        Result is cached via lru_cache.
         """
-        if user_id in self._cache:
-            return self._cache[user_id]
 
         index_path = self._index_path(user_id)
         meta_path = self._meta_path(user_id)
@@ -85,12 +107,11 @@ class VectorStore:
             metadata = []
 
         entry = {"index": index, "metadata": metadata}
-        self._cache[user_id] = entry
         return entry
 
     def _save(self, user_id: str) -> None:
         """Persist the in-memory index and metadata to disk."""
-        entry = self._cache[user_id]
+        entry = self._load_or_create(user_id)
         user_dir = self._user_dir(user_id)
         user_dir.mkdir(parents=True, exist_ok=True)
 
@@ -104,6 +125,7 @@ class VectorStore:
             entry["index"].ntotal,
         )
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8))
     async def _embed(self, text: str) -> np.ndarray:
         """Embed a single text string using OpenAI text-embedding-3-small."""
         response = await self._client.embeddings.create(
@@ -130,17 +152,18 @@ class VectorStore:
             text:     the content to embed and store
             metadata: arbitrary key-value pairs stored with the vector
         """
-        vector = await self._embed(text)
+        async with self._get_lock(user_id):
+            vector = await self._embed(text)
 
-        entry = self._load_or_create(user_id)
-        entry["index"].add(vector.reshape(1, _DIM))
-        entry["metadata"].append(
-            {
-                "text": text,
-                **(metadata or {}),
-            }
-        )
-        self._save(user_id)
+            entry = self._load_or_create(user_id)
+            entry["index"].add(vector.reshape(1, _DIM))
+            entry["metadata"].append(
+                {
+                    "text": text,
+                    **(metadata or {}),
+                }
+            )
+            await asyncio.get_event_loop().run_in_executor(None, self._save, user_id)
 
         logger.info(
             "VectorStore.add: user=%s total_vectors=%d",
