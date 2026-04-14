@@ -35,7 +35,7 @@ class CircuitBreaker:
         self.last_failure_time = None
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
     
-    async def is_available(self) -> bool:
+    def is_available(self) -> bool:
         """Check if the circuit breaker allows requests."""
         if self.state == "CLOSED":
             return True
@@ -78,8 +78,9 @@ class FallbackEngine:
         self.breaker = CircuitBreaker(failure_threshold=5, timeout=60)
         
         # Initialize OpenAI clients
-        self.primary_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.fallback_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Note: Both primary and fallback use the same client since they share the same API key and endpoint
+        # If true isolation is needed (different keys/endpoints), this should be split into separate clients
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     
     async def chat_completion(
         self,
@@ -87,7 +88,7 @@ class FallbackEngine:
         model: str,
         temperature: float,
         max_tokens: int | None = None
-    ) -> Tuple[str, bool]:
+    ) -> Tuple[str, bool, int, int]:
         """
         Perform chat completion with fallback logic.
         
@@ -98,25 +99,26 @@ class FallbackEngine:
             max_tokens: Maximum tokens to generate (optional)
             
         Returns:
-            Tuple of (response_content, fallback_used)
+            Tuple of (response_content, fallback_used, tokens_in, tokens_out)
         """
         # Check if circuit breaker allows primary calls
-        if not await self.breaker.is_available():
+        if not self.breaker.is_available():
             logger.warning("Circuit breaker is OPEN, using fallback model directly")
-            return await self._call_fallback(messages, temperature, max_tokens), True
+            content, tokens_in, tokens_out = await self._call_fallback(messages, temperature, max_tokens)
+            return content, True, tokens_in, tokens_out
         
         # Try primary model first
         try:
-            response = await self._call_primary(messages, model, temperature, max_tokens)
+            content, tokens_in, tokens_out = await self._call_primary(messages, model, temperature, max_tokens)
             self.breaker.record_success()
-            return response, False
+            return content, False, tokens_in, tokens_out
         except Exception as e:
             logger.error(f"Primary model call failed: {e}")
             self.breaker.record_failure()
             # Fall back to gpt-4o-mini
             try:
-                fallback_response = await self._call_fallback(messages, temperature, max_tokens)
-                return fallback_response, True
+                content, tokens_in, tokens_out = await self._call_fallback(messages, temperature, max_tokens)
+                return content, True, tokens_in, tokens_out
             except Exception as fallback_error:
                 logger.error(f"Fallback model also failed: {fallback_error}")
                 raise fallback_error
@@ -127,30 +129,32 @@ class FallbackEngine:
         model: str,
         temperature: float,
         max_tokens: int | None = None
-    ) -> str:
+    ) -> Tuple[str, int, int]:
         """Call the primary model."""
-        response = await self.primary_client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens
         )
-        return response.choices[0].message.content
+        usage = response.usage
+        return response.choices[0].message.content, usage.prompt_tokens, usage.completion_tokens
     
     async def _call_fallback(
         self,
         messages: List[Dict[str, str]],
         temperature: float,
         max_tokens: int | None = None
-    ) -> str:
+    ) -> Tuple[str, int, int]:
         """Call the fallback model (gpt-4o-mini)."""
-        response = await self.fallback_client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens
         )
-        return response.choices[0].message.content
+        usage = response.usage
+        return response.choices[0].message.content, usage.prompt_tokens, usage.completion_tokens
 
 
 # Module-level singleton

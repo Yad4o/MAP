@@ -57,7 +57,7 @@ class PlannerAgent(BaseAgent):
                 # Call LLM using fallback_engine
                 # OLD: llm = ChatOpenAI(...); response = await llm.ainvoke(messages)
                 # NEW: using fallback_engine.chat_completion
-                content, fallback_used = await fallback_engine.chat_completion(
+                content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
                     messages=messages,
                     model=settings.DEFAULT_MODEL,
                     temperature=settings.PLANNER_TEMPERATURE,
@@ -84,8 +84,8 @@ class PlannerAgent(BaseAgent):
                 
                 metadata = AgentMetadata(
                     model_used=settings.DEFAULT_MODEL,
-                    tokens_in=0,  # fallback_engine doesn't expose token counts yet
-                    tokens_out=0,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
                     latency_ms=latency_ms,
                     fallback_used=fallback_used
                 )
@@ -114,6 +114,9 @@ class PlannerAgent(BaseAgent):
                     "content": f"The previous response failed validation: {last_error}. "
                     "Please provide a corrected JSON execution plan following the schema strictly."
                 })
+                # Update fallback_used flag if fallback was used in this attempt
+                if fallback_used:
+                    fallback_used = True
             
             retries -= 1
 

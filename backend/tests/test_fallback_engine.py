@@ -20,7 +20,7 @@ class TestCircuitBreaker:
         breaker = CircuitBreaker()
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
-        assert asyncio.run(breaker.is_available()) is True
+        assert breaker.is_available() is True
     
     def test_circuit_breaker_success(self):
         """Test that success keeps circuit closed."""
@@ -28,7 +28,7 @@ class TestCircuitBreaker:
         breaker.record_success()
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
-        assert asyncio.run(breaker.is_available()) is True
+        assert breaker.is_available() is True
     
     def test_circuit_breaker_failure_threshold(self):
         """Test that circuit opens after failure threshold."""
@@ -40,7 +40,7 @@ class TestCircuitBreaker:
         
         assert breaker.state == "OPEN"
         assert breaker.failure_count == 3
-        assert asyncio.run(breaker.is_available()) is False
+        assert breaker.is_available() is False
     
     def test_circuit_breaker_half_open_after_timeout(self):
         """Test that circuit transitions to HALF_OPEN after timeout."""
@@ -50,12 +50,13 @@ class TestCircuitBreaker:
         breaker.record_failure()
         breaker.record_failure()
         assert breaker.state == "OPEN"
+        assert breaker.is_available() is False
         
         # Wait for timeout
         time.sleep(1.1)
         
         # Should now be HALF_OPEN
-        assert asyncio.run(breaker.is_available()) is True
+        assert breaker.is_available() is True
         assert breaker.state == "HALF_OPEN"
     
     def test_circuit_breaker_closes_on_success(self):
@@ -69,13 +70,14 @@ class TestCircuitBreaker:
         
         # Wait for timeout
         time.sleep(1.1)
-        assert asyncio.run(breaker.is_available()) is True
+        assert breaker.is_available() is True
         assert breaker.state == "HALF_OPEN"
         
         # Record success should close circuit
         breaker.record_success()
         assert breaker.state == "CLOSED"
         assert breaker.failure_count == 0
+        assert breaker.is_available() is True
 
 
 class TestFallbackEngine:
@@ -100,14 +102,17 @@ class TestFallbackEngine:
         """Test successful call to primary model."""
         engine, mock_client = fallback_engine_with_mocks
         
-        # Mock successful response
+        # Mock successful response with usage
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Primary response"
+        mock_response.usage = MagicMock()
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 5
         mock_client.chat.completions.create.return_value = mock_response
         
         messages = [{"role": "user", "content": "Hello"}]
-        content, fallback_used = await engine.chat_completion(
+        content, fallback_used, tokens_in, tokens_out = await engine.chat_completion(
             messages=messages,
             model="gpt-4o",
             temperature=0.7
@@ -115,6 +120,8 @@ class TestFallbackEngine:
         
         assert content == "Primary response"
         assert fallback_used is False
+        assert tokens_in == 10
+        assert tokens_out == 5
         assert engine.breaker.state == "CLOSED"
         
         # Verify primary client was called
@@ -130,14 +137,17 @@ class TestFallbackEngine:
         """Test fallback to gpt-4o-mini when primary fails."""
         engine, mock_client = fallback_engine_with_mocks
         
-        # Mock primary failure and fallback success
+        # Mock primary failure and fallback success with usage
         mock_client.chat.completions.create.side_effect = [
             Exception("Primary failed"),  # Primary call fails
-            MagicMock(choices=[MagicMock(message=MagicMock(content="Fallback response"))])  # Fallback succeeds
+            MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Fallback response"))],
+                usage=MagicMock(prompt_tokens=8, completion_tokens=4)
+            )  # Fallback succeeds
         ]
         
         messages = [{"role": "user", "content": "Hello"}]
-        content, fallback_used = await engine.chat_completion(
+        content, fallback_used, tokens_in, tokens_out = await engine.chat_completion(
             messages=messages,
             model="gpt-4o",
             temperature=0.7
@@ -145,6 +155,8 @@ class TestFallbackEngine:
         
         assert content == "Fallback response"
         assert fallback_used is True
+        assert tokens_in == 8
+        assert tokens_out == 4
         assert engine.breaker.failure_count == 1
         
         # Verify both clients were called
@@ -160,15 +172,16 @@ class TestFallbackEngine:
             engine.breaker.record_failure()
         
         assert engine.breaker.state == "OPEN"
-        assert await engine.breaker.is_available() is False
+        assert engine.breaker.is_available() is False
         
-        # Mock fallback response
+        # Mock fallback response with usage
         mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Fallback response"))]
+            choices=[MagicMock(message=MagicMock(content="Fallback response"))],
+            usage=MagicMock(prompt_tokens=6, completion_tokens=3)
         )
         
         messages = [{"role": "user", "content": "Hello"}]
-        content, fallback_used = await engine.chat_completion(
+        content, fallback_used, tokens_in, tokens_out = await engine.chat_completion(
             messages=messages,
             model="gpt-4o",
             temperature=0.7
@@ -176,6 +189,8 @@ class TestFallbackEngine:
         
         assert content == "Fallback response"
         assert fallback_used is True
+        assert tokens_in == 6
+        assert tokens_out == 3
         
         # Verify only one call was made (fallback only)
         assert mock_client.chat.completions.create.call_count == 1
@@ -211,18 +226,23 @@ class TestFallbackEngine:
         """Test that max_tokens parameter is passed correctly."""
         engine, mock_client = fallback_engine_with_mocks
         
-        # Mock successful response
         mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Response"))]
+            choices=[MagicMock(message=MagicMock(content="Response"))],
+            usage=MagicMock(prompt_tokens=5, completion_tokens=3)
         )
         
         messages = [{"role": "user", "content": "Hello"}]
-        await engine.chat_completion(
+        content, fallback_used, tokens_in, tokens_out = await engine.chat_completion(
             messages=messages,
             model="gpt-4o",
             temperature=0.7,
             max_tokens=100
         )
+        
+        assert content == "Response"
+        assert fallback_used is False
+        assert tokens_in == 5
+        assert tokens_out == 3
         
         # Verify max_tokens was passed
         call_args = mock_client.chat.completions.create.call_args
@@ -245,21 +265,24 @@ class TestFallbackEngineIntegration:
     @pytest.mark.asyncio 
     async def test_circuit_breaker_state_persistence(self):
         """Test that circuit breaker state persists across calls."""
-        from app.core.fallback_engine import fallback_engine
+        from app.core.fallback_engine import FallbackEngine
+        
+        # Use fresh instance instead of singleton
+        engine = FallbackEngine()
         
         # Get initial state
-        initial_state = fallback_engine.breaker.state
-        initial_failures = fallback_engine.breaker.failure_count
+        initial_state = engine.breaker.state
+        initial_failures = engine.breaker.failure_count
         
         # Record some failures
         for i in range(2):
-            fallback_engine.breaker.record_failure()
+            engine.breaker.record_failure()
         
         # Check state changed
-        assert fallback_engine.breaker.failure_count == initial_failures + 2
+        assert engine.breaker.failure_count == initial_failures + 2
         
         # Reset for other tests
-        fallback_engine.breaker.record_success()
+        engine.breaker.record_success()
 
 
 if __name__ == "__main__":

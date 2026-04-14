@@ -20,6 +20,7 @@ from agents.shared.message import AgentMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.outputs import ChatResult, ChatGeneration
 from pydantic import Field
 
 # Import tools
@@ -41,6 +42,8 @@ class FallbackChatModel(BaseChatModel):
     model_name: str = Field(default="fallback-wrapper")
     temperature: float = Field(default=0.2)
     fallback_used: bool = Field(default=False)
+    tokens_in: int = Field(default=0)
+    tokens_out: int = Field(default=0)
     
     async def _generate(
         self,
@@ -62,13 +65,17 @@ class FallbackChatModel(BaseChatModel):
                 fallback_messages.append({"role": "user", "content": msg.content})
         
         # Call fallback engine directly with await
-        content, self.fallback_used = await fallback_engine.chat_completion(
+        content, self.fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
             messages=fallback_messages,
             model=settings.DEFAULT_MODEL,
             temperature=self.temperature,
         )
         
-        return AIMessage(content=content)
+        # Store token counts for metadata access
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=content))])
     
     @property
     def _llm_type(self) -> str:
@@ -221,8 +228,8 @@ Please use the available tools to complete this step. Provide a clear result whe
             from agents.shared.message import AgentMetadata
             metadata = AgentMetadata(
                 model_used=settings.DEFAULT_MODEL,
-                tokens_in=tokens_in,
-                tokens_out=tokens_out,
+                tokens_in=llm.tokens_in,
+                tokens_out=llm.tokens_out,
                 latency_ms=int((end_time - start_time) * 1000),
                 fallback_used=llm.fallback_used
             )

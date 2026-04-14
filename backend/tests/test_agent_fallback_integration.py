@@ -22,7 +22,7 @@ class TestPlannerAgentFallback:
     def mock_fallback_engine(self):
         """Mock fallback engine."""
         mock_engine = AsyncMock()
-        mock_engine.chat_completion.return_value = ('{"steps": [{"id": "1", "description": "Test step"}]}', False)
+        mock_engine.chat_completion.return_value = ('{"steps": [{"id": "1", "description": "Test step"}]}', False, 15, 8)
         return mock_engine
     
     @pytest.fixture
@@ -65,9 +65,7 @@ class TestPlannerAgentFallback:
     @pytest.mark.asyncio
     async def test_planner_reports_fallback_used(self, planner_agent, mock_fallback_engine):
         """Test that planner agent reports fallback usage in metadata."""
-        # Mock fallback engine to indicate fallback was used
-        mock_fallback_engine.chat_completion.return_value = ('{"steps": [{"id": "1", "description": "Test step"}]}', True)
-        
+        # Mock fallback engine
         with patch('agents.planner.planner_agent.fallback_engine', mock_fallback_engine):
             with patch('backend.app.config.settings.DEFAULT_MODEL', 'gpt-4o'):
                 with patch('backend.app.config.settings.PLANNER_TEMPERATURE', 0.7):
@@ -175,9 +173,9 @@ class TestFallbackChatModel:
         """Test that FallbackChatModel works with LangChain interface."""
         from agents.executor.executor_agent import FallbackChatModel
         
-        # Mock the fallback engine
+        # Mock fallback engine
         with patch('agents.executor.executor_agent.fallback_engine') as mock_engine:
-            mock_engine.chat_completion = AsyncMock(return_value=("Test response", True))
+            mock_engine.chat_completion = AsyncMock(return_value=("Test response", True, 10, 5))
             
             # Create model instance
             model = FallbackChatModel(temperature=0.2)
@@ -194,7 +192,7 @@ class TestFallbackChatModel:
             assert call_args[1]['temperature'] == 0.2
             
             # Verify result
-            assert result.content == "Test response"
+            assert result.generations[0].message.content == "Test response"
             assert model.fallback_used is True
     
     @pytest.mark.asyncio
@@ -203,9 +201,9 @@ class TestFallbackChatModel:
         from agents.executor.executor_agent import FallbackChatModel
         from langchain_core.messages import HumanMessage, AIMessage
         
-        # Mock the fallback engine
+        # Mock fallback engine
         with patch('agents.executor.executor_agent.fallback_engine') as mock_engine:
-            mock_engine.chat_completion = AsyncMock(return_value=("Response", False))
+            mock_engine.chat_completion = AsyncMock(return_value=("Response", False, 8, 4))
             
             # Create model instance
             model = FallbackChatModel()
