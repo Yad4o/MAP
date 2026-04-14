@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useToastStore } from '../store/toastStore';
+import { useToastStore, type ToastType } from '../../store/toastStore';
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 /**
@@ -44,16 +44,16 @@ export default function Toaster() {
   );
 }
 
-function getIcon(type: string) {
+function getIcon(type: ToastType) {
   switch (type) {
     case 'success': return CheckCircle2;
     case 'error': return XCircle;
     case 'warning': return AlertTriangle;
-    default: return Info;
+    case 'info': return Info;
   }
 }
 
-function getColors(type: string) {
+function getColors(type: ToastType) {
   switch (type) {
     case 'success':
       return { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: 'text-emerald-400' };
@@ -61,7 +61,7 @@ function getColors(type: string) {
       return { bg: 'bg-red-500/10', border: 'border-red-500/20', icon: 'text-red-400' };
     case 'warning':
       return { bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: 'text-amber-400' };
-    default:
+    case 'info':
       return { bg: 'bg-violet-500/10', border: 'border-violet-500/20', icon: 'text-violet-400' };
   }
 }

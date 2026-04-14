@@ -86,7 +86,7 @@ export default function SettingsPage() {
 // ── Profile Tab Components ───────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ProfileTab({ user }: { user: UserResponse }) {
+function ProfileTab({ user }: { user: UserResponse | null }) {
   const queryClient = useQueryClient();
   const setUser = useAuthStore(s => s.setUser);
 
@@ -143,7 +143,7 @@ function ProfileTab({ user }: { user: UserResponse }) {
         {/* Username Update */}
         <section className="glass-card p-8">
           <div className="flex items-center gap-3 mb-6">
-            <User size={20} className="text-violet-400" />
+            <UserIcon size={20} className="text-violet-400" />
             <h3 className="text-lg font-bold text-white">General Information</h3>
           </div>
           <form onSubmit={profileForm.handleSubmit(data => updateProfileMutation.mutate(data))} className="space-y-6">
@@ -234,6 +234,7 @@ function ApiKeysTab() {
   const [showModal, setShowModal] = useState(false);
   const [newKey, setNewKey] = useState<NewApiKeyResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const { data: keys, isLoading } = useQuery({
     queryKey: ["api-keys"],
@@ -252,9 +253,13 @@ function ApiKeysTab() {
   const revokeMutation = useMutation({
     mutationFn: apiKeysApi.revokeKey,
     onSuccess: () => {
+      setRevokingId(null);
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
-    onError: () => toast.error("Failed to revoke key. Please try again.")
+    onError: () => {
+      setRevokingId(null);
+      toast.error("Failed to revoke key. Please try again.");
+    }
   });
 
   const handleCopy = () => {
@@ -328,11 +333,16 @@ function ApiKeysTab() {
                   </td>
                   <td className="px-8 py-5 text-right">
                     <button
-                      onClick={() => { if (window.confirm("Are you sure? This will break any system using this key.")) revokeMutation.mutate(key.id); }}
+                      onClick={() => { 
+                        if (window.confirm("Are you sure? This will break any system using this key.")) {
+                          setRevokingId(key.id);
+                          revokeMutation.mutate(key.id); 
+                        }
+                      }}
                       disabled={!key.is_active || revokeMutation.isPending}
                       className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
                     >
-                      {revokeMutation.isPending && (revokeMutation.variables === key.id) ? (
+                      {revokingId === key.id ? (
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <Trash2 size={18} />
@@ -362,14 +372,16 @@ function ApiKeysTab() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const name = (e.target as any).name.value;
+                    const fd = new FormData(e.currentTarget);
+                    const name = (fd.get("keyName") as string).trim();
+                    if (!name) return;
                     createMutation.mutate({ name, scopes: ["task:read", "task:write"] });
                   }}
                   className="space-y-6"
                 >
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Key Name (e.g., CI/CD Pipeline)</label>
-                    <input name="name" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/40 outline-none transition-all" />
+                    <input name="keyName" required minLength={1} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/40 outline-none transition-all" />
                   </div>
                   <div className="flex gap-4">
                     <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400 hover:bg-white/5 transition-all">Cancel</button>
@@ -451,6 +463,7 @@ function MemoryTab() {
     mutationFn: memoryApi.deleteAll,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["memory-stats"] });
+      queryClient.removeQueries({ queryKey: ["memory-search"] });
       toast.success("System memory wiped.");
     },
     onError: () => toast.error("Failed to wipe memory. Please try again.")
@@ -511,8 +524,8 @@ function MemoryTab() {
             <p className="text-center py-10 text-slate-500">No signals found matching that pattern.</p>
           )}
 
-          {searchResults?.map((res) => (
-            <div key={`${res.task_id ?? "global"}-${res.created_at}`} className="p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-violet-500/30 transition-all group relative overflow-hidden">
+          {searchResults?.map((res, i) => (
+            <div key={`${res.task_id ?? "global"}-${res.created_at}-${i}`} className="p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-violet-500/30 transition-all group relative overflow-hidden">
               <div className="flex justify-between items-start mb-3 relative z-10">
                 <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
                   <Activity size={10} />

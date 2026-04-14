@@ -37,20 +37,21 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/tasks" replace />} />
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
-      {/* All authenticated routes are rendered inside the AppShell layout */}
-      <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-        <Route path="/tasks" element={<TaskListPage />} />
-        <Route path="/tasks/new" element={<TaskCreatePage />} />
-        {/* PR fix: register TaskDetailPage under AppShell for polling, cancel/retry */}
-        <Route path="/tasks/:id" element={<TaskDetailPage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/logs" element={<LogsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-      </Route>
-    </Routes>
+        {/* All authenticated routes are rendered inside the AppShell layout */}
+        <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+          <Route path="/tasks" element={<TaskListPage />} />
+          <Route path="/tasks/new" element={<TaskCreatePage />} />
+          {/* PR fix: register TaskDetailPage under AppShell for polling, cancel/retry */}
+          <Route path="/tasks/:id" element={<TaskDetailPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/logs" element={<LogsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        </Route>
+      </Routes>
+    </>
   )
 }
