@@ -8,6 +8,8 @@ Phase 4 will replace this with real LangGraph logic.
 import asyncio
 import logging
 import os
+import uuid
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,16 +27,39 @@ class AgentRunner:
         """
         Simulates task execution.
         """
+        # PHASE 3 STUB REPLACED — Now using real AgentController pipeline
         logger.info(f"AgentRunner: starting execution for task {self.task_id}")
         
-        # Simulate work (configurable delay for tests)
-        delay = float(os.getenv("AGENT_RUN_DELAY", 2 if settings.is_development else 0))
-        await asyncio.sleep(delay)
+        from app.db.base import AsyncSessionLocal
+        from app.db.repositories.task import TaskRepository
+        from agents.controller.agent_controller import AgentController
         
-        logger.info(f"AgentRunner: completed execution for task {self.task_id}")
-        
-        return {
-            "status": "COMPLETED",
-            "task_id": self.task_id,
-            "message": "Placeholder result from AgentRunner stub",
-        }
+        async with AsyncSessionLocal() as session:
+            task_repo = TaskRepository()
+            
+            # Fetch task from DB
+            task = await task_repo.get(session, uuid.UUID(self.task_id) if isinstance(self.task_id, str) else self.task_id)
+            if not task:
+                logger.error(f"AgentRunner: Task {self.task_id} not found")
+                return {"status": "FAILED", "task_id": str(self.task_id), "error": "Task not found"}
+                
+            # Update status to PROCESSING
+            task.status = "PROCESSING"
+            await session.commit()
+            
+            # Create AgentController(task_id, description, config)
+            controller = AgentController(
+                task_id=task.id,
+                task_description=task.description,
+                config=task.config
+            )
+            
+            # Return await controller.run_pipeline()
+            result = await controller.run_pipeline()
+            
+            task.status = result.get("status", "COMPLETED").upper()
+            task.result = result
+            await session.commit()
+            
+            logger.info(f"AgentRunner: completed execution for task {self.task_id}")
+            return result
