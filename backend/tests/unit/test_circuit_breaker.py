@@ -1,6 +1,6 @@
 import pytest
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from app.core.circuit_breaker import CircuitBreaker
 
 @pytest.fixture
@@ -40,6 +40,7 @@ def mock_redis():
     class MockPipeline:
         def __init__(self):
             self.cmds = []
+            self.cmds_log = []
             
         def set(self, key, val, ex=None):
             self.cmds.append(("set", key, val, ex))
@@ -58,6 +59,7 @@ def mock_redis():
             return self
             
         async def execute(self):
+            self.cmds_log.extend(self.cmds)
             results = []
             for cmd in self.cmds:
                 if cmd[0] == "set":
@@ -170,3 +172,37 @@ async def test_circuit_breaker_decodes_bytes(mock_redis):
     # Should decode and transition
     assert await cb.get_state() == "HALF_OPEN"
     assert data[cb.state_key] == "HALF_OPEN"
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_half_open_has_ttl(mock_redis):
+    redis, _ = mock_redis
+    cb = CircuitBreaker("test", redis)
+    
+    # Setup state as OPEN and last failure in the past
+    await redis.set(cb.state_key, "OPEN")
+    await redis.set(cb.last_failure_key, str(time.time() - 130))
+    
+    # This should trigger transition with TTL
+    await cb.get_state()
+    
+    # Verify last call to set included ex
+    redis.set.assert_any_call(cb.state_key, "HALF_OPEN", ex=cb.OPEN_STATE_TTL)
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_record_failure_sets_ttl(mock_redis):
+    redis, _ = mock_redis
+    cb = CircuitBreaker("test", redis)
+    
+    await cb.record_failure()
+    
+    # Verify expire was called in the pipeline
+    pipe = redis.pipeline.return_value
+    assert any(cmd[0] == "expire" and cmd[1] == cb.failures_key for cmd in pipe.cmds_log)
+
+@pytest.mark.asyncio
+async def test_get_circuit_breaker_error_handling():
+    from app.core.circuit_breaker import get_circuit_breaker
+    with patch("app.core.circuit_breaker.get_redis", side_effect=Exception("Redis down")):
+        with pytest.raises(RuntimeError) as exc:
+            await get_circuit_breaker("test")
+        assert "failed to acquire Redis for 'test'" in str(exc.value)
