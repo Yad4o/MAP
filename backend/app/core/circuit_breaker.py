@@ -51,7 +51,11 @@ class CircuitBreaker:
                     last_failure_time = float(last_failure)
                     if time.time() - last_failure_time > self.RECOVERY_TIMEOUT:
                         # Transition to HALF_OPEN state
-                        await self.redis.set(self.state_key, self.STATE_HALF_OPEN)
+                        await self.redis.set(
+                            self.state_key, 
+                            self.STATE_HALF_OPEN, 
+                            ex=self.OPEN_STATE_TTL
+                        )
                         return self.STATE_HALF_OPEN
                 except (ValueError, TypeError):
                     # If the timestamp is corrupted, we treat it as still OPEN or rely on TTL
@@ -61,15 +65,10 @@ class CircuitBreaker:
 
     async def record_success(self) -> None:
         """
-        Resets the failure counter on any success.
-        If the state is OPEN or HALF_OPEN, also resets the circuit to CLOSED.
+        Resets the failure counter and the circuit state to CLOSED on any success.
         """
-        state = await self.get_state()
         async with self.redis.pipeline(transaction=True) as pipe:
-            if state in [self.STATE_OPEN, self.STATE_HALF_OPEN]:
-                pipe.set(self.state_key, self.STATE_CLOSED)
-            
-            # Always reset failure counter on any success
+            pipe.set(self.state_key, self.STATE_CLOSED)
             pipe.delete(self.failures_key)
             pipe.delete(self.last_failure_key)
             await pipe.execute()
@@ -80,17 +79,14 @@ class CircuitBreaker:
         If failures reached the threshold, sets the state to OPEN with a 600s TTL.
         """
         now = time.time()
-        async with self.redis.pipeline(transaction=True) as pipe:
+        async with self.redis.pipeline(transaction=False) as pipe:
             pipe.incr(self.failures_key)
             pipe.set(self.last_failure_key, str(now))
+            pipe.expire(self.failures_key, self.OPEN_STATE_TTL)
             results = await pipe.execute()
         
         failures = results[0]
         
-        # Set TTL on first increment so the failure counter auto-expires if threshold not met
-        if failures == 1:
-            await self.redis.expire(self.failures_key, self.OPEN_STATE_TTL)
-            
         if failures >= self.FAILURE_THRESHOLD:
             await self.redis.set(self.state_key, self.STATE_OPEN, ex=self.OPEN_STATE_TTL)
 
@@ -110,7 +106,9 @@ class CircuitBreaker:
 
 async def get_circuit_breaker(provider: str) -> CircuitBreaker:
     """
-    Factory function to create or get a CircuitBreaker instance for a specific provider.
+    Factory function for use outside the FastAPI request lifecycle (e.g., scripts, workers).
+    In FastAPI routes or services, prefer injecting the redis client via Depends(get_redis)
+    and instantiating CircuitBreaker(provider, redis) directly.
     """
     try:
         redis = await get_redis()
