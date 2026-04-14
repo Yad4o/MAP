@@ -5,3 +5,5 @@
  * Add new handler arrays here as features are added.
  */
 export { taskHandlers } from './tasks';
+export { adminHandlers } from './admin';
+export { logHandlers } from './logs';
