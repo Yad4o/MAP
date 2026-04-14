@@ -12,6 +12,7 @@ import json
 from agents.planner.planner_agent import PlannerAgent
 from agents.planner.prompts import build_planner_prompt, PLANNER_SYSTEM_PROMPT
 from agents.shared.message import AgentMessage, AgentMetadata
+from langchain_core.messages import AIMessage, HumanMessage
 
 @pytest.fixture
 def planner_agent():
@@ -164,8 +165,10 @@ async def test_planner_retry_contains_feedback(planner_agent):
     call_args = planner_agent.llm.ainvoke.call_args_list[1]
     messages = call_args[0][0]
     assert len(messages) == 4
-    assert "failed validation" in messages[-1].content
+    assert isinstance(messages[-2], AIMessage), "Bad LLM reply must be AIMessage to maintain role alternation"
+    assert isinstance(messages[-1], HumanMessage)
     assert "bad json" in messages[-2].content
+    assert "failed validation" in messages[-1].content
 
 @pytest.mark.asyncio
 async def test_planner_uses_default_model_in_metadata(planner_agent):
@@ -184,6 +187,7 @@ async def test_planner_uses_default_model_in_metadata(planner_agent):
 
 @pytest.mark.asyncio
 async def test_simple_task_sends_one_step_constraint(planner_agent):
+    """Verify the system prompt containing the 1-step constraint is passed to the LLM for simple tasks."""
     task_id = planner_agent.task_id
     message = build_test_message("What is the capital of France?", task_id)
     

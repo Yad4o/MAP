@@ -59,6 +59,7 @@ class PlannerAgent(BaseAgent):
 
         while retries >= 0:
             start_time = time.time()
+            append_feedback = False
             try:
                 # Call LLM
                 response = await self.llm.ainvoke(messages)
@@ -67,8 +68,10 @@ class PlannerAgent(BaseAgent):
                 # Strip markdown fences if present
                 if content.strip().startswith("```"):
                     lines = content.strip().split("\n")
-                    # Remove lines that are just ``` or ```json
-                    lines = [l for l in lines if not l.strip().startswith("```")]
+                    if lines[0].strip().startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
                     content = "\n".join(lines).strip()
 
                 # Parse JSON
@@ -100,20 +103,20 @@ class PlannerAgent(BaseAgent):
             except (json.JSONDecodeError, ValueError) as e:
                 last_error = str(e)
                 logger.warning(f"PlannerAgent: Parse/Validation failure (attempts left: {retries}). Error: {last_error}")
+                append_feedback = True
                 
             except Exception as e:
                 last_error = f"LLM call failed: {e}"
                 logger.error(f"PlannerAgent: Unexpected LLM error: {e}", exc_info=True)
-                retries -= 1
-                continue
 
-            # If we're here, we caught (json.JSONDecodeError, ValueError)
-            # Add feedback for next attempt
-            messages.append(AIMessage(content=content)) # Add the bad response with correct role
-            messages.append(HumanMessage(
-                content=f"The previous response failed validation: {last_error}. "
-                "Please provide a corrected JSON execution plan following the schema strictly."
-            ))
+            if append_feedback:
+                # Add feedback for next attempt
+                messages.append(AIMessage(content=content)) # Add the bad response with correct role
+                messages.append(HumanMessage(
+                    content=f"The previous response failed validation: {last_error}. "
+                    "Please provide a corrected JSON execution plan following the schema strictly."
+                ))
+            
             retries -= 1
 
         # On persistent failure, return error response
