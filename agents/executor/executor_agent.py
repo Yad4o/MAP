@@ -13,14 +13,66 @@ import time
 import warnings
 import logging
 import traceback
-from typing import Dict, Any
+import asyncio
+from typing import Dict, Any, List, Optional
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from pydantic import Field
 
 # Import tools
 from agents.executor.tools.web_search import WebSearchTool
 from agents.executor.tools.file_reader import FileReaderTool
 from agents.executor.tools.code_interpreter import CodeInterpreterTool
+
+# Import fallback engine
+from backend.app.core.fallback_engine import fallback_engine
+from backend.app.config import settings
+
+
+class FallbackChatModel(BaseChatModel):
+    """
+    LangChain-compatible wrapper for fallback_engine.
+    Makes the fallback engine work with LangGraph's create_react_agent.
+    """
+    
+    model_name: str = Field(default="fallback-wrapper")
+    temperature: float = Field(default=0.2)
+    fallback_used: bool = Field(default=False)
+    
+    async def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AIMessage:
+        """Generate response using fallback_engine."""
+        # Convert LangChain messages to fallback_engine format
+        fallback_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                fallback_messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                fallback_messages.append({"role": "assistant", "content": msg.content})
+            else:
+                # Handle other message types (system, etc.)
+                fallback_messages.append({"role": "user", "content": msg.content})
+        
+        # Call fallback engine directly with await
+        content, self.fallback_used = await fallback_engine.chat_completion(
+            messages=fallback_messages,
+            model=settings.DEFAULT_MODEL,
+            temperature=self.temperature,
+        )
+        
+        return AIMessage(content=content)
+    
+    @property
+    def _llm_type(self) -> str:
+        return "fallback_engine"
 
 # LangGraph imports
 try:
@@ -98,10 +150,10 @@ class ExecutorAgent(BaseAgent):
             if not tools:
                 tools = [WebSearchTool()]
 
-            # Get LLM from config or use default
-            llm = self.config.get("llm")
-            if not llm:
-                return self.build_error("No LLM provided in config")
+            # Create fallback LLM wrapper
+            # OLD: llm = self.config.get("llm"); if not llm: return error
+            # NEW: using fallback_engine via FallbackChatModel
+            llm = FallbackChatModel(temperature=settings.EXECUTOR_TEMPERATURE)
 
             # Create ReAct agent
             agent = create_react_agent(llm, tools)
@@ -165,10 +217,21 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "trace": [msg.content for msg in messages if hasattr(msg, 'content')]
             }
 
+            # Create metadata with fallback information
+            from agents.shared.message import AgentMetadata
+            metadata = AgentMetadata(
+                model_used=settings.DEFAULT_MODEL,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                latency_ms=int((end_time - start_time) * 1000),
+                fallback_used=llm.fallback_used
+            )
+
             return self.build_response(
                 recipient="controller",
                 message_type="step_result",
-                payload={"step_result": step_result}
+                payload={"step_result": step_result},
+                metadata=metadata
             )
 
         except Exception as e:
