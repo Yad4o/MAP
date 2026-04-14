@@ -3,13 +3,48 @@ agents/analyzer/analyzer_agent.py
 ───────────────────────────────────
 Validates Executor outputs and scores confidence.
 
-Phase 0: Skeleton only.
-Phase 4: Implement validation logic and confidence scoring.
+# ALREADY IMPLEMENTED: AnalyzerAgent skeleton exists — adding full run() implementation.
+
+Phase 4: Calls ChatOpenAI with the quality analyst system prompt, strips
+         markdown fences from the response, parses a JSON validation report,
+         and returns a validation AgentMessage. Gracefully falls back on
+         JSON parse failure (passed=True, raw content used as critique).
 """
 
+import json
+import logging
+import os
+import re
+import time
 import uuid
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
+
+from agents.analyzer.prompts import ANALYZER_SYSTEM_PROMPT
 from agents.shared.base_agent import BaseAgent
-from agents.shared.message import AgentMessage
+from agents.shared.message import AgentMessage, AgentMetadata
+
+logger = logging.getLogger(__name__)
+
+# ── Confidence threshold (mirrors ANALYZER_CONFIDENCE_THRESHOLD in config) ──
+_DEFAULT_THRESHOLD = float(os.getenv("ANALYZER_CONFIDENCE_THRESHOLD", "0.70"))
+_MODEL = os.getenv("ANALYZER_MODEL", "gpt-4o-mini")
+_TEMPERATURE = float(os.getenv("ANALYZER_TEMPERATURE", "0.1"))
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """
+    Remove ```json ... ``` or ``` ... ``` code fences from an LLM response.
+    Returns the raw content between the fences (stripped of whitespace).
+    If no fence is found the original string is returned unchanged.
+    """
+    # Match ```json\n...\n``` or ```\n...\n```
+    pattern = r"```(?:json)?\s*([\s\S]*?)```"
+    match = re.search(pattern, text)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
 
 
 class AnalyzerAgent(BaseAgent):
@@ -19,28 +54,119 @@ class AnalyzerAgent(BaseAgent):
     Flags steps below the confidence threshold for re-execution.
 
     Model config:
-      - temperature: 0.1 (deterministic evaluation)
+      - model:       gpt-4o-mini  (override: ANALYZER_MODEL env var)
+      - temperature: 0.1          (deterministic evaluation)
     """
 
     name = "analyzer"
     description = "Validates executor outputs and scores confidence."
 
+    def __init__(self, task_id: uuid.UUID):
+        super().__init__(task_id)
+        self._llm = ChatOpenAI(
+            model=_MODEL,
+            temperature=_TEMPERATURE,
+            api_key=os.getenv("OPENAI_API_KEY", ""),
+        )
+
     async def run(self, message: AgentMessage) -> AgentMessage:
         """
-        Input payload:  { "step_results": list[StepResult], "plan": PlanDocument }
+        Input payload:  { "step_results": list[dict], "plan": dict }
         Output payload: {
             "validation_report": {
-                "passed": bool,
-                "step_scores": { "step_id": confidence_float },
-                "failed_steps": list[step_id],
-                "critique": str
+                "passed":       bool,
+                "confidence":   float,
+                "step_scores":  { "step_id": float },
+                "failed_steps": list[str],
+                "critique":     str,
+                "summary":      str
             }
         }
-
-        Steps to implement in Phase 4:
-        1. For each step result: validate against expected_output_schema
-        2. Call LLM to self-evaluate confidence (0.0-1.0) with reasoning
-        3. Flag steps with confidence < ANALYZER_CONFIDENCE_THRESHOLD
-        4. Return validation report
         """
-        raise NotImplementedError("Phase 4 — implement this")
+        step_results = message.payload.get("step_results", [])
+        plan = message.payload.get("plan", {})
+
+        # ── Build user message ────────────────────────────────────────────────
+        user_content = json.dumps(
+            {"step_results": step_results, "plan": plan},
+            indent=2,
+            default=str,
+        )
+
+        # ── Call LLM ─────────────────────────────────────────────────────────
+        t0 = time.time()
+        tokens_in = 0
+        tokens_out = 0
+        try:
+            response = await self._llm.ainvoke(
+                [
+                    SystemMessage(content=ANALYZER_SYSTEM_PROMPT),
+                    HumanMessage(content=user_content),
+                ]
+            )
+            raw_content: str = response.content
+            if response.usage_metadata:
+                tokens_in = response.usage_metadata.get("input_tokens", 0)
+                tokens_out = response.usage_metadata.get("output_tokens", 0)
+        except Exception as exc:
+            logger.error("AnalyzerAgent LLM call failed: %s", exc)
+            return self.build_error(f"LLM call failed: {exc}")
+
+        latency_ms = int((time.time() - t0) * 1000)
+
+        # ── Strip markdown fences ─────────────────────────────────────────────
+        clean_content = _strip_markdown_fences(raw_content)
+
+        # ── Parse JSON ───────────────────────────────────────────────────────
+        try:
+            report: dict = json.loads(clean_content)
+
+            # Enforce passed/failed invariants
+            step_scores = report.get("step_scores", {})
+            failed = [sid for sid, score in step_scores.items() if score < _DEFAULT_THRESHOLD]
+            report["failed_steps"] = failed
+            report["passed"] = len(failed) == 0
+
+            # Ensure required keys exist with safe defaults
+            report.setdefault("confidence", 1.0)
+            report.setdefault("step_scores", {})
+            report.setdefault("critique", "")
+            report.setdefault("summary", "")
+
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning(
+                "AnalyzerAgent: JSON parse failed (%s) — using fallback report. "
+                "Raw content: %.200s",
+                exc,
+                raw_content,
+            )
+            # Graceful fallback: return a low-confidence failed report
+            report = {
+                "passed": False,
+                "confidence": 0.0,
+                "step_scores": {},
+                "failed_steps": [],
+                "critique": f"Analyzer parse failure: {raw_content}",
+                "summary": "Analyzer could not parse LLM response.",
+            }
+
+        logger.info(
+            "AnalyzerAgent: validation complete — passed=%s confidence=%.2f latency_ms=%d",
+            report["passed"],
+            report.get("confidence", 1.0),
+            latency_ms,
+        )
+
+        metadata = AgentMetadata(
+            model_used=_MODEL,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+        )
+
+        return self.build_response(
+            recipient="controller",
+            message_type="validation",
+            payload={"validation_report": report},
+            metadata=metadata,
+        )
