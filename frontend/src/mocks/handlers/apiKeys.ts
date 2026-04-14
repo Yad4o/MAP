@@ -39,9 +39,9 @@ export const apiKeyHandlers = [
   // POST /api/v1/api-keys
   http.post('/api/v1/api-keys', async ({ request }) => {
     await delay(500);
-    const body: any = await request.json();
+    const body = await request.json() as import('../../types').CreateApiKeyRequest;
     const newKey: NewApiKeyResponse = {
-      id: `k-${Math.random().toString(36).substr(2, 9)}`,
+      id: `k-${Math.random().toString(36).slice(2, 11)}`,
       name: body.name || 'Untitled Key',
       key_prefix: 'map_live_new',
       full_key: 'map_live_new_abc123def456ghi789jkl012',

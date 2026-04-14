@@ -12,6 +12,7 @@ import LogsPage from './pages/LogsPage'
 import AdminPage from './pages/AdminPage'
 import SettingsPage from './pages/SettingsPage'
 import AppShell from './components/layout/AppShell'
+import Toaster from './components/layout/Toaster'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
@@ -31,8 +32,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/tasks" replace />} />
+    <>
+      <Toaster />
+      <Routes>
+        <Route path="/" element={<Navigate to="/tasks" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

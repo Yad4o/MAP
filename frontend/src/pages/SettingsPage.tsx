@@ -1,35 +1,34 @@
 // STUB REPLACED — implementing all tabs per task instructions
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/auth";
 import { apiKeysApi } from "../api/apiKeys";
 import { memoryApi } from "../api/memory";
+import { toast } from "../store/toastStore";
 import { useForm } from "react-hook-form";
-import { 
-  User, 
-  Key, 
-  Database, 
-  Save, 
-  Plus, 
-  Trash2, 
-  Copy, 
-  Check, 
-  AlertCircle,
+import {
+  User as UserIcon,
+  Key,
+  Database,
+  Save,
+  Plus,
+  Trash2,
+  Copy,
+  Check,
   Loader2,
   Lock,
   Search,
   Shield,
-  Eye,
-  EyeOff,
   AlertTriangle,
-  Mail,
   Zap,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  History,
+  Activity
 } from "lucide-react";
-import { UpdateProfileRequest, ChangePasswordRequest } from "../types";
+import { UpdateProfileRequest, ChangePasswordRequest, UserResponse, NewApiKeyResponse } from "../types";
 
 /**
  * SettingsPage provides a central hub for user profile, security, and memory management.
@@ -39,7 +38,7 @@ export default function SettingsPage() {
   const { user } = useAuthStore();
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: User },
+    { id: "profile", label: "Profile", icon: UserIcon },
     { id: "keys", label: "API Keys", icon: Key },
     { id: "memory", label: "Agent Memory", icon: Database },
   ] as const;
@@ -61,11 +60,10 @@ export default function SettingsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${
-                isActive 
-                ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30 ring-1 ring-white/20" 
+              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${isActive
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30 ring-1 ring-white/20"
                 : "text-slate-500 hover:text-slate-200 hover:bg-white/5"
-              }`}
+                }`}
             >
               <Icon size={16} className={isActive ? "animate-pulse" : ""} />
               {tab.label}
@@ -88,7 +86,7 @@ export default function SettingsPage() {
 // ── Profile Tab Components ───────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ProfileTab({ user }: { user: any }) {
+function ProfileTab({ user }: { user: UserResponse }) {
   const queryClient = useQueryClient();
   const setUser = useAuthStore(s => s.setUser);
 
@@ -102,15 +100,16 @@ function ProfileTab({ user }: { user: any }) {
     mutationFn: authApi.updateMe,
     onSuccess: (updatedUser) => {
       setUser(updatedUser);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     }
   });
 
   const changePasswordMutation = useMutation({
-    mutationFn: authApi.changePassword,
+    mutationFn: ({ confirm: _, ...payload }: ChangePasswordRequest & { confirm: string }) =>
+      authApi.changePassword(payload),
     onSuccess: () => {
       passwordForm.reset();
-      alert("Password changed successfully!");
+      toast.success("Password changed successfully!");
     }
   });
 
@@ -150,7 +149,7 @@ function ProfileTab({ user }: { user: any }) {
           <form onSubmit={profileForm.handleSubmit(data => updateProfileMutation.mutate(data))} className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Username</label>
-              <input 
+              <input
                 {...profileForm.register("username", { required: "Username is required", minLength: 3 })}
                 className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/40 transition-all"
               />
@@ -158,8 +157,8 @@ function ProfileTab({ user }: { user: any }) {
                 <p className="text-red-400 text-xs mt-1">{profileForm.formState.errors.username.message}</p>
               )}
             </div>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={updateProfileMutation.isPending}
               className="btn-primary flex items-center gap-2"
             >
@@ -175,14 +174,14 @@ function ProfileTab({ user }: { user: any }) {
             <Lock size={20} className="text-violet-400" />
             <h3 className="text-lg font-bold text-white">Security & Password</h3>
           </div>
-          <form 
-            onSubmit={passwordForm.handleSubmit(data => changePasswordMutation.mutate(data))} 
+          <form
+            onSubmit={passwordForm.handleSubmit(data => changePasswordMutation.mutate(data))}
             className="space-y-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2 col-span-full">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current Password</label>
-                <input 
+                <input
                   type="password"
                   {...passwordForm.register("current_password", { required: "Required" })}
                   className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/40 transition-all"
@@ -190,7 +189,7 @@ function ProfileTab({ user }: { user: any }) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">New Password</label>
-                <input 
+                <input
                   type="password"
                   {...passwordForm.register("new_password", { required: "Required", minLength: 8 })}
                   className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/40 transition-all"
@@ -198,9 +197,9 @@ function ProfileTab({ user }: { user: any }) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Confirm New Password</label>
-                <input 
+                <input
                   type="password"
-                  {...passwordForm.register("confirm", { 
+                  {...passwordForm.register("confirm", {
                     required: "Required",
                     validate: val => val === passwordForm.getValues("new_password") || "Passwords don't match"
                   })}
@@ -211,8 +210,8 @@ function ProfileTab({ user }: { user: any }) {
                 )}
               </div>
             </div>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={changePasswordMutation.isPending}
               className="btn-primary flex items-center gap-2"
             >
@@ -233,7 +232,7 @@ function ProfileTab({ user }: { user: any }) {
 function ApiKeysTab() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
-  const [newKey, setNewKey] = useState<any>(null);
+  const [newKey, setNewKey] = useState<NewApiKeyResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { data: keys, isLoading } = useQuery({
@@ -246,17 +245,20 @@ function ApiKeysTab() {
     onSuccess: (data) => {
       setNewKey(data);
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-    }
+    },
+    onError: () => toast.error("Failed to create key. Please try again.")
   });
 
   const revokeMutation = useMutation({
     mutationFn: apiKeysApi.revokeKey,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-    }
+    },
+    onError: () => toast.error("Failed to revoke key. Please try again.")
   });
 
   const handleCopy = () => {
+    if (!newKey) return;
     navigator.clipboard.writeText(newKey.full_key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -275,8 +277,8 @@ function ApiKeysTab() {
             <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest mt-1">Authenticate agents and external systems</p>
           </div>
         </div>
-        <button 
-          onClick={() => { setShowModal(true); setNewKey(null); }}
+        <button
+          onClick={() => setShowModal(true)}
           className="btn-primary flex items-center gap-2 px-6 py-3"
         >
           <Plus size={18} />
@@ -300,10 +302,10 @@ function ApiKeysTab() {
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
                 <tr>
-                   <td colSpan={5} className="px-8 py-16 text-center">
-                      <Loader2 className="animate-spin mx-auto text-violet-500 mb-2" size={32} />
-                      <p className="text-slate-500 text-sm">Fetching credentials...</p>
-                   </td>
+                  <td colSpan={5} className="px-8 py-16 text-center">
+                    <Loader2 className="animate-spin mx-auto text-violet-500 mb-2" size={32} />
+                    <p className="text-slate-500 text-sm">Fetching credentials...</p>
+                  </td>
                 </tr>
               ) : keys?.map(key => (
                 <tr key={key.id} className="hover:bg-white/[0.02] transition-colors group">
@@ -315,9 +317,8 @@ function ApiKeysTab() {
                     <code className="text-violet-400 px-2 py-1 bg-violet-400/10 rounded font-mono text-xs">{key.key_prefix}...</code>
                   </td>
                   <td className="px-8 py-5">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                      key.is_active ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${key.is_active ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' : 'bg-red-400/10 text-red-400 border-red-400/20'
+                      }`}>
                       <span className={`w-1 h-1 rounded-full ${key.is_active ? 'bg-emerald-400' : 'bg-red-400'}`} />
                       {key.is_active ? 'Active' : 'Revoked'}
                     </span>
@@ -326,11 +327,16 @@ function ApiKeysTab() {
                     {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <button 
-                      onClick={() => { if(window.confirm("Are you sure? This will break any system using this key.")) revokeMutation.mutate(key.id); }}
-                      className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100"
+                    <button
+                      onClick={() => { if (window.confirm("Are you sure? This will break any system using this key.")) revokeMutation.mutate(key.id); }}
+                      disabled={!key.is_active || revokeMutation.isPending}
+                      className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
                     >
-                      <Trash2 size={18} />
+                      {revokeMutation.isPending && (revokeMutation.variables === key.id) ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={18} />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -353,7 +359,7 @@ function ApiKeysTab() {
                   <h3 className="text-2xl font-bold text-white">Generate Access Key</h3>
                   <p className="text-slate-400 text-sm">Create a secret key to authenticate your automated workflows.</p>
                 </div>
-                <form 
+                <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     const name = (e.target as any).name.value;
@@ -383,12 +389,12 @@ function ApiKeysTab() {
                   <h3 className="text-2xl font-bold text-white">Generation Successful</h3>
                   <p className="text-slate-400 text-sm mt-1 px-4">This is the <span className="text-emerald-400 font-bold">only time</span> the secret key will be shown.</p>
                 </div>
-                
+
                 <div className="bg-[#020617] p-4 rounded-2xl border border-white/10 relative group">
                   <div className="text-violet-400 font-mono text-sm break-all pr-12 text-left leading-relaxed">
                     {newKey.full_key}
                   </div>
-                  <button 
+                  <button
                     onClick={handleCopy}
                     className="absolute top-1/2 -translate-y-1/2 right-3 p-2 bg-white/5 rounded-xl hover:bg-violet-500 transition-all text-white"
                   >
@@ -401,8 +407,8 @@ function ApiKeysTab() {
                   Please store this key securely. If lost, you must revoke and regenerate it.
                 </div>
 
-                <button 
-                  onClick={() => setShowModal(false)}
+                <button
+                  onClick={() => { setShowModal(false); setNewKey(null); }}
                   className="w-full py-4 bg-slate-800 text-white rounded-2xl text-sm font-bold tracking-widest hover:bg-slate-700 transition-colors"
                 >
                   I've Stored the Key
@@ -422,7 +428,13 @@ function ApiKeysTab() {
 
 function MemoryTab() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(searchQuery), 400);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
 
   const { data: stats } = useQuery({
     queryKey: ["memory-stats"],
@@ -430,17 +442,18 @@ function MemoryTab() {
   });
 
   const { data: searchResults, isFetching } = useQuery({
-    queryKey: ["memory-search", searchQuery],
-    queryFn: () => memoryApi.search(searchQuery),
-    enabled: searchQuery.length > 2
+    queryKey: ["memory-search", debouncedQuery],
+    queryFn: () => memoryApi.search(debouncedQuery),
+    enabled: debouncedQuery.length > 2
   });
 
   const deleteAllMutation = useMutation({
     mutationFn: memoryApi.deleteAll,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["memory-stats"] });
-      alert("System memory wiped.");
-    }
+      toast.success("System memory wiped.");
+    },
+    onError: () => toast.error("Failed to wipe memory. Please try again.")
   });
 
   return (
@@ -457,16 +470,16 @@ function MemoryTab() {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-6 text-right sm:text-left">
-           <div>
-              <div className="text-3xl font-black text-white tracking-tighter">{stats?.count?.toLocaleString() ?? "..."}</div>
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Memory Units</div>
-           </div>
-           <button 
-              onClick={() => { if(window.confirm("Permanently wipe all agent memory? This cannot be undone.")) deleteAllMutation.mutate(); }}
-              className="px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/30"
-           >
-             Factory Reset Memory
-           </button>
+          <div>
+            <div className="text-3xl font-black text-white tracking-tighter">{stats?.count?.toLocaleString() ?? "..."}</div>
+            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Memory Units</div>
+          </div>
+          <button
+            onClick={() => { if (window.confirm("Permanently wipe all agent memory? This cannot be undone.")) deleteAllMutation.mutate(); }}
+            className="px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/30"
+          >
+            Factory Reset Memory
+          </button>
         </div>
       </div>
 
@@ -474,7 +487,7 @@ function MemoryTab() {
       <div className="glass-card p-8 flex flex-col gap-6">
         <div className="relative">
           <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input 
+          <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Query memory system for specific patterns..."
@@ -487,33 +500,33 @@ function MemoryTab() {
 
         {/* Search Results */}
         <div className="space-y-4">
-          {!searchResults && searchQuery.length == 0 && (
-             <div className="py-20 text-center opacity-30 select-none pointer-events-none">
-                <Database size={64} className="mx-auto mb-4" />
-                <p className="text-sm font-bold uppercase tracking-[0.2em]">Enter query to search indexed vectors</p>
-             </div>
+          {!searchResults && searchQuery.length === 0 && (
+            <div className="py-20 text-center opacity-30 select-none pointer-events-none">
+              <Database size={64} className="mx-auto mb-4" />
+              <p className="text-sm font-bold uppercase tracking-[0.2em]">Enter query to search indexed vectors</p>
+            </div>
           )}
 
           {searchResults?.length === 0 && (
             <p className="text-center py-10 text-slate-500">No signals found matching that pattern.</p>
           )}
 
-          {searchResults?.map((res, i) => (
-            <div key={i} className="p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-violet-500/30 transition-all group relative overflow-hidden">
-               <div className="flex justify-between items-start mb-3 relative z-10">
-                  <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={10} />
-                    Signal Score: {(res.score * 100).toFixed(1)}%
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-600 font-mono">{new Date(res.created_at || "").toLocaleDateString()}</span>
-               </div>
-               <p className="text-sm text-white leading-relaxed mb-4 relative z-10">{res.content}</p>
-               {res.task_id && (
-                 <div className="text-[10px] text-slate-500 relative z-10">Linked to Task Context: <code className="text-violet-400/80">{res.task_id}</code></div>
-               )}
-               
-               {/* Aesthetic accent */}
-               <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/5 blur-[40px] rounded-full group-hover:bg-violet-600/10 transition-all duration-700" />
+          {searchResults?.map((res) => (
+            <div key={`${res.task_id ?? "global"}-${res.created_at}`} className="p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-violet-500/30 transition-all group relative overflow-hidden">
+              <div className="flex justify-between items-start mb-3 relative z-10">
+                <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={10} />
+                  Signal Score: {(res.score * 100).toFixed(1)}%
+                </span>
+                <span className="text-[10px] font-bold text-slate-600 font-mono">{new Date(res.created_at || "").toLocaleDateString()}</span>
+              </div>
+              <p className="text-sm text-white leading-relaxed mb-4 relative z-10">{res.content}</p>
+              {res.task_id && (
+                <div className="text-[10px] text-slate-500 relative z-10">Linked to Task Context: <code className="text-violet-400/80">{res.task_id}</code></div>
+              )}
+
+              {/* Aesthetic accent */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/5 blur-[40px] rounded-full group-hover:bg-violet-600/10 transition-all duration-700" />
             </div>
           ))}
         </div>
