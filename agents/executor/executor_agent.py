@@ -137,7 +137,6 @@ Please use the available tools to complete this step. Provide a clear result whe
                     tokens_out = token_usage.get('completion_tokens', 0)
                 else:
                     # Log warning if LLM doesn't expose token metadata
-                    import warnings
                     warnings.warn("LLM doesn't expose token usage metadata - token counts will be zero")
 
             # Parse actual tool invocations from message trace
@@ -152,7 +151,7 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "description": step_description,
                 "status": "completed",
                 "output": final_message,
-                "tool_calls_used": list(set(actual_tool_calls)),  # Remove duplicates, preserve order
+                "tool_calls_used": list(dict.fromkeys(actual_tool_calls)),  # Remove duplicates, preserve insertion order
                 "latency_ms": int((end_time - start_time) * 1000),
                 "tokens_used": {
                     "in": tokens_in,

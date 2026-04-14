@@ -54,25 +54,7 @@ class WebSearchTool(BaseTool):
             return f"Error performing web search: {str(e)}"
 
     async def _arun(self, query: str, num_results: int = 5) -> str:
-        """Async version using DDGS (DuckDuckGo Search)."""
-        if DDGS is None:
-            return "Error: duckduckgo-search package not installed. Install with: pip install duckduckgo-search"
-        
-        try:
-            ddgs = DDGS()
-            results = ddgs.text(query, max_results=num_results)
-            
-            if not results:
-                return f"No results found for query: {query}"
-            
-            formatted_results = []
-            for i, result in enumerate(results, 1):
-                title = result.get('title', 'No title')
-                url = result.get('href', 'No URL')
-                summary = result.get('body', 'No summary')
-                formatted_results.append(f"{i}. {title}\n   URL: {url}\n   Summary: {summary}\n")
-            
-            return "\n".join(formatted_results)
-            
-        except Exception as e:
-            return f"Error performing web search: {str(e)}"
+        """Async version - runs blocking I/O in thread pool executor."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._run, query, num_results)

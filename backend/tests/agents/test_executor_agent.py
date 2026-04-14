@@ -75,13 +75,6 @@ class TestWebSearchTool:
             
             assert "No results found" in result
 
-    @pytest.mark.asyncio
-    async def test_web_search_dependency_missing(self, web_search_tool):
-        """Test WebSearchTool handles missing DDGS dependency"""
-        with patch('agents.executor.tools.web_search.DDGS', None):
-            result = await web_search_tool._arun("test query")
-            assert "duckduckgo-search package not installed" in result
-
     def test_web_search_sync_run_returns_formatted_results(self, web_search_tool):
         """Test _run method returns properly formatted results from sync execution"""
         with patch('agents.executor.tools.web_search.DDGS') as mock_ddgs:
@@ -614,6 +607,11 @@ class TestExecutorAgent:
                 mock_create_agent.return_value = mock_agent
                 
                 result = await executor_agent.run(message)
+                
+                assert result.message_type == "error"
+                assert "Test error" in result.payload["error"]
+
+    @pytest.mark.asyncio
     async def test_executor_agent_tracks_token_usage(self, executor_agent):
         """Test ExecutorAgent extracts and returns actual token usage"""
         message = AgentMessage(
