@@ -8,8 +8,6 @@ import json
 import logging
 import time
 import uuid
-from typing import Any
-
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
@@ -70,7 +68,7 @@ class PlannerAgent(BaseAgent):
                     lines = content.strip().split("\n")
                     if lines[0].strip().startswith("```"):
                         lines = lines[1:]
-                    if lines and lines[-1].strip() == "```":
+                    if lines and lines[-1].strip().startswith("```"):
                         lines = lines[:-1]
                     content = "\n".join(lines).strip()
 
