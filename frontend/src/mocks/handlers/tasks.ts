@@ -124,6 +124,7 @@ export const taskHandlers = [
           confidence: 0.98,
           created_at: task.created_at,
           completed_at: new Date().toISOString(),
+          input_payload: { task: task.title, detail: task.description },
           output_payload: { plan: ['Research', 'Execute', 'Verify'] }
         },
         {
@@ -135,6 +136,7 @@ export const taskHandlers = [
           latency_ms: task.status === TaskStatus.COMPLETED ? 4500 : undefined,
           confidence: 0.92,
           created_at: new Date().toISOString(),
+          input_payload: { plan: ['Research', 'Execute', 'Verify'], current_step: 'Execute' },
           output_payload: { code: 'console.log("hello world")' }
         }
       ]
