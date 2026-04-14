@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, ClassVar
 import redis.asyncio as aioredis
 from app.core.redis_client import get_redis
 
@@ -12,13 +12,13 @@ class CircuitBreaker:
     - OPEN: Failures exceeded threshold, requests are blocked for a recovery period.
     - HALF_OPEN: Recovery period passed, testing if the provider is back online.
     """
-    STATE_CLOSED = "CLOSED"
-    STATE_OPEN = "OPEN"
-    STATE_HALF_OPEN = "HALF_OPEN"
+    STATE_CLOSED: ClassVar[str] = "CLOSED"
+    STATE_OPEN: ClassVar[str] = "OPEN"
+    STATE_HALF_OPEN: ClassVar[str] = "HALF_OPEN"
     
-    FAILURE_THRESHOLD = 3
-    RECOVERY_TIMEOUT = 120  # seconds before transitioning from OPEN to HALF_OPEN
-    OPEN_STATE_TTL = 600    # seconds before the OPEN state key expires in Redis
+    FAILURE_THRESHOLD: ClassVar[int] = 3
+    RECOVERY_TIMEOUT: ClassVar[int] = 120  # seconds before transitioning from OPEN to HALF_OPEN
+    OPEN_STATE_TTL: ClassVar[int] = 600    # seconds before the OPEN state key expires in Redis
     
     def __init__(self, provider: str, redis_client: aioredis.Redis):
         self.provider = provider
@@ -36,9 +36,17 @@ class CircuitBreaker:
         if not state:
             return self.STATE_CLOSED
         
+        # Ensure state is a string for comparison
+        if isinstance(state, bytes):
+            state = state.decode("utf-8")
+        
         if state == self.STATE_OPEN:
             last_failure = await self.redis.get(self.last_failure_key)
             if last_failure:
+                # Ensure last_failure is a string for conversion to float
+                if isinstance(last_failure, bytes):
+                    last_failure = last_failure.decode("utf-8")
+                    
                 try:
                     last_failure_time = float(last_failure)
                     if time.time() - last_failure_time > self.RECOVERY_TIMEOUT:
@@ -53,24 +61,37 @@ class CircuitBreaker:
 
     async def record_success(self) -> None:
         """
-        If the state is OPEN or HALF_OPEN, resets the circuit to CLOSED and deletes the failure counter.
+        Resets the failure counter on any success.
+        If the state is OPEN or HALF_OPEN, also resets the circuit to CLOSED.
         """
         state = await self.get_state()
-        if state in [self.STATE_OPEN, self.STATE_HALF_OPEN]:
-            await self.redis.set(self.state_key, self.STATE_CLOSED)
-            await self.redis.delete(self.failures_key)
-            await self.redis.delete(self.last_failure_key)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            if state in [self.STATE_OPEN, self.STATE_HALF_OPEN]:
+                pipe.set(self.state_key, self.STATE_CLOSED)
+            
+            # Always reset failure counter on any success
+            pipe.delete(self.failures_key)
+            pipe.delete(self.last_failure_key)
+            await pipe.execute()
 
     async def record_failure(self) -> None:
         """
         Increments the failure counter.
         If failures reached the threshold, sets the state to OPEN with a 600s TTL.
         """
-        failures = await self.redis.incr(self.failures_key)
         now = time.time()
-        await self.redis.set(self.last_failure_key, str(now))
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.incr(self.failures_key)
+            pipe.set(self.last_failure_key, str(now))
+            results = await pipe.execute()
         
-        if int(failures) >= self.FAILURE_THRESHOLD:
+        failures = results[0]
+        
+        # Set TTL on first increment so the failure counter auto-expires if threshold not met
+        if failures == 1:
+            await self.redis.expire(self.failures_key, self.OPEN_STATE_TTL)
+            
+        if failures >= self.FAILURE_THRESHOLD:
             await self.redis.set(self.state_key, self.STATE_OPEN, ex=self.OPEN_STATE_TTL)
 
     async def is_available(self) -> bool:
@@ -86,9 +107,13 @@ class CircuitBreaker:
         """
         await self.redis.delete(self.state_key, self.failures_key, self.last_failure_key)
 
+
 async def get_circuit_breaker(provider: str) -> CircuitBreaker:
     """
     Factory function to create or get a CircuitBreaker instance for a specific provider.
     """
-    redis = await get_redis()
+    try:
+        redis = await get_redis()
+    except Exception as exc:
+        raise RuntimeError(f"CircuitBreaker: failed to acquire Redis for '{provider}'") from exc
     return CircuitBreaker(provider, redis)
