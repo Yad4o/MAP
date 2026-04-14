@@ -66,12 +66,21 @@ class CircuitBreaker:
     async def record_success(self) -> None:
         """
         Resets the failure counter and the circuit state to CLOSED on any success.
+        Uses a Lua script for atomicity to prevent race conditions with record_failure.
         """
-        async with self.redis.pipeline(transaction=True) as pipe:
-            pipe.set(self.state_key, self.STATE_CLOSED)
-            pipe.delete(self.failures_key)
-            pipe.delete(self.last_failure_key)
-            await pipe.execute()
+        lua = """
+        local state = redis.call('GET', KEYS[1])
+        if state == 'CLOSED' or state == 'OPEN' or state == 'HALF_OPEN' or state == false then
+            redis.call('SET', KEYS[1], 'CLOSED')
+            redis.call('DEL', KEYS[2])
+            redis.call('DEL', KEYS[3])
+        end
+        return 1
+        """
+        await self.redis.eval(
+            lua, 3,
+            self.state_key, self.failures_key, self.last_failure_key
+        )
 
     async def record_failure(self) -> None:
         """

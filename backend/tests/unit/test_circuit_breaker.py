@@ -11,10 +11,11 @@ def mock_redis():
     
     async def mock_get(key):
         val = data.get(key)
-        # Handle bytes decoding like the real redis client
+        if val is None:
+            return None
         if isinstance(val, bytes):
             return val
-        return val if val is None else str(val).encode("utf-8") if not isinstance(val, str) else val
+        return str(val).encode("utf-8")
     
     async def mock_set(key, value, ex=None):
         data[key] = value
@@ -31,16 +32,29 @@ def mock_redis():
     async def mock_exists(key):
         return key in data
 
+    async def mock_eval(script, num_keys, *args):
+        # Very basic simulation of the record_success script
+        if "redis.call('SET', KEYS[1], 'CLOSED')" in script:
+            state_key = args[0]
+            failures_key = args[1]
+            last_failure_key = args[2]
+            data[state_key] = "CLOSED"
+            if failures_key in data: del data[failures_key]
+            if last_failure_key in data: del data[last_failure_key]
+        return 1
+
     redis.get.side_effect = mock_get
     redis.set.side_effect = mock_set
     redis.delete.side_effect = mock_delete
     redis.exists.side_effect = mock_exists
+    redis.eval.side_effect = mock_eval
     
     # Mock pipeline
     class MockPipeline:
-        def __init__(self):
+        def __init__(self, transaction=True):
             self.cmds = []
             self.cmds_log = []
+            self.transaction = transaction
             
         def set(self, key, val, ex=None):
             self.cmds.append(("set", key, val, ex))
@@ -88,19 +102,24 @@ def mock_redis():
             pass
 
     # pipeline() is a sync call in redis-py
-    redis.pipeline = MagicMock(return_value=MockPipeline())
-    return redis, data
+    created_pipelines = []
+    def get_pipeline(transaction=True):
+        p = MockPipeline(transaction=transaction)
+        created_pipelines.append(p)
+        return p
+    redis.pipeline = MagicMock(side_effect=get_pipeline)
+    return redis, data, created_pipelines
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_initial_state(mock_redis):
-    redis, _ = mock_redis
+    redis, _, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     assert await cb.get_state() == "CLOSED"
     assert await cb.is_available() is True
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_transitions_to_open(mock_redis):
-    redis, _ = mock_redis
+    redis, _, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     # Record failures
@@ -113,7 +132,7 @@ async def test_circuit_breaker_transitions_to_open(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_half_open_recovery(mock_redis):
-    redis, data = mock_redis
+    redis, data, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     # Force OPEN
@@ -128,7 +147,7 @@ async def test_circuit_breaker_half_open_recovery(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_success_resets_counters(mock_redis):
-    redis, data = mock_redis
+    redis, data, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     # Record some failures but not enough to trip
@@ -144,7 +163,7 @@ async def test_circuit_breaker_success_resets_counters(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_success_in_open_resets(mock_redis):
-    redis, data = mock_redis
+    redis, data, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     data[cb.state_key] = "OPEN"
@@ -153,7 +172,7 @@ async def test_circuit_breaker_success_in_open_resets(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_reset_clears_all(mock_redis):
-    redis, data = mock_redis
+    redis, data, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     await cb.record_failure()
@@ -162,7 +181,7 @@ async def test_circuit_breaker_reset_clears_all(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_decodes_bytes(mock_redis):
-    redis, data = mock_redis
+    redis, data, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     # Simulate Redis returning bytes
@@ -175,7 +194,7 @@ async def test_circuit_breaker_decodes_bytes(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_half_open_has_ttl(mock_redis):
-    redis, _ = mock_redis
+    redis, _, _ = mock_redis
     cb = CircuitBreaker("test", redis)
     
     # Setup state as OPEN and last failure in the past
@@ -190,13 +209,14 @@ async def test_circuit_breaker_half_open_has_ttl(mock_redis):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_record_failure_sets_ttl(mock_redis):
-    redis, _ = mock_redis
+    redis, _, pipelines = mock_redis
     cb = CircuitBreaker("test", redis)
     
     await cb.record_failure()
     
     # Verify expire was called in the pipeline
-    pipe = redis.pipeline.return_value
+    pipe = pipelines[-1]
+    assert pipe.transaction is False
     assert any(cmd[0] == "expire" and cmd[1] == cb.failures_key for cmd in pipe.cmds_log)
 
 @pytest.mark.asyncio
@@ -206,3 +226,12 @@ async def test_get_circuit_breaker_error_handling():
         with pytest.raises(RuntimeError) as exc:
             await get_circuit_breaker("test")
         assert "failed to acquire Redis for 'test'" in str(exc.value)
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_corrupted_timestamp_stays_open(mock_redis):
+    redis, data, _ = mock_redis
+    cb = CircuitBreaker("test", redis)
+    data[cb.state_key] = "OPEN"
+    data[cb.last_failure_key] = "not-a-timestamp"
+    # Should safely catch the ValueError/TypeError and stay OPEN
+    assert await cb.get_state() == "OPEN"
