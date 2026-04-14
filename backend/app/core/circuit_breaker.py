@@ -69,6 +69,7 @@ class CircuitBreaker:
         Uses a Lua script for atomicity to prevent race conditions with record_failure.
         """
         lua = """
+        -- record_success
         local state = redis.call('GET', KEYS[1])
         if state == 'CLOSED' or state == 'OPEN' or state == 'HALF_OPEN' or state == false then
             redis.call('SET', KEYS[1], 'CLOSED')

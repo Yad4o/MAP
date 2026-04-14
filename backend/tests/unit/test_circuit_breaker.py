@@ -34,7 +34,7 @@ def mock_redis():
 
     async def mock_eval(script, num_keys, *args):
         # Very basic simulation of the record_success script
-        if "redis.call('SET', KEYS[1], 'CLOSED')" in script:
+        if "-- record_success" in script:
             state_key = args[0]
             failures_key = args[1]
             last_failure_key = args[2]
