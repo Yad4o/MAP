@@ -91,7 +91,7 @@ class TaskStepResponse(BaseModel):
     created_at: datetime
     completed_at: datetime | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
 
 class TaskRead(BaseModel):

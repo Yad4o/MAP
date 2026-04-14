@@ -70,7 +70,7 @@ class FallbackChatModel(BaseChatModel):
             messages=fallback_messages,
             model=settings.DEFAULT_MODEL,
             temperature=self.temperature,
-            max_tokens=getattr(settings, 'MAX_TOKENS', None),
+            max_tokens=settings.MAX_TOKENS,
         )
         
         # Store metadata in ChatResult's llm_output for access by executor

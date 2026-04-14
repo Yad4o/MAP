@@ -3,37 +3,47 @@ agents/analyzer/analyzer_agent.py
 ───────────────────────────────────
 Validates Executor outputs and scores confidence.
 
-Phase 4: Implement validation logic and confidence scoring using fallback_engine.
+# ALREADY IMPLEMENTED: AnalyzerAgent skeleton exists — adding full run() implementation.
+
+Phase 4: Calls fallback_engine with the quality analyst system prompt, strips
+         markdown fences from the response, parses a JSON validation report,
+         and returns a validation AgentMessage. Gracefully falls back on
+         JSON parse failure (passed=True, raw content used as critique).
 """
 
 import json
 import logging
+import os
+import re
 import time
 import uuid
-from typing import Dict, Any, List
-from backend.app.config import settings
-from backend.app.core.fallback_engine import fallback_engine
+
+from agents.analyzer.prompts import ANALYZER_SYSTEM_PROMPT
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage, AgentMetadata
+from backend.app.config import settings
+from backend.app.core.fallback_engine import fallback_engine
 
 logger = logging.getLogger(__name__)
 
-# Analyzer system prompt for validation
-ANALYZER_SYSTEM_PROMPT = """You are an analyzer agent that validates executor outputs and scores confidence.
+# ── Confidence threshold (mirrors ANALYZER_CONFIDENCE_THRESHOLD in config) ──
+_DEFAULT_THRESHOLD = float(os.getenv("ANALYZER_CONFIDENCE_THRESHOLD", "0.70"))
+_MODEL = os.getenv("ANALYZER_MODEL", "gpt-4o-mini")
+_TEMPERATURE = float(os.getenv("ANALYZER_TEMPERATURE", "0.1"))
 
-Your task is to evaluate the execution results against the expected outcomes and provide:
-1. A confidence score (0.0-1.0) for each step
-2. Identify any failed steps
-3. Provide a brief critique
 
-Respond with a JSON object containing:
-{
-    "step_scores": {"step_id": confidence_score, ...},
-    "failed_steps": ["step_id1", "step_id2", ...],
-    "critique": "Brief assessment of the results"
-}
-
-Be objective and thorough in your evaluation."""
+def _strip_markdown_fences(text: str) -> str:
+    """
+    Remove ```json ... ``` or ``` ... ``` code fences from an LLM response.
+    Returns the raw content between the fences (stripped of whitespace).
+    If no fence is found the original string is returned unchanged.
+    """
+    # Match ```json\n...\n``` or ```\n...\n```
+    pattern = r"```(?:json)?\s*([\s\S]*?)```"
+    match = re.search(pattern, text)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
 
 
 class AnalyzerAgent(BaseAgent):
@@ -43,140 +53,116 @@ class AnalyzerAgent(BaseAgent):
     Flags steps below the confidence threshold for re-execution.
 
     Model config:
-      - temperature: 0.1 (deterministic evaluation)
+      - model:       gpt-4o-mini  (override: ANALYZER_MODEL env var)
+      - temperature: 0.1          (deterministic evaluation)
     """
 
     name = "analyzer"
     description = "Validates executor outputs and scores confidence."
 
+    def __init__(self, task_id: uuid.UUID):
+        super().__init__(task_id)
+
     async def run(self, message: AgentMessage) -> AgentMessage:
         """
-        Input payload:  { "step_results": list[StepResult], "plan": PlanDocument }
+        Input payload:  { "step_results": list[dict], "plan": dict }
         Output payload: {
             "validation_report": {
-                "passed": bool,
-                "step_scores": { "step_id": confidence_float },
-                "failed_steps": list[step_id],
-                "critique": str
+                "passed":       bool,
+                "confidence":   float,
+                "step_scores":  { "step_id": float },
+                "failed_steps": list[str],
+                "critique":     str,
+                "summary":      str
             }
         }
-
-        Steps to implement in Phase 4:
-        1. For each step result: validate against expected_output_schema
-        2. Call LLM to self-evaluate confidence (0.0-1.0) with reasoning
-        3. Flag steps with confidence < ANALYZER_CONFIDENCE_THRESHOLD
-        4. Return validation report
         """
-        payload = message.payload
-        step_results = payload.get("step_results", [])
-        plan = payload.get("plan", {})
+        step_results = message.payload.get("step_results", [])
+        plan = message.payload.get("plan", {})
 
-        if not step_results:
-            return self.build_error("No step_results provided in payload.")
-
-        # Build analysis prompt
-        analysis_prompt = self._build_analysis_prompt(step_results, plan)
+        # ── Build user message ────────────────────────────────────────────────
+        user_content = json.dumps(
+            {"step_results": step_results, "plan": plan},
+            indent=2,
+            default=str,
+        )
 
         messages = [
             {"role": "system", "content": ANALYZER_SYSTEM_PROMPT},
-            {"role": "user", "content": analysis_prompt}
+            {"role": "user", "content": user_content},
         ]
 
-        start_time = time.time()
+        # ── Call LLM via fallback_engine ──────────────────────────────────────
+        # OLD: response = await self._llm.ainvoke([SystemMessage(...), HumanMessage(...)])
+        # NEW: using fallback_engine.chat_completion
+        t0 = time.time()
         try:
-            # Call LLM using fallback_engine
-            # OLD: llm = ChatOpenAI(...); response = await llm.ainvoke(messages)
-            # NEW: using fallback_engine.chat_completion
-            content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
+            raw_content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
                 messages=messages,
                 model=settings.DEFAULT_MODEL,
-                temperature=getattr(settings, 'ANALYZER_TEMPERATURE', 0.1),
-                max_tokens=getattr(settings, 'MAX_TOKENS', None),
+                temperature=settings.ANALYZER_TEMPERATURE,
+                max_tokens=settings.MAX_TOKENS,
             )
+        except Exception as exc:
+            logger.error("AnalyzerAgent LLM call failed: %s", exc)
+            return self.build_error(f"LLM call failed: {exc}")
 
-            # Strip markdown fences if present
-            if content.strip().startswith("```"):
-                lines = content.strip().split("\n")
-                if lines[0].strip().startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].strip().startswith("```"):
-                    lines = lines[:-1]
-                content = "\n".join(lines).strip()
+        latency_ms = int((time.time() - t0) * 1000)
 
-            # Parse JSON response
-            analysis_result = json.loads(content)
+        # ── Strip markdown fences ─────────────────────────────────────────────
+        clean_content = _strip_markdown_fences(raw_content)
 
-            # Validate required fields
-            required_fields = ["step_scores", "failed_steps", "critique"]
-            for field in required_fields:
-                if field not in analysis_result:
-                    raise ValueError(f"Missing required field: {field}")
+        # ── Parse JSON ───────────────────────────────────────────────────────
+        try:
+            report: dict = json.loads(clean_content)
 
-            # Determine if validation passed
-            failed_steps = analysis_result["failed_steps"]
-            passed = len(failed_steps) == 0
+            # Enforce passed/failed invariants
+            step_scores = report.get("step_scores", {})
+            failed = [sid for sid, score in step_scores.items() if score < _DEFAULT_THRESHOLD]
+            report["failed_steps"] = failed
+            report["passed"] = len(failed) == 0
 
-            # Build validation report
-            validation_report = {
-                "passed": passed,
-                "step_scores": analysis_result["step_scores"],
-                "failed_steps": failed_steps,
-                "critique": analysis_result["critique"]
+            # Ensure required keys exist with safe defaults
+            report.setdefault("confidence", 1.0)
+            report.setdefault("step_scores", {})
+            report.setdefault("critique", "")
+            report.setdefault("summary", "")
+
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning(
+                "AnalyzerAgent: JSON parse failed (%s) — using fallback report. "
+                "Raw content: %.200s",
+                exc,
+                raw_content,
+            )
+            # Graceful fallback: return a low-confidence failed report
+            report = {
+                "passed": False,
+                "confidence": 0.0,
+                "step_scores": {},
+                "failed_steps": [],
+                "critique": f"Analyzer parse failure: {raw_content}",
+                "summary": "Analyzer could not parse LLM response.",
             }
 
-            # Create metadata
-            latency_ms = int((time.time() - start_time) * 1000)
-            metadata = AgentMetadata(
-                model_used=settings.DEFAULT_MODEL,
-                tokens_in=tokens_in,
-                tokens_out=tokens_out,
-                latency_ms=latency_ms,
-                fallback_used=fallback_used
-            )
+        logger.info(
+            "AnalyzerAgent: validation complete — passed=%s confidence=%.2f latency_ms=%d",
+            report["passed"],
+            report.get("confidence", 1.0),
+            latency_ms,
+        )
 
-            return self.build_response(
-                recipient="controller",
-                message_type="validation_report",
-                payload={"validation_report": validation_report},
-                metadata=metadata
-            )
+        metadata = AgentMetadata(
+            model_used=settings.DEFAULT_MODEL,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+            fallback_used=fallback_used,
+        )
 
-        except Exception as e:
-            logger.error(f"AnalyzerAgent failed: {e}", exc_info=True)
-            return self.build_error(f"Analysis failed: {type(e).__name__}: {str(e)}")
-
-    def _build_analysis_prompt(self, step_results: List[Dict[str, Any]], plan: Dict[str, Any]) -> str:
-        """Build the analysis prompt from step results and plan."""
-        prompt_parts = [
-            "Please analyze the following execution results:",
-            "",
-            "=== PLAN ==="
-        ]
-
-        # Add plan information
-        if plan and "steps" in plan:
-            for step in plan["steps"]:
-                step_id = step.get("id", "unknown")
-                description = step.get("description", "No description")
-                prompt_parts.append(f"Step {step_id}: {description}")
-
-        prompt_parts.extend([
-            "",
-            "=== EXECUTION RESULTS ==="
-        ])
-
-        # Add step results
-        for i, result in enumerate(step_results):
-            step_id = result.get("step_id", f"step_{i}")
-            status = result.get("status", "unknown")
-            output = result.get("output", "No output")
-            prompt_parts.append(f"Step {step_id} ({status}):")
-            prompt_parts.append(f"Output: {output[:500]}..." if len(output) > 500 else f"Output: {output}")
-            prompt_parts.append("")
-
-        prompt_parts.extend([
-            "Please evaluate these results and provide confidence scores for each step.",
-            "Consider completeness, correctness, and adherence to the plan requirements."
-        ])
-
-        return "\n".join(prompt_parts)
+        return self.build_response(
+            recipient="controller",
+            message_type="validation",
+            payload={"validation_report": report},
+            metadata=metadata,
+        )
