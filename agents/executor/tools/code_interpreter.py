@@ -47,7 +47,6 @@ class CodeInterpreterTool(BaseTool):
             'sum': sum,
             'tuple': tuple,
             'zip': zip,
-            '__import__': __import__,  # Allow imports for math module
             'Exception': Exception,
             'NameError': NameError,
         }

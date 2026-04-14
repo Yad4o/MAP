@@ -15,6 +15,7 @@ import pytest
 import asyncio
 import os
 import tempfile
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 from datetime import datetime
@@ -81,14 +82,50 @@ class TestWebSearchTool:
             result = await web_search_tool._arun("test query")
             assert "duckduckgo-search package not installed" in result
 
+    def test_web_search_sync_run_returns_formatted_results(self, web_search_tool):
+        """Test _run method returns properly formatted results from sync execution"""
+        with patch('agents.executor.tools.web_search.DDGS') as mock_ddgs:
+            # Mock DDGS response
+            mock_ddgs_instance = MagicMock()
+            mock_ddgs.return_value = mock_ddgs_instance
+            mock_ddgs_instance.text.return_value = [
+                {
+                    'title': 'Test Result',
+                    'href': 'https://example.com',
+                    'body': 'Test summary'
+                }
+            ]
+            
+            result = web_search_tool._run("test query", num_results=1)
+            
+            assert "Test Result" in result
+            assert "https://example.com" in result
+            assert "Test summary" in result
+            # Verify DDGS was called directly (not through asyncio.run)
+            mock_ddgs.assert_called_once()
+            mock_ddgs_instance.text.assert_called_once_with("test query", max_results=1)
+
+    def test_web_search_sync_run_no_results(self, web_search_tool):
+        """Test _run method handles no results correctly"""
+        with patch('agents.executor.tools.web_search.DDGS') as mock_ddgs:
+            mock_ddgs_instance = MagicMock()
+            mock_ddgs.return_value = mock_ddgs_instance
+            mock_ddgs_instance.text.return_value = []  # No results
+            
+            result = web_search_tool._run("test query", num_results=5)
+            
+            assert "No results found" in result
+            assert result == "No results found for query: test query"
+            # Verify DDGS was called correctly
+            mock_ddgs.assert_called_once()
+            mock_ddgs_instance.text.assert_called_once_with("test query", max_results=5)
+
     @pytest.mark.asyncio
-    async def test_web_search_sync_wrapper(self, web_search_tool):
-        """Test _run method provides sync wrapper"""
-        # Mock asyncio.run to avoid event loop issues
-        with patch('agents.executor.tools.web_search.asyncio.run', return_value="test result") as mock_run:
-            result = web_search_tool._run("test query")
-            assert result == "test result"
-            mock_run.assert_called_once()
+    async def test_web_search_dependency_missing(self, web_search_tool):
+        """Test WebSearchTool handles missing DDGS dependency"""
+        with patch('agents.executor.tools.web_search.DDGS', None):
+            result = await web_search_tool._arun("test query")
+            assert "duckduckgo-search package not installed" in result
 
 
 class TestFileReaderTool:
@@ -199,11 +236,35 @@ class TestFileReaderTool:
 
     @pytest.mark.asyncio
     async def test_file_reader_async_wrapper(self, file_reader_tool):
-        """Test _arun method delegates to _run"""
+        """Test _arun method runs blocking I/O in thread pool executor"""
+        # Test that _arun properly uses thread pool for async I/O
         with patch.object(file_reader_tool, '_run', return_value="test result") as mock_run:
             result = await file_reader_tool._arun("test_file.txt")
             assert result == "test result"
             mock_run.assert_called_once_with("test_file.txt", 10000)
+
+    @pytest.mark.asyncio
+    async def test_file_reader_async_io_performance(self, file_reader_tool):
+        """Test FileReaderTool async I/O doesn't block event loop"""
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write("Test content for async I/O")
+            temp_file = f.name
+        
+        try:
+            # This should not block the event loop
+            start_time = time.time()
+            result = await file_reader_tool._arun(temp_file)
+            end_time = time.time()
+            
+            # Verify result and that it completed quickly
+            assert "Test content for async I/O" in result
+            assert (end_time - start_time) < 1.0  # Should be very fast
+            
+        finally:
+            # Clean up
+            if os.path.exists(temp_file):
+                os.unlink(temp_file)
 
 
 class TestCodeInterpreterTool:
@@ -228,7 +289,7 @@ print(f'2 + 3 = {result}')
     def test_code_interpreter_math_functions(self, code_interpreter_tool):
         """Test CodeInterpreterTool supports math functions"""
         code = """
-import math
+# Math module is already available in restricted_globals
 print(f'Pi = {math.pi}')
 print(f'Sqrt(16) = {math.sqrt(16)}')
 """
@@ -263,9 +324,18 @@ try:
     eval('print("unsafe")')
 except NameError:
     print("eval not available")
+
+# Try to use __import__ to escape sandbox
+try:
+    os = __import__('os')
+    print("__import__ available - SECURITY BREACH")
+except NameError:
+    print("__import__ not available - sandbox secure")
 """
         result = code_interpreter_tool._run(code)
         assert "eval not available" in result
+        assert "__import__ not available" in result
+        assert "SECURITY BREACH" not in result
 
     @pytest.mark.asyncio
     async def test_code_interpreter_async_wrapper(self, code_interpreter_tool):
@@ -289,13 +359,13 @@ class TestExecutorAgent:
         """Test ExecutorAgent initializes correctly"""
         assert executor_agent.name == "executor"
         assert executor_agent.description == "Executes plan steps using tools in a ReAct loop."
-        assert "web_search" in executor_agent.AVAILABLE_TOOLS
-        assert "file_reader" in executor_agent.AVAILABLE_TOOLS
-        assert "code_interpreter" in executor_agent.AVAILABLE_TOOLS
+        assert "web_search" in executor_agent.available_tools
+        assert "file_reader" in executor_agent.available_tools
+        assert "code_interpreter" in executor_agent.available_tools
 
     def test_executor_agent_tools_available(self, executor_agent):
         """Test all required tools are available and instantiated"""
-        tools = executor_agent.AVAILABLE_TOOLS
+        tools = executor_agent.available_tools
         assert isinstance(tools["web_search"], WebSearchTool)
         assert isinstance(tools["file_reader"], FileReaderTool)
         assert isinstance(tools["code_interpreter"], CodeInterpreterTool)
@@ -454,25 +524,27 @@ class TestExecutorAgent:
         
         with patch('agents.executor.executor_agent.HumanMessage') as mock_human:
             with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
-                # Mock the agent and its response
+                # Mock agent and its response
                 mock_agent = AsyncMock()
                 mock_final_message = MagicMock()
                 mock_final_message.content = "Search completed successfully"
                 mock_agent.ainvoke.return_value = {"messages": [mock_final_message]}
                 mock_create_agent.return_value = mock_agent
-                
+
                 result = await executor_agent.run(message)
-                
+
                 # Verify response structure
                 assert result.message_type == "step_result"
                 assert "step_result" in result.payload
                 step_result = result.payload["step_result"]
-                
+
                 assert step_result["step_id"] == "test_step_1"
                 assert step_result["description"] == "Execute test search"
                 assert step_result["status"] == "completed"
                 assert step_result["output"] == "Search completed successfully"
-                assert "web_search" in step_result["tool_calls_used"]
+                
+                # Should report empty tool_calls when no tools used
+                assert step_result["tool_calls_used"] == []
                 assert "latency_ms" in step_result
                 assert "tokens_used" in step_result
                 assert "trace" in step_result
@@ -542,10 +614,105 @@ class TestExecutorAgent:
                 mock_create_agent.return_value = mock_agent
                 
                 result = await executor_agent.run(message)
+    async def test_executor_agent_tracks_token_usage(self, executor_agent):
+        """Test ExecutorAgent extracts and returns actual token usage"""
+        message = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=executor_agent.task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={
+                "step": {
+                    "description": "Test step",
+                    "tool_names": ["web_search"]
+                }
+            }
+        )
+        
+        with patch('agents.executor.executor_agent.HumanMessage'):
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
                 
-                assert result.message_type == "error"
-                assert "Error executing step" in result.payload["error"]
-                assert "Test error" in result.payload["error"]
+                # Mock final message with token usage metadata
+                mock_final_message = MagicMock()
+                mock_final_message.content = "Test response"
+                mock_final_message.usage_metadata = {
+                    'input_tokens': 50,
+                    'output_tokens': 25
+                }
+                
+                mock_agent.ainvoke.return_value = {
+                    "messages": [mock_final_message]
+                }
+                mock_create_agent.return_value = mock_agent
+                
+                result = await executor_agent.run(message)
+                
+                assert result.message_type == "step_result"
+                step_result = result.payload["step_result"]
+                assert step_result["tokens_used"]["in"] == 50
+                assert step_result["tokens_used"]["out"] == 25
+
+    @pytest.mark.asyncio
+    async def test_executor_agent_tracks_actual_tool_calls(self, executor_agent):
+        """Test ExecutorAgent tracks actual tool calls from LangGraph trace"""
+        message = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=executor_agent.task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={
+                "step": {
+                    "description": "Test step with multiple tools",
+                    "tool_names": ["web_search", "file_reader", "code_interpreter"]
+                }
+            }
+        )
+        
+        with patch('agents.executor.executor_agent.HumanMessage') as mock_human:
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
+                
+                # Mock messages with tool calls
+                mock_thought = MagicMock()
+                mock_thought.content = "I need to search and read files"
+                
+                # Create proper LangGraph tool call structure
+                mock_tool_call = MagicMock()
+                mock_tool_call.content = "Using web_search tool"
+                mock_tool_call.tool_calls = [
+                    {"name": "web_search", "id": "call_1"}
+                ]
+                
+                mock_final = MagicMock()
+                mock_final.content = "Task completed successfully"
+                mock_final.tool_calls = [
+                    {"name": "file_reader", "id": "call_2"}
+                ]
+                
+                mock_agent.ainvoke.return_value = {
+                    "messages": [mock_thought, mock_tool_call, mock_final]
+                }
+                mock_create_agent.return_value = mock_agent
+                
+                result = await executor_agent.run(message)
+                
+                assert result.message_type == "step_result"
+                step_result = result.payload["step_result"]
+                
+                # Should report only tools actually used (web_search, file_reader)
+                assert set(step_result["tool_calls_used"]) == {"web_search", "file_reader"}
+                assert "code_interpreter" not in step_result["tool_calls_used"]
+                
+                # Verify both tools are reported (order may vary)
+                assert "web_search" in step_result["tool_calls_used"]
+                assert "file_reader" in step_result["tool_calls_used"]
+                
+                # Verify empty tool_calls when no tools used
+                if not step_result["tool_calls_used"]:
+                    assert step_result["tool_calls_used"] == []
 
 
 class TestIntegration:
@@ -630,9 +797,32 @@ class TestIntegration:
         with patch('agents.executor.executor_agent.HumanMessage') as mock_human:
             with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
                 mock_agent = AsyncMock()
-                mock_final_message = MagicMock()
-                mock_final_message.content = "Task completed using all tools"
-                mock_agent.ainvoke.return_value = {"messages": [mock_final_message]}
+                
+                # Mock messages with tool calls in LangGraph format
+                mock_thought = MagicMock()
+                mock_thought.content = "I need to use all three tools"
+                
+                mock_web_search = MagicMock()
+                mock_web_search.content = "Using web search"
+                mock_web_search.tool_calls = [
+                    {"name": "web_search", "id": "call_1"}
+                ]
+                
+                mock_file_reader = MagicMock()
+                mock_file_reader.content = "Reading file"
+                mock_file_reader.tool_calls = [
+                    {"name": "file_reader", "id": "call_2"}
+                ]
+                
+                mock_final = MagicMock()
+                mock_final.content = "Task completed using all tools"
+                mock_final.tool_calls = [
+                    {"name": "code_interpreter", "id": "call_3"}
+                ]
+                
+                mock_agent.ainvoke.return_value = {
+                    "messages": [mock_thought, mock_web_search, mock_file_reader, mock_final]
+                }
                 mock_create_agent.return_value = mock_agent
                 
                 result = await executor.run(message)

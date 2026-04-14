@@ -52,8 +52,7 @@ class FileReaderTool(BaseTool):
             # Handle text-based files
             elif extension in ['.txt', '.md', '.csv', '.json']:
                 with open(file_path, 'r', encoding='utf-8') as file:
-                    content = file.read()
-                    return content[:max_chars]
+                    return file.read(max_chars)
             
             else:
                 return f"Error: Unsupported file extension '{extension}'. Supported: .pdf, .txt, .md, .csv, .json"
@@ -62,5 +61,7 @@ class FileReaderTool(BaseTool):
             return f"Error reading file: {str(e)}"
 
     async def _arun(self, file_path: str, max_chars: int = 10000) -> str:
-        """Async version - delegates to sync version."""
-        return self._run(file_path, max_chars)
+        """Async version - runs blocking I/O in thread pool executor."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._run, file_path, max_chars)
