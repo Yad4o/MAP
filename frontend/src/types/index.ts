@@ -184,6 +184,34 @@ export interface NewApiKeyResponse extends ApiKeyResponse {
 
 // ── WebSocket Events ──────────────────────────────────────────
 
+// ── Admin ──────────────────────────────────────────────────
+export interface AdminMetrics {
+  total_tasks_today: number;
+  success_rate: number;
+  avg_task_duration: number;
+  active_users: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  username: string;
+  role: "USER" | "ADMIN" | "SYSTEM";
+  tier: "free" | "pro" | "enterprise";
+  is_active: boolean;
+  last_login?: string;
+}
+
+// ── Logs ───────────────────────────────────────────────────
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+  event: string;
+  task_id?: string;
+  logger: string;
+}
+
 export type WsEventType = "step_complete" | "thinking" | "complete" | "error";
 
 export interface WsEvent<T = unknown> {
