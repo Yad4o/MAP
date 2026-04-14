@@ -25,8 +25,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import os
-os.environ["OPENAI_API_KEY"] = "dummy_for_tests"
-import os
 os.environ["OPENAI_API_KEY"] = "dummy"
 
 from agents.analyzer.analyzer_agent import AnalyzerAgent, _strip_markdown_fences
