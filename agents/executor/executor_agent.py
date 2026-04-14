@@ -11,6 +11,8 @@ Phase 4 (Member building Executor): Implement run() using LangGraph
 import uuid
 import time
 import warnings
+import logging
+import traceback
 from typing import Dict, Any
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
@@ -28,6 +30,9 @@ except ImportError:
     HumanMessage = None
     AIMessage = None
     create_react_agent = None
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 class ExecutorAgent(BaseAgent):
@@ -167,9 +172,6 @@ Please use the available tools to complete this step. Provide a clear result whe
             )
 
         except Exception as e:
-            import traceback
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(
                 "ExecutorAgent failed",
                 exc_info=True,

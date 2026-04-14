@@ -63,5 +63,5 @@ class FileReaderTool(BaseTool):
     async def _arun(self, file_path: str, max_chars: int = 10000) -> str:
         """Async version - runs blocking I/O in thread pool executor."""
         import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._run, file_path, max_chars)

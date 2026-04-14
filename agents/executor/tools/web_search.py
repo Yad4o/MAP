@@ -55,6 +55,5 @@ class WebSearchTool(BaseTool):
 
     async def _arun(self, query: str, num_results: int = 5) -> str:
         """Async version - runs blocking I/O in thread pool executor."""
-        import asyncio
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._run, query, num_results)
