@@ -21,7 +21,7 @@ export default function LogsPage() {
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: logs, isLoading, isFetching } = useQuery({
+  const { data: logs, isLoading, isFetching, isError } = useQuery({
     queryKey: ["logs", level, search],
     queryFn: () => logsApi.getLogs({ level, search }),
     // Refresh every 5 seconds per instructions
@@ -67,7 +67,7 @@ export default function LogsPage() {
 
           {/* Level Filter Buttons */}
           <div className="flex bg-white/[0.03] p-1.5 rounded-2xl border border-white/10 shadow-inner">
-            {["ALL", "INFO", "WARNING", "ERROR"].map((l) => (
+            {["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].map((l) => (
               <button
                 key={l}
                 onClick={() => setLevel(l)}
@@ -169,8 +169,10 @@ export default function LogsPage() {
       <div className="flex items-center justify-between text-[10px] font-bold text-slate-600 px-4 uppercase tracking-[0.2em]">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Connection Secure</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isError ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+            <span className={isError ? 'text-red-400' : ''}>
+              {isError ? 'Stream Disconnected' : 'Connection Secure'}
+            </span>
           </div>
           <div>Buffer Size: {logs?.length ?? 0} Epochs</div>
         </div>

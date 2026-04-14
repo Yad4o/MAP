@@ -70,7 +70,7 @@ export const adminHandlers = [
   // PATCH /api/v1/admin/users/:id
   http.patch('/api/v1/admin/users/:id', async ({ params, request }) => {
     await delay(300);
-    const body: any = await request.json();
+    const body = await request.json() as Partial<AdminUser>;
     return HttpResponse.json({ message: `User ${params.id} updated successfully`, ...body });
   }),
 ];

@@ -13,9 +13,11 @@ import {
   Shield, 
   User as UserIcon,
   Loader2,
+  AlertCircle,
   MoreVertical,
   ChevronRight
 } from "lucide-react";
+import { AdminUser } from "../types";
 
 /**
  * AdminPage provides global system metrics and user management.
@@ -37,18 +39,18 @@ export default function AdminPage() {
     }
   }, [user, navigate]);
 
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useQuery({
     queryKey: ["admin", "metrics"],
     queryFn: adminApi.getMetrics,
   });
 
-  const { data: users, isLoading: usersLoading } = useQuery({
+  const { data: users, isLoading: usersLoading, isError: usersError } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: adminApi.getUsers,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => adminApi.updateUser(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<AdminUser> }) => adminApi.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
     },
@@ -63,6 +65,13 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
         <p className="text-slate-400 mt-2">Global system overview and user management.</p>
       </div>
+
+      {(metricsError || usersError) && (
+        <div className="glass-card p-4 border-red-500/20 bg-red-500/5 flex items-center gap-3 text-red-400">
+          <AlertCircle className="w-5 h-5" />
+          <p className="text-sm font-medium">Failed to synchronize some administrative data. Please refresh or try again later.</p>
+        </div>
+      )}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -145,7 +154,12 @@ export default function AdminPage() {
                     <td className="px-6 py-4">
                       <select 
                         value={u.role}
-                        onChange={(e) => updateMutation.mutate({ id: u.id, data: { role: e.target.value } })}
+                        onChange={(e) => {
+                          const newRole = e.target.value as AdminUser['role'];
+                          if (window.confirm(`Change ${u.username}'s role to ${newRole}?`)) {
+                            updateMutation.mutate({ id: u.id, data: { role: newRole } });
+                          }
+                        }}
                         className="bg-transparent text-sm text-slate-300 border-none focus:ring-0 cursor-pointer hover:text-white transition-colors"
                       >
                         <option value="USER" className="bg-[#0f172a]">User</option>
@@ -191,7 +205,15 @@ export default function AdminPage() {
   );
 }
 
-function MetricCard({ title, value, icon: Icon, color, isLoading }: any) {
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+  isLoading: boolean;
+}
+
+function MetricCard({ title, value, icon: Icon, color, isLoading }: MetricCardProps) {
   return (
     <div className="glass-card p-6 relative overflow-hidden group hover:border-white/20 transition-all duration-500">
       <div className="relative z-10 flex justify-between items-start">
@@ -208,7 +230,7 @@ function MetricCard({ title, value, icon: Icon, color, isLoading }: any) {
         </div>
       </div>
       
-      {/* Sublte background glow */}
+      {/* Subtle background glow */}
       <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700 ${color.replace('text', 'bg')}`} />
     </div>
   );
