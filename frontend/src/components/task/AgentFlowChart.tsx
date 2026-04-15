@@ -10,10 +10,12 @@ import {
   getBezierPath,
   EdgeProps,
   Panel,
+  Handle,
+  Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TaskStepResponse, StepType, StepStatus } from '../../types/task';
-import { LucideIcon, Cpu, Brain, Search, Database, CheckCircle2, XCircle, Loader2, X, FileJson } from 'lucide-react';
+import { LucideIcon, Cpu, Brain, Search, Database, CheckCircle2, XCircle, Loader2, X, FileJson, Clock } from 'lucide-react';
 
 interface AgentFlowChartProps {
   steps: TaskStepResponse[];
@@ -33,6 +35,67 @@ const AGENT_ICONS: Record<string, LucideIcon> = {
   [StepType.EXECUTE]: Cpu,
   [StepType.ANALYZE]: Search,
   [StepType.MEMORY]: Database,
+};
+
+// Custom Node Component to show status and latency
+const AgentNode = ({ data }: { data: { step: TaskStepResponse } }) => {
+  const { step } = data;
+  const color = AGENT_COLORS[step.step_type] || '#64748b';
+  const Icon = AGENT_ICONS[step.step_type] || Cpu;
+
+  const getStatusDetails = (status: StepStatus) => {
+    switch (status) {
+      case StepStatus.COMPLETED:
+        return { icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-400/10' };
+      case StepStatus.FAILED:
+        return { icon: XCircle, color: 'text-red-400', bg: 'bg-red-400/10' };
+      case StepStatus.SKIPPED:
+        return { icon: X, color: 'text-slate-500', bg: 'bg-slate-500/10' };
+      case StepStatus.RUNNING:
+        return { icon: Loader2, color: 'text-violet-400', bg: 'bg-violet-400/10', animate: true };
+      default:
+        return { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-400/10' };
+    }
+  };
+
+  const statusDetails = getStatusDetails(step.status);
+  const StatusIcon = statusDetails.icon;
+
+  return (
+    <div className="relative group">
+      {/* Port Handles */}
+      <Handle type="target" position={Position.Left} className="opacity-0" />
+      <Handle type="source" position={Position.Right} className="opacity-0" />
+      
+      <div 
+        className="w-[220px] bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-xl p-3 transition-all duration-300 group-hover:border-white/20 group-hover:bg-slate-900/60"
+        style={{ borderLeft: `4px solid ${color}` }}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <div className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+            <Icon className="w-4 h-4" style={{ color }} />
+          </div>
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${statusDetails.bg} border border-white/5`}>
+            <StatusIcon className={`w-3 h-3 ${statusDetails.color} ${statusDetails.animate ? 'animate-spin' : ''}`} />
+            <span className={`text-[9px] font-bold ${statusDetails.color} uppercase tracking-tighter`}>
+              {step.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <h4 className="text-white text-xs font-bold truncate">{step.agent_name}</h4>
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] text-slate-500 uppercase font-medium">{step.step_type}</span>
+            <div className="flex items-center gap-1 text-slate-400">
+              <Clock className="w-2.5 h-2.5" />
+              <span className="text-[10px] font-mono">{step.latency_ms || 0}ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Custom edge for animation
@@ -56,6 +119,10 @@ function AnimatedEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, 
   );
 }
 
+const nodeTypes = {
+  agentNode: AgentNode,
+};
+
 const edgeTypes = {
   animated: AnimatedEdge,
 };
@@ -68,33 +135,11 @@ export default function AgentFlowChart({ steps }: AgentFlowChartProps) {
     const edges: Edge[] = [];
 
     steps.forEach((step, index) => {
-      const color = AGENT_COLORS[step.step_type] || '#64748b';
-      const Icon = AGENT_ICONS[step.step_type] || Cpu;
-      const statusIcon = step.status === StepStatus.COMPLETED ? (
-        <CheckCircle2 className="w-3 h-3 text-green-400" />
-      ) : step.status === StepStatus.FAILED ? (
-        <XCircle className="w-3 h-3 text-red-500" />
-      ) : (
-        <Loader2 className="w-3 h-3 text-violet-400 animate-spin" />
-      );
-
       nodes.push({
         id: step.id,
-        data: { label: step.agent_name },
-        position: { x: index * 250, y: 100 },
-        style: {
-          background: 'rgba(255, 255, 255, 0.03)',
-          color: '#fff',
-          border: `1px solid ${color}40`,
-          borderRadius: '12px',
-          width: 200,
-          padding: '12px',
-          backdropFilter: 'blur(8px)',
-        },
-        type: 'default',
-        // Embedding custom render logic in style is not ideal for React Flow, 
-        // but for a simple sequential chart it works. To be more "premium", 
-        // we'd use Custom Nodes, but let's stick to requested functionality.
+        data: { step },
+        position: { x: index * 280, y: 100 },
+        type: 'agentNode',
       });
 
       if (index > 0) {
@@ -111,7 +156,7 @@ export default function AgentFlowChart({ steps }: AgentFlowChartProps) {
     return { nodes, edges };
   }, [steps]);
 
-  const onNodeClick = (_: any, node: Node) => {
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
     const step = steps.find(s => s.id === node.id);
     if (step) setSelectedStep(step);
   };
@@ -128,6 +173,7 @@ export default function AgentFlowChart({ steps }: AgentFlowChartProps) {
           nodes={nodes}
           edges={edges}
           onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           className="bg-transparent"
@@ -139,6 +185,7 @@ export default function AgentFlowChart({ steps }: AgentFlowChartProps) {
           </Panel>
         </ReactFlow>
       </div>
+
 
       {/* Side Panel for Payload */}
       {selectedStep && (
