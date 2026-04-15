@@ -9,9 +9,16 @@ Phase 4: Implement run_pipeline() — dispatch agents in sequence,
          pass messages between them, handle failures.
 """
 
+import logging
 import uuid
 from agents.shared.message import AgentMessage
 
+from agents.planner.planner_agent import PlannerAgent
+from agents.executor.executor_agent import ExecutorAgent
+from agents.analyzer.analyzer_agent import AnalyzerAgent
+from agents.memory.memory_agent import MemoryAgent
+
+logger = logging.getLogger(__name__)
 
 class AgentController:
     """
@@ -23,12 +30,6 @@ class AgentController:
         self.task_id = task_id
         self.task_description = task_description
         self.config = config or {}
-
-        # Agents are instantiated fresh for each task
-        from agents.planner.planner_agent import PlannerAgent
-        from agents.executor.executor_agent import ExecutorAgent
-        from agents.analyzer.analyzer_agent import AnalyzerAgent
-        from agents.memory.memory_agent import MemoryAgent
 
         self.planner = PlannerAgent(task_id, config)
         self.executor = ExecutorAgent(task_id, config)
@@ -48,21 +49,41 @@ class AgentController:
         # 1. Planner
         plan_message = await self._run_planner(self.task_description)
         if plan_message.message_type == "error":
-            return {"error": plan_message.payload.get("error", "Planner error"), "status": "failed"}
+            return {"error": plan_message.payload.get("error", "Planner error"), "status": "FAILED"}
             
         plan_dict = plan_message.payload.get("plan", {})
         steps = plan_dict.get("steps", [])
 
         # 2. Executor loop
-        step_results = await self._run_executor(plan_message)
+        step_results = await self._run_executor(steps)
 
         # 3. Analyzer
         validation_message = await self._run_analyzer(step_results, plan_dict)
-        
         validation_report = validation_message.payload.get("validation_report", {})
         
-        # 4. Memory (store)
-        await self._run_memory(validation_message)
+        # 4. Retry loop (max 2 retries)
+        retries = 0
+        while retries < 2 and not validation_report.get("passed", True):
+            retries += 1
+            failed_steps = validation_report.get("failed_steps", [])
+            retried_any = False
+            
+            for i, step in enumerate(steps):
+                step_id = str(step.get("id", ""))
+                # Retry if step failed, or if failed_steps is generic/empty we retry all on failure
+                if not failed_steps or step_id in failed_steps or str(i) in failed_steps or step.get("description") in failed_steps:
+                    step_results[i] = await self._execute_step(step)
+                    retried_any = True
+            
+            if not retried_any:
+                break
+                
+            validation_message = await self._run_analyzer(step_results, plan_dict)
+            validation_report = validation_message.payload.get("validation_report", {})
+        
+        # 5. Memory (store)
+        # Pass final_results containing the validation message as per spec
+        await self._run_memory(step_results + [validation_message])
         
         # Format the final result
         return {
@@ -86,14 +107,11 @@ class AgentController:
         )
         return await self.planner.run(msg)
 
-    async def _run_executor(self, plan_message: AgentMessage) -> list[AgentMessage]:
-        """Execute each plan step, return list of step result messages."""
-        plan_dict = plan_message.payload.get("plan", {})
-        steps = plan_dict.get("steps", [])
-        
-        step_results = []
-        for step in steps:
-            # Memory (retrieve)
+    async def _execute_step(self, step: dict) -> AgentMessage:
+        """Execute a single step: retrieve memory, call executor."""
+        # Memory (retrieve)
+        context = []
+        try:
             retrieve_msg = AgentMessage(
                 message_id=uuid.uuid4(),
                 task_id=self.task_id,
@@ -107,25 +125,30 @@ class AgentController:
             )
             context_msg = await self.memory.run(retrieve_msg)
             context = context_msg.payload.get("memory_context", [])
-            
-            # Executor
-            exec_msg = AgentMessage(
-                message_id=uuid.uuid4(),
-                task_id=self.task_id,
-                sender="controller",
-                recipient="executor",
-                message_type="step_result",
-                payload={"step": step, "context": context}
-            )
-            result_msg = await self.executor.run(exec_msg)
+        except Exception as e:
+            logger.warning(f"Memory retrieve failed: {e}")
+
+        # Executor
+        exec_msg = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=self.task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={"step": step, "context": context}
+        )
+        return await self.executor.run(exec_msg)
+
+    async def _run_executor(self, steps: list[dict]) -> list[AgentMessage]:
+        """Execute each plan step sequentially, return list of step result messages."""
+        step_results = []
+        for step in steps:
+            result_msg = await self._execute_step(step)
             step_results.append(result_msg)
-            
         return step_results
 
     async def _run_analyzer(self, step_results: list[AgentMessage], plan_dict: dict) -> AgentMessage:
         """Validate all step results, return validation message."""
-        # Note: The validation loop for re-execution is omitted here for simplicity
-        # as the minimum requirement seems to pass what we have
         msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -139,23 +162,29 @@ class AgentController:
         )
         return await self.analyzer.run(msg)
 
-    async def _run_memory(self, validation_msg: AgentMessage) -> None:
+    async def _run_memory(self, final_results: list[AgentMessage]) -> None:
         """Store task context in vector store."""
         # Memory (store) — pass validation.summary as task summary
+        validation_msg = next((msg for msg in reversed(final_results) if msg.message_type == "validation"), None)
+        if not validation_msg:
+            return
+            
         validation_report = validation_msg.payload.get("validation_report", {})
         summary = validation_report.get("summary", "")
         
-        store_msg = AgentMessage(
-            message_id=uuid.uuid4(),
-            task_id=self.task_id,
-            sender="controller",
-            recipient="memory",
-            message_type="store",
-            payload={
-                "user_id": str(self.task_id),
-                "text": summary,
-                "metadata": {}
-            }
-        )
-        await self.memory.run(store_msg)
-        
+        try:
+            store_msg = AgentMessage(
+                message_id=uuid.uuid4(),
+                task_id=self.task_id,
+                sender="controller",
+                recipient="memory",
+                message_type="store",
+                payload={
+                    "user_id": str(self.task_id),
+                    "text": summary,
+                    "metadata": {}
+                }
+            )
+            await self.memory.run(store_msg)
+        except Exception as e:
+            logger.warning(f"Memory store failed: {e}")
