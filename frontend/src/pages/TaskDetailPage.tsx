@@ -23,6 +23,8 @@ import {
   History,
   Timer
 } from 'lucide-react';
+import AgentFlowChart from '../components/task/AgentFlowChart';
+import TaskTimeline from '../components/task/TaskTimeline';
 
 /**
  * TaskDetailPage.tsx
@@ -442,6 +444,24 @@ export default function TaskDetailPage() {
           </section>
         </div>
       </div>
+
+      {/* Agent Trace */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className="w-1.5 h-6 bg-violet-500 rounded-full" />
+          <h2 className="text-xl font-bold text-white tracking-tight">Agent Workflow Trace</h2>
+        </div>
+        <AgentFlowChart steps={task.steps} />
+      </section>
+
+      {/* Timeline */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className="w-1.5 h-6 bg-violet-500 rounded-full" />
+          <h2 className="text-xl font-bold text-white tracking-tight">Execution Timeline</h2>
+        </div>
+        <TaskTimeline steps={task.steps} />
+      </section>
 
       <style>{`
         @keyframes loading-bar {
