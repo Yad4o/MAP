@@ -20,6 +20,7 @@ from agents.memory.memory_agent import MemoryAgent
 
 logger = logging.getLogger(__name__)
 
+
 class AgentController:
     """
     Called by the Celery worker for each task.
@@ -69,21 +70,24 @@ class AgentController:
             retried_any = False
             
             for i, step in enumerate(steps):
+                # Canonical identifier is the step's declared "id" field (1-based, as used in the plan).
+                # failed_steps from the analyzer must use the same id values.
                 step_id = str(step.get("id", ""))
-                # Retry if step failed, or if failed_steps is generic/empty we retry all on failure
-                if not failed_steps or step_id in failed_steps or str(i) in failed_steps or step.get("description") in failed_steps:
+                # If failed_steps is empty the analyzer gave no specifics — retry all;
+                # otherwise only retry steps whose canonical id appears in the list.
+                if not failed_steps or step_id in failed_steps:
                     step_results[i] = await self._execute_step(step)
                     retried_any = True
-            
+
             if not retried_any:
                 break
-                
+
+            # Re-analyze all steps — non-retried results are carried over from the previous pass.
             validation_message = await self._run_analyzer(step_results, plan_dict)
             validation_report = validation_message.payload.get("validation_report", {})
         
-        # 5. Memory (store)
-        # Pass final_results containing the validation message as per spec
-        await self._run_memory(step_results + [validation_message])
+        # 5. Memory (store) — pass the validation message directly.
+        await self._run_memory(validation_message)
         
         # Format the final result
         return {
@@ -162,16 +166,15 @@ class AgentController:
         )
         return await self.analyzer.run(msg)
 
-    async def _run_memory(self, final_results: list[AgentMessage]) -> None:
-        """Store task context in vector store."""
-        # Memory (store) — pass validation.summary as task summary
-        validation_msg = next((msg for msg in reversed(final_results) if msg.message_type == "validation"), None)
-        if not validation_msg:
+    async def _run_memory(self, validation_message: AgentMessage | None) -> None:
+        """Store task context in vector store using the final validation message."""
+        if not validation_message:
+            logger.warning("_run_memory called with no validation_message — memory store skipped.")
             return
-            
-        validation_report = validation_msg.payload.get("validation_report", {})
+
+        validation_report = validation_message.payload.get("validation_report", {})
         summary = validation_report.get("summary", "")
-        
+
         try:
             store_msg = AgentMessage(
                 message_id=uuid.uuid4(),
@@ -187,4 +190,5 @@ class AgentController:
             )
             await self.memory.run(store_msg)
         except Exception as e:
-            logger.warning(f"Memory store failed: {e}")
+            logger.warning(f"Memory store failed: {e}")
+

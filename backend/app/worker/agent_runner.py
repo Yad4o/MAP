@@ -48,11 +48,13 @@ class AgentRunner:
             task.status = "PROCESSING"
             await session.commit()
             
-            # Create AgentController(task_id, description, config)
+            # Create AgentController(task_id, description, config).
+            # Task.config is a verified JSON column from the Phase 2 schema (task.py line 44).
+            # getattr guards against any future model drift that drops the column.
             controller = AgentController(
                 task_id=task.id,
                 task_description=task.description,
-                config=task.config
+                config=getattr(task, "config", None),
             )
             
             # Return await controller.run_pipeline()
