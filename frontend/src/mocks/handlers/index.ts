@@ -7,3 +7,5 @@
 export { taskHandlers } from './tasks';
 export { adminHandlers } from './admin';
 export { logHandlers } from './logs';
+export { apiKeyHandlers } from './apiKeys';
+export { memoryHandlers } from './memory';
