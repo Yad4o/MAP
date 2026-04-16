@@ -87,7 +87,6 @@ export default function SettingsPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ProfileTab({ user }: { user: UserResponse | null }) {
-  const queryClient = useQueryClient();
   const setUser = useAuthStore(s => s.setUser);
 
   const profileForm = useForm<UpdateProfileRequest>({
@@ -101,7 +100,8 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
     onSuccess: (updatedUser) => {
       setUser(updatedUser);
       toast.success("Profile updated successfully!");
-    }
+    },
+    onError: () => toast.error("Failed to update profile. Please try again.")
   });
 
   const changePasswordMutation = useMutation({
@@ -110,7 +110,8 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
     onSuccess: () => {
       passwordForm.reset();
       toast.success("Password changed successfully!");
-    }
+    },
+    onError: () => toast.error("Failed to change password. Check your current password and try again.")
   });
 
   if (!user) return null;
