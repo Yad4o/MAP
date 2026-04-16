@@ -31,6 +31,8 @@ class AgentRunner:
         # PHASE 3 STUB REPLACED — Now using real AgentController pipeline
         logger.info(f"AgentRunner: starting execution for task {self.task_id}")
         
+        # Inline imports are used here to prevent circular import issues and premature DB initialization 
+        # when the module is loaded by the Celery worker.
         from app.db.base import AsyncSessionLocal
         from app.db.repositories.task import TaskRepository
         from agents.controller.agent_controller import AgentController

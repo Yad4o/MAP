@@ -101,6 +101,9 @@ class AgentController:
 
     async def _run_planner(self, task_description: str) -> AgentMessage:
         """Send task description to planner, return plan message."""
+        # message_type="plan" is the agreed *request* type the PlannerAgent
+        # expects — it is the dispatching key, not a description of content.
+        # See agent message contract in agents/shared/message.py.
         msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -191,4 +194,4 @@ class AgentController:
             await self.memory.run(store_msg)
         except Exception as e:
             logger.warning(f"Memory store failed: {e}")
-
+

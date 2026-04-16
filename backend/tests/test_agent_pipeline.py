@@ -174,6 +174,78 @@ async def test_agent_controller_analyzer_failure(mocker):
     assert controller.analyzer.run.call_count == 3
 
 @pytest.mark.asyncio
+async def test_agent_controller_partial_retry(mocker):
+    """
+    Test that when the analyzer specifies 'failed_steps' with specific step IDs,
+    only those specific steps are retried.
+    """
+    task_id = uuid.uuid4()
+    controller = AgentController(task_id, "Test task")
+
+    # 2-step plan
+    mock_plan_msg = AgentMessage(
+        message_id=uuid.uuid4(),
+        task_id=task_id,
+        sender="planner",
+        recipient="controller",
+        message_type="plan",
+        payload={"plan": {"steps": [{"id": "1", "description": "Step 1"}, {"id": "2", "description": "Step 2"}]}}
+    )
+    mocker.patch.object(controller.planner, "run", return_value=mock_plan_msg)
+
+    # Memory retrieve/store
+    mock_memory_msg = AgentMessage(
+        message_id=uuid.uuid4(),
+        task_id=task_id,
+        sender="memory",
+        recipient="controller",
+        message_type="memory_context",
+        payload={"memory_context": []}
+    )
+    mocker.patch.object(controller.memory, "run", return_value=mock_memory_msg)
+
+    # Executor returns success
+    mock_exec_msg = AgentMessage(
+        message_id=uuid.uuid4(),
+        task_id=task_id,
+        sender="executor",
+        recipient="controller",
+        message_type="step_result",
+        payload={"step_result": {"status": "completed", "output": "Done"}}
+    )
+    mocker.patch.object(controller.executor, "run", return_value=mock_exec_msg)
+
+    # Analyzer fails ONLY step 2 on the first pass, then passes on the second pass
+    mock_analyzer_msg_fail = AgentMessage(
+        message_id=uuid.uuid4(),
+        task_id=task_id,
+        sender="analyzer",
+        recipient="controller",
+        message_type="validation",
+        payload={"validation_report": {"passed": False, "summary": "Step 2 failed", "failed_steps": ["2"]}}
+    )
+    mock_analyzer_msg_pass = AgentMessage(
+        message_id=uuid.uuid4(),
+        task_id=task_id,
+        sender="analyzer",
+        recipient="controller",
+        message_type="validation",
+        payload={"validation_report": {"passed": True, "summary": "All good", "failed_steps": []}}
+    )
+    mocker.patch.object(controller.analyzer, "run", side_effect=[mock_analyzer_msg_fail, mock_analyzer_msg_pass])
+
+    result = await controller.run_pipeline()
+
+    assert result["status"] == "COMPLETED"
+    
+    # 2 initial steps + 1 retry of step 2 = 3 executor calls
+    assert controller.executor.run.call_count == 3
+    
+    # Verify the 3rd call was specifically for step 2
+    retry_call = controller.executor.run.call_args_list[2][0][0]
+    assert str(retry_call.payload["step"]["id"]) == "2"
+
+@pytest.mark.asyncio
 async def test_agent_controller_multi_step_success(mocker):
     task_id = uuid.uuid4()
     controller = AgentController(task_id, "Test task")
