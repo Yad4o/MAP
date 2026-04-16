@@ -11,6 +11,7 @@ import HistoryPage from './pages/HistoryPage'
 import LogsPage from './pages/LogsPage'
 import AdminPage from './pages/AdminPage'
 import SettingsPage from './pages/SettingsPage'
+import NotFoundPage from './pages/NotFoundPage'
 import AppShell from './components/layout/AppShell'
 import Toaster from './components/layout/Toaster'
 
@@ -51,6 +52,9 @@ export default function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         </Route>
+
+        {/* Catch-all 404 route */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )
