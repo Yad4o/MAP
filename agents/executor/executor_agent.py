@@ -40,7 +40,9 @@ class FallbackChatModel(BaseChatModel):
     
     model_name: str = Field(default="fallback-wrapper")
     temperature: float = Field(default=0.2)
-    last_llm_output: Dict[str, Any] = Field(default_factory=dict, init=False)
+    total_tokens_in: int = Field(default=0, init=False)
+    total_tokens_out: int = Field(default=0, init=False)
+    fallback_ever_used: bool = Field(default=False, init=False)
     
     async def _generate(
         self,
@@ -73,15 +75,17 @@ class FallbackChatModel(BaseChatModel):
             max_tokens=getattr(settings, 'MAX_TOKENS', None),
         )
         
+        # Accumulate token counts across all _generate calls
+        self.total_tokens_in += tokens_in
+        self.total_tokens_out += tokens_out
+        self.fallback_ever_used = self.fallback_ever_used or fallback_used
+        
         # Store metadata in ChatResult's llm_output for access by executor
         llm_output = {
             "fallback_used": fallback_used,
             "tokens_in": tokens_in,
             "tokens_out": tokens_out
         }
-        
-        # Store in instance field for access by executor
-        self.last_llm_output = llm_output
         
         return ChatResult(
             generations=[ChatGeneration(message=AIMessage(content=content))],
@@ -94,11 +98,8 @@ class FallbackChatModel(BaseChatModel):
 
 # LangGraph imports
 try:
-    from langchain_core.messages import HumanMessage, AIMessage
     from langgraph.prebuilt import create_react_agent
 except ImportError:
-    HumanMessage = None
-    AIMessage = None
     create_react_agent = None
 
 # Module-level logger
@@ -235,18 +236,16 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "trace": [msg.content for msg in messages if hasattr(msg, 'content')]
             }
 
-            # Extract metadata from ChatResult's llm_output (if available)
-            # Note: LangGraph wraps the ChatResult, so we need to extract from the actual result
-            fallback_used = False
-            tokens_in = 0
-            tokens_out = 0
-            
-            # Try to get metadata from the LLM's llm_output if accessible
-            if hasattr(llm, 'last_llm_output'):
-                llm_output = llm.last_llm_output
-                fallback_used = llm_output.get('fallback_used', False)
-                tokens_in = llm_output.get('tokens_in', 0)
-                tokens_out = llm_output.get('tokens_out', 0)
+            # Get accumulated metadata from FallbackChatModel
+            if hasattr(llm, 'total_tokens_in'):
+                fallback_used = llm.fallback_ever_used
+                tokens_in = llm.total_tokens_in
+                tokens_out = llm.total_tokens_out
+            else:
+                # Fallback to LangGraph metadata extraction
+                fallback_used = False
+                tokens_in = 0
+                tokens_out = 0
             
             # Create metadata with fallback information
             from agents.shared.message import AgentMetadata

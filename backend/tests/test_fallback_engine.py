@@ -209,19 +209,26 @@ class TestFallbackEngine:
         """Test when both primary and fallback fail."""
         engine, mock_client = fallback_engine_with_mocks
         
+        def create_side_effect(primary_model):
+            def side_effect(*args, **kwargs):
+                if kwargs.get("model") == primary_model:
+                    raise Exception("Primary failed")
+                return MagicMock(
+                    choices=[MagicMock(message=MagicMock(content="Fallback response"))],
+                    usage=MagicMock(prompt_tokens=8, completion_tokens=4)
+                )
+            return side_effect
+        
         # Mock both primary and fallback failures
-        mock_client.chat.completions.create.side_effect = [
-            Exception("Primary failed"),
-            Exception("Fallback failed")
-        ]
+        mock_client.chat.completions.create.side_effect = create_side_effect("gpt-4o")
         
         messages = [{"role": "user", "content": "Hello"}]
         
-        with pytest.raises(Exception, match="Fallback failed"):
+        with pytest.raises(Exception, match=r"Primary:.*Fallback:"):
             await engine.chat_completion(
                 messages=messages,
                 model="gpt-4o",
-                temperature=0.7
+                temperature=0.7,
             )
         
         assert engine.breaker.failure_count == 1

@@ -22,7 +22,7 @@ class TestPlannerAgentFallback:
     def mock_fallback_engine(self):
         """Mock fallback engine."""
         mock_engine = AsyncMock()
-        mock_engine.chat_completion.return_value = ('{"steps": [{"id": "1", "description": "Test step"}]}', False, 15, 8)
+        mock_engine.chat_completion.return_value = ('{"steps": [{"id": "1", "description": "Test step"}]}', True, 15, 8)
         return mock_engine
     
     @pytest.fixture

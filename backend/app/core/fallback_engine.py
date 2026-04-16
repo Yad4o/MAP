@@ -18,6 +18,7 @@ Usage:
 import asyncio
 import logging
 import time
+import uuid
 from typing import List, Dict, Any, Tuple
 from openai import AsyncOpenAI
 from backend.app.config import settings
@@ -78,13 +79,15 @@ class FallbackEngine:
     """
     
     def __init__(self):
-        # Initialize circuit breaker
-        self.breaker = CircuitBreaker(failure_threshold=5, timeout=60)
-        
-        # Initialize OpenAI clients
-        # Note: Both primary and fallback use the same client since they share the same API key and endpoint
-        # If true isolation is needed (different keys/endpoints), this should be split into separate clients
+        """Initialize FallbackEngine with OpenAI client."""
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self.breakers: Dict[str, CircuitBreaker] = {}
+    
+    def _get_breaker(self, model: str) -> CircuitBreaker:
+        """Get or create circuit breaker for specific model."""
+        if model not in self.breakers:
+            self.breakers[model] = CircuitBreaker(failure_threshold=5, timeout=60)
+        return self.breakers[model]
     
     async def chat_completion(
         self,
@@ -106,11 +109,18 @@ class FallbackEngine:
             Tuple of (response_content, fallback_used, tokens_in, tokens_out)
         """
         # Generate request ID for logging
-        request_id = f"req_{int(time.time() * 1000)}_{hash(str(messages)) % 10000}"
+        request_id = str(uuid.uuid4())[:8]
+        
+        # Get circuit breaker for this model
+        breaker = self._get_breaker(model)
         
         # Check if circuit breaker allows primary calls
-        if not await self.breaker.is_available():
-            logger.warning(f"[{request_id}] Circuit breaker is OPEN, using fallback model directly")
+        if not await breaker.is_available():
+            logger.warning(f"[{request_id}] Circuit breaker is OPEN for model {model}, using fallback model directly")
+            # Single client: primary and fallback share the same API key and rate-limit bucket.
+            # If rate-limit isolation is needed (so fallback calls aren't throttled by
+            # primary burst), split into two clients with separate API keys or use the
+            # OpenAI org/project header to isolate quotas.
             content, tokens_in, tokens_out = await self._call_fallback(messages, temperature, max_tokens)
             return content, True, tokens_in, tokens_out
         
@@ -118,12 +128,12 @@ class FallbackEngine:
         try:
             logger.info(f"[{request_id}] Calling primary model: {model}")
             content, tokens_in, tokens_out = await self._call_primary(messages, model, temperature, max_tokens)
-            await self.breaker.record_success()
+            await breaker.record_success()
             logger.info(f"[{request_id}] Primary model succeeded, tokens: {tokens_in}+{tokens_out}")
             return content, False, tokens_in, tokens_out
         except Exception as primary_error:
             logger.error(f"[{request_id}] Primary model call failed: {primary_error}")
-            await self.breaker.record_failure()
+            await breaker.record_failure()
             # Fall back to fallback model
             try:
                 logger.info(f"[{request_id}] Falling back to model: {settings.FALLBACK_MODEL}")
