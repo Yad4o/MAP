@@ -1,24 +1,21 @@
+/**
+ * TaskCreatePage.tsx — Aetheric Intelligence Design
+ */
+
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { createTask } from '../api/tasks';
 import { TaskCreate, TaskStatus } from '../types/task';
 import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function TaskCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<TaskCreate>({
-    defaultValues: {
-      title: '',
-      description: '',
-      status: TaskStatus.PENDING,
-    },
+  const { register, handleSubmit, formState: { errors } } = useForm<TaskCreate>({
+    defaultValues: { title: '', description: '', status: TaskStatus.PENDING },
   });
 
   const mutation = useMutation({
@@ -29,115 +26,96 @@ export default function TaskCreatePage() {
     },
   });
 
-  const onSubmit = (data: TaskCreate) => {
-    mutation.mutate(data);
-  };
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
           to="/tasks"
-          className="p-2.5 text-slate-400 hover:text-white bg-white/5 rounded-xl border border-white/10 hover:border-violet-500/30 hover:bg-violet-500/10 transition-all duration-200"
           aria-label="Back to tasks"
+          className="btn-ghost p-2.5 !px-2.5"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--on-surface)', letterSpacing: '-0.02em' }}>
             Create Task
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">
-            Add a new task to your automation pipeline.
+          <p className="text-sm mt-0.5" style={{ color: 'var(--on-surface-variant)' }}>
+            Add a new task to your automation pipeline
           </p>
         </div>
       </div>
 
       {/* Form card */}
-      <div className="glass-card overflow-hidden">
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          {/* Mutation error banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="glass-card overflow-hidden"
+      >
+        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-8 space-y-6">
+          {/* Error banner */}
           {mutation.isError && (
-            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
-              <AlertTriangle size={18} className="flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 rounded-xl text-sm"
+              style={{ background: 'rgba(255,110,132,0.08)', border: '1px solid rgba(255,110,132,0.2)', color: 'var(--error)' }}>
+              <AlertTriangle size={16} className="flex-shrink-0" />
               <span>Failed to create the task. Please try again.</span>
             </div>
           )}
 
-          {/* Title field */}
+          {/* Title */}
           <div className="space-y-2">
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-slate-300"
-            >
-              Title <span className="text-red-400">*</span>
+            <label htmlFor="title" className="label-xs block">
+              Title <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               id="title"
               type="text"
-              {...register('title', { 
+              {...register('title', {
                 required: 'Title is required',
-                minLength: { value: 1, message: 'Title is too short' }
+                minLength: { value: 1, message: 'Title is too short' },
               })}
-              placeholder="e.g. Update database schema"
-              className={`form-input ${
-                errors.title
-                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
-                  : ''
-              }`}
+              placeholder="e.g. Analyze customer sentiment"
+              className="form-input"
+              style={errors.title ? { boxShadow: 'inset 0 0 0 1px rgba(255,110,132,0.5)' } : {}}
             />
             {errors.title && (
-              <p className="text-sm text-red-400 flex items-center gap-1.5">
-                <AlertTriangle size={14} />
+              <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--error)' }}>
+                <AlertTriangle size={12} />
                 {errors.title.message}
               </p>
             )}
           </div>
 
-          {/* Description field */}
+          {/* Description */}
           <div className="space-y-2">
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-slate-300"
-            >
-              Description <span className="text-red-400">*</span>
+            <label htmlFor="description" className="label-xs block">
+              Description <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <textarea
               id="description"
               rows={4}
-              {...register('description', { 
+              {...register('description', {
                 required: 'Description is required',
-                minLength: { value: 1, message: 'Description is too short' }
+                minLength: { value: 1, message: 'Description is too short' },
               })}
-              placeholder="Detailed explanation of the task…"
-              className={`form-input resize-y ${
-                errors.description
-                  ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
-                  : ''
-              }`}
+              placeholder="Detailed explanation of what this task should accomplish…"
+              className="form-input form-textarea"
+              style={errors.description ? { boxShadow: 'inset 0 0 0 1px rgba(255,110,132,0.5)' } : {}}
             />
             {errors.description && (
-              <p className="text-sm text-red-400 flex items-center gap-1.5">
-                <AlertTriangle size={14} />
+              <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--error)' }}>
+                <AlertTriangle size={12} />
                 {errors.description.message}
               </p>
             )}
           </div>
 
-          {/* Status field */}
+          {/* Status */}
           <div className="space-y-2">
-            <label
-              htmlFor="status"
-              className="block text-sm font-medium text-slate-300"
-            >
-              Status
-            </label>
-            <select
-              id="status"
-              {...register('status')}
-              className="form-input appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
-            >
+            <label htmlFor="status" className="label-xs block">Initial Status</label>
+            <select id="status" {...register('status')} className="form-input form-select">
               <option value={TaskStatus.PENDING}>Pending</option>
               <option value={TaskStatus.PROCESSING}>Processing</option>
               <option value={TaskStatus.COMPLETED}>Completed</option>
@@ -145,34 +123,30 @@ export default function TaskCreatePage() {
           </div>
 
           {/* Actions */}
-          <div className="pt-4 flex justify-end gap-3 border-t border-white/5">
+          <div className="flex justify-end items-center gap-3 pt-4"
+            style={{ borderTop: '1px solid rgba(72,71,77,0.18)' }}>
             <button
               type="button"
               onClick={() => navigate('/tasks')}
-              className="px-5 py-2.5 text-slate-400 hover:text-white hover:bg-white/5 font-medium rounded-xl transition-all duration-200"
+              className="btn-ghost"
             >
               Cancel
             </button>
             <button
               type="submit"
+              id="save-task-btn"
               disabled={mutation.isPending}
-              className="btn-primary inline-flex items-center gap-2"
+              className="btn-primary"
             >
               {mutation.isPending ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Saving…
-                </>
+                <><Loader2 size={15} className="animate-spin" /> Saving…</>
               ) : (
-                <>
-                  <Save size={18} />
-                  Save Task
-                </>
+                <><Save size={15} /> Save Task</>
               )}
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,7 +1,5 @@
 /**
- * frontend/src/pages/RegisterPage.tsx
- * ───────────────────────────────────
- * Premium Design Refactor: Glassmorphic Dark Edition.
+ * RegisterPage.tsx — Aetheric Intelligence Design
  */
 
 import { useState } from 'react';
@@ -10,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { authApi } from '../api/auth';
 
@@ -19,22 +17,31 @@ const schema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
 });
-
 type FormData = z.infer<typeof schema>;
 
 function getStrengthScore(pw: string) {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  return score;
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (pw.length >= 12) s++;
+  if (/[A-Z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
 }
+
+const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Secure'];
+const strengthColors = [
+  '',
+  '#ff6e84',
+  '#f59e0b',
+  '#3b82f6',
+  '#10b981',
+  '#10b981',
+];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -44,20 +51,10 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordValue, setPasswordValue] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<FormData>({ resolver: zodResolver(schema) });
 
   const strengthScore = getStrengthScore(passwordValue);
-  const strengthColor = 
-    strengthScore <= 2 ? 'bg-red-500 shadow-red-500/20' : 
-    strengthScore === 3 ? 'bg-amber-500 shadow-amber-500/20' : 
-    strengthScore === 4 ? 'bg-blue-500 shadow-blue-500/20' : 
-    'bg-green-500 shadow-green-500/20';
 
   const onSubmit = async (data: FormData) => {
     setServerError(null);
@@ -66,188 +63,201 @@ export default function RegisterPage() {
       await login(data.email, data.password);
       navigate('/tasks');
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Registration failed. Please try again later.';
-      setServerError(msg);
+      setServerError(error instanceof Error ? error.message : 'Registration failed. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6 bg-[#020617]">
-      <div className="bg-mesh" />
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <div className="auth-bg" />
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-[480px] relative z-10"
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-[440px]"
       >
-        {/* Logo / Branding */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ShieldCheck className="text-violet-400 w-5 h-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-white">MAP Platform</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-white mt-6 mb-1">Create an Account</h1>
-          <p className="text-slate-500 text-sm">Join our specialized agent network</p>
+        {/* Brand */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5"
+            style={{ background: 'linear-gradient(135deg, #8455ef 0%, #5e2c91 100%)', boxShadow: '0 8px 32px rgba(132,85,239,0.3)' }}
+          >
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <circle cx="13" cy="5"  r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="4"  cy="20" r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="22" cy="20" r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="13" cy="13.5" r="1.8" fill="white" fillOpacity="0.6"/>
+              <line x1="13" y1="7.5"  x2="13"  y2="11.7" stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+              <line x1="11.5" y1="14.5" x2="5.5"  y2="18"   stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+              <line x1="14.5" y1="14.5" x2="20.5" y2="18"   stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#f9f5fd] mb-1">Create your account</h1>
+          <p className="text-sm" style={{ color: 'var(--on-surface-variant)' }}>Join the MAP Platform network</p>
         </div>
 
-        <div className="glass-card p-8 sm:p-10">
-          <AnimatePresence mode="wait">
+        {/* Card */}
+        <div className="glass-card p-8">
+          <AnimatePresence>
             {serverError && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: '1.25rem' }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="flex items-start gap-2.5 p-3.5 rounded-lg"
+                style={{ background: 'rgba(255,110,132,0.08)', border: '1px solid rgba(255,110,132,0.2)' }}
               >
-                <p className="text-xs text-red-400 font-medium leading-relaxed font-mono">{serverError}</p>
+                <AlertCircle size={15} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--error)' }} />
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--error)' }}>{serverError}</p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-            {/* Username Field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
-                Username
-              </label>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            {/* Username */}
+            <div>
+              <label htmlFor="username" className="label-xs block mb-2">Username</label>
               <div className="relative">
-                <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
                   {...register('username')}
+                  id="username"
                   type="text"
-                  className="form-input pl-11"
+                  autoComplete="username"
                   placeholder="agent_nexus"
+                  className={`form-input pl-10 ${errors.username ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
               </div>
               {errors.username && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.username.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.username.message}</p>
               )}
             </div>
 
-            {/* Email Field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
-                Intelligence Handle (Email)
-              </label>
+            {/* Email */}
+            <div>
+              <label htmlFor="reg-email" className="label-xs block mb-2">Email address</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
                   {...register('email')}
+                  id="reg-email"
                   type="email"
-                  className="form-input pl-11"
-                  placeholder="nexus@matrix.ai"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  className={`form-input pl-10 ${errors.email ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
               </div>
               {errors.email && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.email.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.email.message}</p>
               )}
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
-                Access Secret
-              </label>
+            {/* Password + strength */}
+            <div>
+              <label htmlFor="reg-password" className="label-xs block mb-2">Password</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
-                  {...register('password')}
+                  {...register('password', {
+                    onChange: (e) => setPasswordValue(e.target.value),
+                  })}
+                  id="reg-password"
                   type={showPassword ? 'text' : 'password'}
-                  onChange={(e) => setPasswordValue(e.target.value)}
-                  className="form-input pl-11 pr-11"
+                  autoComplete="new-password"
                   placeholder="••••••••"
+                  className={`form-input pl-10 pr-10 ${errors.password ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--outline)' }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              
-              {/* Password Strength Indicator */}
+
+              {/* Strength meter */}
               {passwordValue && (
-                <div className="px-1 pt-1">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Strength</span>
-                    <span className={`text-[9px] font-bold uppercase tracking-widest ${strengthScore <= 2 ? 'text-red-400' : 'text-green-400'}`}>
-                      {['Weak', 'Weak', 'Fair', 'Strong', 'Secure', 'Inderflectable'][strengthScore]}
-                    </span>
-                  </div>
-                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden flex gap-1">
-                    {[1, 2, 3, 4, 5].map((lvl) => (
-                      <div 
-                        key={lvl}
-                        className={`h-full flex-1 transition-all duration-500 rounded-full ${
-                          strengthScore >= lvl ? strengthColor : 'bg-transparent'
-                        }`}
+                <div className="mt-2.5 space-y-1.5">
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map((lvl) => (
+                      <div key={lvl} className="h-1 flex-1 rounded-full transition-all duration-400"
+                        style={{
+                          backgroundColor: strengthScore >= lvl
+                            ? strengthColors[strengthScore]
+                            : 'var(--surface-bright)',
+                          opacity: strengthScore >= lvl ? 1 : 0.4,
+                        }}
                       />
                     ))}
                   </div>
+                  <p className="text-xs font-medium"
+                    style={{ color: strengthScore >= 1 ? strengthColors[strengthScore] : 'var(--outline)' }}>
+                    {strengthLabels[strengthScore] || 'Too weak'}
+                  </p>
                 </div>
               )}
-              
+
               {errors.password && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.password.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.password.message}</p>
               )}
             </div>
 
-            {/* Confirm Password Field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">
-                Verify Secret
-              </label>
+            {/* Confirm password */}
+            <div>
+              <label htmlFor="confirmPassword" className="label-xs block mb-2">Confirm password</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
                   {...register('confirmPassword')}
+                  id="confirmPassword"
                   type={showConfirm ? 'text' : 'password'}
-                  className="form-input pl-11 pr-11"
+                  autoComplete="new-password"
                   placeholder="••••••••"
+                  className={`form-input pl-10 pr-10 ${errors.confirmPassword ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--outline)' }}
+                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
                 >
-                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.confirmPassword.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.confirmPassword.message}</p>
               )}
             </div>
 
             <button
               type="submit"
+              id="register-submit"
               disabled={isSubmitting}
-              className="btn-primary w-full shadow-violet-500/20 active:translate-y-0.5"
+              className="btn-primary w-full mt-2"
             >
               {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm font-bold tracking-widest uppercase">Initializing...</span>
-                </div>
+                <Loader2 size={16} className="animate-spin" />
               ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-sm font-bold tracking-widest uppercase">Deploy Identity</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
+                <>
+                  Create Account
+                  <ArrowRight size={15} />
+                </>
               )}
             </button>
           </form>
-        </div>
 
-        <p className="text-center mt-8 text-slate-500 text-xs tracking-wide">
-          Already verified?{' '}
-          <Link to="/login" className="text-violet-400 font-bold hover:text-violet-300 transition-colors">
-            SIGN IN
-          </Link>
-        </p>
+          <p className="mt-6 text-center text-sm" style={{ color: 'var(--on-surface-variant)' }}>
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--primary)' }}>
+              Sign in
+            </Link>
+          </p>
+        </div>
       </motion.div>
     </div>
   );

@@ -1,8 +1,6 @@
 /**
- * frontend/src/pages/LoginPage.tsx
- * ────────────────────────────────
- * Premium Design Refactor: Glassmorphic Dark Edition.
- * Features: Framer Motion animations, Lucide icons, Inter typography.
+ * LoginPage.tsx — Aetheric Intelligence Design
+ * Clean, minimal AI-tool aesthetic inspired by Claude.ai
  */
 
 import { useState } from 'react';
@@ -11,14 +9,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
-
 type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
@@ -27,13 +24,8 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
     setServerError(null);
@@ -41,131 +33,161 @@ export default function LoginPage() {
       await login(data.email, data.password);
       navigate('/tasks');
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Invalid credentials. Please try again.';
-      setServerError(msg);
+      setServerError(error instanceof Error ? error.message : 'Invalid credentials.');
     }
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6 bg-[#020617]">
-      {/* Background Mesh (defined in index.css) */}
-      <div className="bg-mesh" />
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      {/* Ambient background */}
+      <div className="auth-bg" />
 
-      {/* Hero Content Stacking */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[420px] relative z-10"
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-[400px]"
       >
-        {/* Logo / Branding */}
-        <div className="flex flex-col items-center mb-10 text-center">
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-4 shadow-xl shadow-violet-500/20"
+        {/* Brand */}
+        <div className="text-center mb-10">
+          {/* Neural network logo */}
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5"
+            style={{ background: 'linear-gradient(135deg, #8455ef 0%, #5e2c91 100%)', boxShadow: '0 8px 32px rgba(132,85,239,0.3)' }}
           >
-            <Sparkles className="text-white w-6 h-6" />
-          </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Welcome Back</h1>
-          <p className="text-slate-400 text-sm">Enter your credentials to access the platform</p>
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <circle cx="13" cy="5"  r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="4"  cy="20" r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="22" cy="20" r="2.5" fill="white" fillOpacity="0.9"/>
+              <circle cx="13" cy="13.5" r="1.8" fill="white" fillOpacity="0.6"/>
+              <line x1="13" y1="7.5"  x2="13"  y2="11.7" stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+              <line x1="11.5" y1="14.5" x2="5.5"  y2="18"   stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+              <line x1="14.5" y1="14.5" x2="20.5" y2="18"   stroke="white" strokeOpacity="0.5" strokeWidth="1.2"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#f9f5fd] mb-1">
+            MAP Platform
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--on-surface-variant)' }}>
+            Multi-Agent Platform
+          </p>
         </div>
 
-        {/* Glass Card */}
-        <div className="glass-card p-8 sm:p-10">
-          <AnimatePresence mode="wait">
+        {/* Card */}
+        <div className="glass-card p-8">
+          <h2 className="text-xl font-semibold text-[#f9f5fd] mb-6 tracking-tight">
+            Welcome back
+          </h2>
+
+          {/* Server error */}
+          <AnimatePresence>
             {serverError && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: '1.25rem' }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="flex items-start gap-2.5 p-3.5 rounded-lg"
+                style={{ background: 'rgba(255,110,132,0.08)', border: '1px solid rgba(255,110,132,0.2)' }}
               >
-                <p className="text-xs text-red-400 font-medium leading-relaxed">{serverError}</p>
+                <AlertCircle size={15} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--error)' }} />
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--error)' }}>{serverError}</p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500 ml-1">
-                Email Address
-              </label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors">
-                  <Mail size={18} />
-                </div>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="label-xs block mb-2">Email address</label>
+              <div className="relative">
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
                   {...register('email')}
-                  type="email"
                   id="email"
-                  className={`form-input pl-11 ${errors.email ? 'border-red-500/50' : ''}`}
+                  type="email"
+                  autoComplete="email"
                   placeholder="name@company.com"
+                  className={`form-input pl-10 ${errors.email ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
               </div>
               {errors.email && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.email.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.email.message}</p>
               )}
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between ml-1">
-                <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Password
-                </label>
-                <Link to="/forgot-password" className="text-[10px] text-violet-400 font-semibold hover:text-violet-300 transition-colors">
-                  FORGOT?
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="label-xs">Password</label>
+                <Link to="/forgot-password"
+                  className="text-xs font-medium hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--primary)' }}>
+                  Forgot password?
                 </Link>
               </div>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors">
-                  <Lock size={18} />
-                </div>
+              <div className="relative">
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--outline)' }} />
                 <input
                   {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className={`form-input pl-11 pr-11 ${errors.password ? 'border-red-500/50' : ''}`}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="••••••••"
+                  className={`form-input pl-10 pr-10 ${errors.password ? 'ring-1 ring-[rgba(255,110,132,0.5)]' : ''}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--outline)' }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-[10px] text-red-400 font-medium italic ml-1">{errors.password.message}</p>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--error)' }}>{errors.password.message}</p>
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
+              id="login-submit"
               disabled={isSubmitting}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-primary w-full mt-2"
             >
               {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
                   Sign In
-                  <ArrowRight className="w-4 h-4 ml-1 opacity-60 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={15} />
                 </>
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <hr className="flex-1 divider" />
+            <span className="text-xs" style={{ color: 'var(--outline)' }}>New here?</span>
+            <hr className="flex-1 divider" />
+          </div>
+
+          <Link to="/register"
+            className="btn-ghost w-full justify-center text-sm"
+          >
+            Create an account
+          </Link>
         </div>
 
-        {/* Footer */}
-        <p className="text-center mt-8 text-slate-500 text-sm">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-violet-400 font-semibold hover:text-violet-300 underline-offset-4 hover:underline transition-all">
-            Join the collective
-          </Link>
+        <p className="mt-6 text-center text-xs" style={{ color: 'var(--outline)' }}>
+          By signing in you agree to our{' '}
+          <span className="cursor-default" style={{ color: 'var(--on-surface-variant)' }}>Terms of Service</span>
+          {' '}and{' '}
+          <span className="cursor-default" style={{ color: 'var(--on-surface-variant)' }}>Privacy Policy</span>
         </p>
       </motion.div>
     </div>
