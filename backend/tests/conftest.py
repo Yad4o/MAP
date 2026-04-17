@@ -1,3 +1,14 @@
+import os
+import subprocess
+import sys
+
+# Define absolute path for the test database
+DB_PATH = os.path.abspath(os.path.join(os.getcwd(), "test_integration.db"))
+TEST_DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
+# Set environment variable early for all imports to pick it up
+os.environ["DATABASE_URL"] = TEST_DB_URL
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -5,6 +16,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from httpx import AsyncClient, ASGITransport
 
+# Now import app modules
+from app.config import settings
 from app.main import app
 from app.dependencies import get_db
 from app.db.base import Base
@@ -29,9 +42,36 @@ def setup_test_mode():
 # ---------------------------------------------------------------------------
 # 1. Test database URL — SQLite so no real Neon DB is needed during tests
 # ---------------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    # Final check: settings.DATABASE_URL should match TEST_DB_URL
+    settings.DATABASE_URL = TEST_DB_URL
+    
+    if os.path.exists(DB_PATH):
+        try:
+            os.remove(DB_PATH)
+        except PermissionError:
+            pass
+            
+    # Run alembic upgrade head once to ensure migrations are compatible and applied
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        env={**os.environ, "PYTHONPATH": "."},
+        check=True
+    )
+    
+    yield TEST_DB_URL
+    
+    # Cleanup after session
+    try:
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+    except PermissionError:
+        pass
+
 @pytest.fixture
-def test_db_url():
-    return "sqlite+aiosqlite:///:memory:"
+def test_db_url(setup_database):
+    return setup_database
 
 
 # ---------------------------------------------------------------------------
@@ -40,28 +80,24 @@ def test_db_url():
 # ---------------------------------------------------------------------------
 @pytest.fixture
 async def engine(test_db_url):
-    # Important: import models here or anywhere before create_all
-    from app.db.models.user import User
-    from app.db.models.task import Task, TaskStep
-    
     engine = create_async_engine(
         test_db_url, 
         echo=False, 
         poolclass=StaticPool,
         connect_args={"check_same_thread": False}
     )
+    
+    # Safety measure: ensure all tables exist for this test run
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
     yield engine
+    
+    # Drop tables after test as requested
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
-
-# ---------------------------------------------------------------------------
-# 3. db_session — provides a real AsyncSession backed by the test engine
-#    Rolls back after each test so no data leaks between tests
-# ---------------------------------------------------------------------------
 @pytest.fixture
 async def db_session(engine):
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -96,7 +132,8 @@ async def client(db_session):
 #    Use this fixture in any test that requires authentication
 # ---------------------------------------------------------------------------
 @pytest_asyncio.fixture(scope="function")
-async def auth_headers(client, test_user_data: dict):
+async def create_test_user(client, test_user_data: dict):
+    """registers a user via API, logs in, returns auth headers dict"""
     await client.post("/api/v1/auth/register", json=test_user_data)
     response = await client.post("/api/v1/auth/login", json={
         "email": test_user_data["email"],
@@ -104,6 +141,10 @@ async def auth_headers(client, test_user_data: dict):
     })
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_headers(create_test_user):
+    return create_test_user
 
 
 # ---------------------------------------------------------------------------
