@@ -61,8 +61,8 @@ class AnalyzerAgent(BaseAgent):
     name = "analyzer"
     description = "Validates executor outputs and scores confidence."
 
-    def __init__(self, task_id: uuid.UUID):
-        super().__init__(task_id)
+    def __init__(self, task_id: uuid.UUID, config: dict | None = None):
+        super().__init__(task_id, config)
         self._llm = ChatOpenAI(
             model=_MODEL,
             temperature=_TEMPERATURE,
