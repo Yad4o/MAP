@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     ANALYZER_CONFIDENCE_THRESHOLD: float = Field(default=0.70)
     MAX_TASK_RETRY_COUNT: int = Field(default=3)
     TASK_TIMEOUT_SECONDS: int = Field(default=3600)
+    MAX_TOKENS: int = Field(default=4000)
 
     # ── Rate Limiting ─────────────────────────────────────────
     RATE_LIMIT_FREE_RPM: int = Field(default=100)

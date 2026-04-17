@@ -13,22 +13,93 @@ import time
 import warnings
 import logging
 import traceback
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.outputs import ChatResult, ChatGeneration
+from pydantic import Field
 
 # Import tools
 from agents.executor.tools.web_search import WebSearchTool
 from agents.executor.tools.file_reader import FileReaderTool
 from agents.executor.tools.code_interpreter import CodeInterpreterTool
 
+# Import fallback engine
+from backend.app.core.fallback_engine import fallback_engine
+from backend.app.config import settings
+
+
+class FallbackChatModel(BaseChatModel):
+    """
+    LangChain-compatible wrapper for fallback_engine.
+    Makes the fallback engine work with LangGraph's create_react_agent.
+    """
+    
+    model_name: str = Field(default="fallback-wrapper")
+    temperature: float = Field(default=0.2)
+    total_tokens_in: int = Field(default=0, init=False)
+    total_tokens_out: int = Field(default=0, init=False)
+    fallback_ever_used: bool = Field(default=False, init=False)
+    
+    async def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Generate response using fallback_engine."""
+        # Convert LangChain messages to fallback_engine format
+        fallback_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                role = "user"
+            elif isinstance(msg, AIMessage):
+                role = "assistant"
+            elif isinstance(msg, SystemMessage):
+                role = "system"
+            else:
+                # Handle other message types
+                role = "user"
+            
+            fallback_messages.append({"role": role, "content": msg.content})
+        
+        # Call fallback engine directly with await
+        content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
+            messages=fallback_messages,
+            model=settings.DEFAULT_MODEL,
+            temperature=self.temperature,
+            max_tokens=settings.MAX_TOKENS,
+        )
+        
+        # Accumulate token counts across all _generate calls
+        self.total_tokens_in += tokens_in
+        self.total_tokens_out += tokens_out
+        self.fallback_ever_used = self.fallback_ever_used or fallback_used
+        
+        # Store metadata in ChatResult's llm_output for access by executor
+        llm_output = {
+            "fallback_used": fallback_used,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out
+        }
+        
+        return ChatResult(
+            generations=[ChatGeneration(message=AIMessage(content=content))],
+            llm_output=llm_output
+        )
+    
+    @property
+    def _llm_type(self) -> str:
+        return "fallback_engine"
+
 # LangGraph imports
 try:
-    from langchain_core.messages import HumanMessage, AIMessage
     from langgraph.prebuilt import create_react_agent
 except ImportError:
-    HumanMessage = None
-    AIMessage = None
     create_react_agent = None
 
 # Module-level logger
@@ -98,10 +169,10 @@ class ExecutorAgent(BaseAgent):
             if not tools:
                 tools = [WebSearchTool()]
 
-            # Get LLM from config or use default
-            llm = self.config.get("llm")
-            if not llm:
-                return self.build_error("No LLM provided in config")
+            # Create fallback LLM wrapper
+            # OLD: llm = self.config.get("llm"); if not llm: return error
+            # NEW: using fallback_engine via FallbackChatModel
+            llm = FallbackChatModel(temperature=settings.EXECUTOR_TEMPERATURE)
 
             # Create ReAct agent
             agent = create_react_agent(llm, tools)
@@ -165,10 +236,32 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "trace": [msg.content for msg in messages if hasattr(msg, 'content')]
             }
 
+            # Get accumulated metadata from FallbackChatModel
+            if hasattr(llm, 'total_tokens_in'):
+                fallback_used = llm.fallback_ever_used
+                tokens_in = llm.total_tokens_in
+                tokens_out = llm.total_tokens_out
+            else:
+                # Fallback to LangGraph metadata extraction
+                fallback_used = False
+                tokens_in = 0
+                tokens_out = 0
+            
+            # Create metadata with fallback information
+            from agents.shared.message import AgentMetadata
+            metadata = AgentMetadata(
+                model_used=settings.DEFAULT_MODEL,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                latency_ms=int((end_time - start_time) * 1000),
+                fallback_used=fallback_used
+            )
+
             return self.build_response(
                 recipient="controller",
                 message_type="step_result",
-                payload={"step_result": step_result}
+                payload={"step_result": step_result},
+                metadata=metadata
             )
 
         except Exception as e:

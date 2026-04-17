@@ -5,7 +5,7 @@ Validates Executor outputs and scores confidence.
 
 # ALREADY IMPLEMENTED: AnalyzerAgent skeleton exists — adding full run() implementation.
 
-Phase 4: Calls ChatOpenAI with the quality analyst system prompt, strips
+Phase 4: Calls fallback_engine with the quality analyst system prompt, strips
          markdown fences from the response, parses a JSON validation report,
          and returns a validation AgentMessage. Gracefully falls back on
          JSON parse failure (passed=True, raw content used as critique).
@@ -18,12 +18,11 @@ import re
 import time
 import uuid
 
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
-
 from agents.analyzer.prompts import ANALYZER_SYSTEM_PROMPT
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage, AgentMetadata
+from backend.app.config import settings
+from backend.app.core.fallback_engine import fallback_engine
 
 logger = logging.getLogger(__name__)
 
@@ -93,21 +92,22 @@ class AnalyzerAgent(BaseAgent):
             default=str,
         )
 
-        # ── Call LLM ─────────────────────────────────────────────────────────
+        messages = [
+            {"role": "system", "content": ANALYZER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ]
+
+        # ── Call LLM via fallback_engine ──────────────────────────────────────
+        # OLD: response = await self._llm.ainvoke([SystemMessage(...), HumanMessage(...)])
+        # NEW: using fallback_engine.chat_completion
         t0 = time.time()
-        tokens_in = 0
-        tokens_out = 0
         try:
-            response = await self._llm.ainvoke(
-                [
-                    SystemMessage(content=ANALYZER_SYSTEM_PROMPT),
-                    HumanMessage(content=user_content),
-                ]
+            raw_content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
+                messages=messages,
+                model=settings.DEFAULT_MODEL,
+                temperature=settings.ANALYZER_TEMPERATURE,
+                max_tokens=settings.MAX_TOKENS,
             )
-            raw_content: str = response.content
-            if response.usage_metadata:
-                tokens_in = response.usage_metadata.get("input_tokens", 0)
-                tokens_out = response.usage_metadata.get("output_tokens", 0)
         except Exception as exc:
             logger.error("AnalyzerAgent LLM call failed: %s", exc)
             return self.build_error(f"LLM call failed: {exc}")
@@ -158,10 +158,11 @@ class AnalyzerAgent(BaseAgent):
         )
 
         metadata = AgentMetadata(
-            model_used=_MODEL,
+            model_used=settings.DEFAULT_MODEL,
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             latency_ms=latency_ms,
+            fallback_used=fallback_used,
         )
 
         return self.build_response(
