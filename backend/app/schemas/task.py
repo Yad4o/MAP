@@ -87,6 +87,7 @@ class TaskStepResponse(BaseModel):
     tokens_out: int | None
     latency_ms: int | None
     confidence: float | None
+    input_payload: dict[str, Any] | None
     output_payload: dict[str, Any] | None
     created_at: datetime
     completed_at: datetime | None

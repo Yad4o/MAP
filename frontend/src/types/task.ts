@@ -41,6 +41,7 @@ export interface TaskStepResponse {
   tokens_out?: number;
   latency_ms?: number;
   confidence?: number;
+  input_payload?: Record<string, unknown>;
   output_payload?: Record<string, unknown>;
   created_at: string;
   completed_at?: string;
