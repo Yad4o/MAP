@@ -194,6 +194,12 @@ class TestFallbackChatModel:
             # Verify result
             assert result.generations[0].message.content == "Test response"
             assert result.llm_output["fallback_used"] is True
+            
+            # Verify FallbackChatModel has expected fields
+            assert hasattr(model, 'fallback_ever_used')
+            assert hasattr(model, 'total_tokens_in')
+            assert hasattr(model, 'total_tokens_out')
+            assert hasattr(model, '_generate')
     
     @pytest.mark.asyncio
     async def test_fallback_chat_model_message_conversion(self):

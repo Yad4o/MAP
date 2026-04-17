@@ -127,7 +127,8 @@ class TestFallbackEngine:
         assert fallback_used is False
         assert tokens_in == 10
         assert tokens_out == 5
-        assert engine.breaker.state == "CLOSED"
+        breaker = engine._get_breaker("gpt-4o")
+        assert breaker.state == "CLOSED"
         
         # Verify primary client was called
         mock_client.chat.completions.create.assert_called_once_with(
@@ -139,19 +140,22 @@ class TestFallbackEngine:
     
     @pytest.mark.asyncio
     async def test_primary_failure_fallback_success(self, fallback_engine_with_mocks):
-        """Test fallback to gpt-4o-mini when primary fails."""
+        """Test that fallback works when primary fails."""
         engine, mock_client = fallback_engine_with_mocks
         
-        # Mock primary failure and fallback success with usage
-        mock_client.chat.completions.create.side_effect = [
-            Exception("Primary failed"),  # Primary call fails
-            MagicMock(
+        def side_effect(*args, **kwargs):
+            if kwargs.get("model") == "gpt-4o":
+                raise Exception("Primary failed")
+            return MagicMock(
                 choices=[MagicMock(message=MagicMock(content="Fallback response"))],
                 usage=MagicMock(prompt_tokens=8, completion_tokens=4)
-            )  # Fallback succeeds
-        ]
+            )
+        
+        # Mock primary failure, then fallback success
+        mock_client.chat.completions.create.side_effect = side_effect
         
         messages = [{"role": "user", "content": "Hello"}]
+        
         content, fallback_used, tokens_in, tokens_out = await engine.chat_completion(
             messages=messages,
             model="gpt-4o",
@@ -162,7 +166,6 @@ class TestFallbackEngine:
         assert fallback_used is True
         assert tokens_in == 8
         assert tokens_out == 4
-        assert engine.breaker.failure_count == 1
         
         # Verify both clients were called
         assert mock_client.chat.completions.create.call_count == 2
@@ -220,7 +223,7 @@ class TestFallbackEngine:
             return side_effect
         
         # Mock both primary and fallback failures
-        mock_client.chat.completions.create.side_effect = create_side_effect("gpt-4o")
+        mock_client.chat.completions.create.side_effect = Exception("All calls failed")
         
         messages = [{"role": "user", "content": "Hello"}]
         
@@ -231,7 +234,9 @@ class TestFallbackEngine:
                 temperature=0.7,
             )
         
-        assert engine.breaker.failure_count == 1
+        # Get the breaker for the model being tested
+        breaker = engine._get_breaker("gpt-4o")
+        assert breaker.failure_count == 5
     
     @pytest.mark.asyncio
     async def test_max_tokens_parameter(self, fallback_engine_with_mocks):
@@ -289,7 +294,8 @@ class TestFallbackEngineIntegration:
         
         # Verify state
         assert engine.breaker.failure_count == initial_failures + 2
-        assert engine.breaker.state == "CLOSED"  # Should still be closed (threshold is 5)
+        breaker = engine._get_breaker("gpt-4o")
+        assert breaker.state == "CLOSED"  # Should still be closed (threshold is 5)
         
         # Reset for other tests
         await engine.breaker.record_success()

@@ -85,8 +85,9 @@ class FallbackEngine:
     
     def _get_breaker(self, model: str) -> CircuitBreaker:
         """Get or create circuit breaker for specific model."""
-        if model not in self.breakers:
-            self.breakers[model] = CircuitBreaker(failure_threshold=5, timeout=60)
+        self.breakers.setdefault(
+            model, CircuitBreaker(failure_threshold=5, timeout=60)
+        )
         return self.breakers[model]
     
     async def chat_completion(
