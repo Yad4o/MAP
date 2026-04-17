@@ -416,6 +416,13 @@ async def test_end_to_end_task_status_transitions_and_retrieve(engine, db_sessio
         }
 
     mocker.patch.object(AgentController, "run_pipeline", mock_run_pipeline)
+    
+    # Also mock __init__ to avoid instantiating real agents (which require API keys)
+    def mock_init(self, task_id, task_description, config=None):
+        self.task_id = task_id
+        self.task_description = task_description
+        self.config = config
+    mocker.patch.object(AgentController, "__init__", mock_init)
 
     # ── 4. Redirect AsyncSessionLocal inside AgentRunner to the test engine ───
     # AgentRunner imports AsyncSessionLocal inside run(), so we patch its source.

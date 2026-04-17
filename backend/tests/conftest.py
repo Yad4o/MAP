@@ -5,10 +5,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from httpx import AsyncClient, ASGITransport
 
+import os
 from app.main import app
 from app.dependencies import get_db
 from app.db.base import Base
 from app.core.redis import override_redis_client, set_test_mode
+
+# Set dummy OpenAI key for tests
+os.environ["OPENAI_API_KEY"] = "sk-mock-key-for-tests-12345"
 
 class MockRedis:
     def __init__(self):
