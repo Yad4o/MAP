@@ -132,7 +132,8 @@ class TestExecutorAgentFallback:
                 llm_arg = mock_create.call_args[0][0]  # First argument to create_react_agent
                 
                 # Check that it's our FallbackChatModel
-                assert hasattr(llm_arg, 'fallback_used')
+                assert hasattr(llm_arg, 'fallback_ever_used')
+                assert hasattr(llm_arg, 'total_tokens_in')
                 assert hasattr(llm_arg, '_generate')
                 
                 # Verify response structure

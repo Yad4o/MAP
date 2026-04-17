@@ -176,11 +176,12 @@ class TestFallbackEngine:
         engine, mock_client = fallback_engine_with_mocks
         
         # Force circuit open
+        breaker = engine._get_breaker("gpt-4o")
         for i in range(5):
-            await engine.breaker.record_failure()
+            await breaker.record_failure()
         
-        assert engine.breaker.state == "OPEN"
-        assert await engine.breaker.is_available() is False
+        assert breaker.state == "OPEN"
+        assert await breaker.is_available() is False
         
         # Mock fallback response with usage
         mock_client.chat.completions.create.return_value = MagicMock(
@@ -212,16 +213,6 @@ class TestFallbackEngine:
         """Test when both primary and fallback fail."""
         engine, mock_client = fallback_engine_with_mocks
         
-        def create_side_effect(primary_model):
-            def side_effect(*args, **kwargs):
-                if kwargs.get("model") == primary_model:
-                    raise Exception("Primary failed")
-                return MagicMock(
-                    choices=[MagicMock(message=MagicMock(content="Fallback response"))],
-                    usage=MagicMock(prompt_tokens=8, completion_tokens=4)
-                )
-            return side_effect
-        
         # Mock both primary and fallback failures
         mock_client.chat.completions.create.side_effect = Exception("All calls failed")
         
@@ -236,7 +227,7 @@ class TestFallbackEngine:
         
         # Get the breaker for the model being tested
         breaker = engine._get_breaker("gpt-4o")
-        assert breaker.failure_count == 5
+        assert breaker.failure_count == 1  # only primary failure increments the breaker
     
     @pytest.mark.asyncio
     async def test_max_tokens_parameter(self, fallback_engine_with_mocks):
@@ -277,28 +268,26 @@ class TestFallbackEngineIntegration:
         # Should be instance of FallbackEngine
         assert isinstance(fallback_engine, FallbackEngine)
         assert hasattr(fallback_engine, 'chat_completion')
-        assert hasattr(fallback_engine, 'breaker')
+        assert hasattr(fallback_engine, 'breakers')       # dict, not singular
+        assert callable(fallback_engine._get_breaker)
     
     @pytest.mark.asyncio
     async def test_circuit_breaker_state_persistence(self):
         """Test that circuit breaker state persists across instances."""
         # Create a fresh instance (not the singleton)
         engine = FallbackEngine()
+        breaker = engine._get_breaker("gpt-4o")
         
-        # Get initial failure count
-        initial_failures = engine.breaker.failure_count
+        initial_failures = breaker.failure_count
         
         # Record failures
         for i in range(2):
-            await engine.breaker.record_failure()
-        
-        # Verify state
-        assert engine.breaker.failure_count == initial_failures + 2
-        breaker = engine._get_breaker("gpt-4o")
-        assert breaker.state == "CLOSED"  # Should still be closed (threshold is 5)
-        
-        # Reset for other tests
-        await engine.breaker.record_success()
+            await breaker.record_failure()
+
+        assert breaker.failure_count == initial_failures + 2
+        assert breaker.state == "CLOSED"  # threshold is 5
+
+        await breaker.record_success()
 
 
 if __name__ == "__main__":
