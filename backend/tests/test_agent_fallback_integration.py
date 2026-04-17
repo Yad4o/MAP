@@ -38,6 +38,13 @@ class TestPlannerAgentFallback:
             with patch('backend.app.config.settings.DEFAULT_MODEL', 'gpt-4o'):
                 with patch('backend.app.config.settings.PLANNER_TEMPERATURE', 0.7):
                     
+                    # Override return value for this test - primary succeeded
+                    mock_fallback_engine.chat_completion.return_value = (
+                        '{"steps": [{"id": "1", "description": "Test step"}]}',
+                        False,  # primary succeeded - no fallback
+                        15, 8
+                    )
+                    
                     # Create test message
                     message = AgentMessage(
                         message_id=uuid.uuid4(),

@@ -169,6 +169,11 @@ class TestFallbackEngine:
         
         # Verify both clients were called
         assert mock_client.chat.completions.create.call_count == 2
+        
+        # Verify circuit breaker recorded the primary failure
+        breaker = engine._get_breaker("gpt-4o")
+        assert breaker.failure_count == 1  # primary failure must have been recorded
+        assert breaker.state == "CLOSED"   # one failure below threshold of 5
     
     @pytest.mark.asyncio
     async def test_circuit_open_uses_fallback(self, fallback_engine_with_mocks):
