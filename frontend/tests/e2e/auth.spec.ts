@@ -50,7 +50,7 @@ test.describe('Authentication', () => {
     await page.click('button[type="submit"]');
 
     // The component shows serverError inside the glass-card, not the form.
-    await expect(page.locator('.glass-card')).toContainText(/401|Invalid|credentials/i);
+    await expect(page.locator('.glass-card')).toContainText(/invalid credentials|incorrect/i);
   });
 
   test('redirects to /tasks after login', async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Authentication', () => {
     // Check if auth state is cleared in localStorage
     const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
     const parsed = JSON.parse(storageValue || '{}');
-    expect(parsed.state.isAuthenticated).toBe(false);
+    expect(parsed?.state?.isAuthenticated).toBe(false);
   });
 
   test('cannot access /tasks without login', async ({ page }) => {

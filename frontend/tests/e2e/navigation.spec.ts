@@ -38,6 +38,11 @@ test.describe('Navigation', () => {
     ];
 
     for (const item of navItems) {
+      if (item.label === 'Admin') {
+        await page.route(/\/api\/v1\/admin/, async (route) => {
+          await route.fulfill({ status: 200, body: JSON.stringify([]) });
+        });
+      }
       await page.click(`nav a:has-text("${item.label}")`);
       await expect(page).toHaveURL(item.url);
     }

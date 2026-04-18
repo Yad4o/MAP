@@ -72,8 +72,9 @@ test.describe('Tasks', () => {
     await page.fill('#title', 'New Automation Task');
     await page.fill('#description', 'This is a test task');
     await page.click('button[type="submit"]');
-
-    await expect(page).toHaveURL(/\/tasks/);
+    
+    await page.waitForURL('/tasks');
+    await expect(page).toHaveURL(/\/tasks$/);
     // Wait for the task to appear with a generous timeout and specific locator
     await expect(page.getByRole('heading', { name: 'New Automation Task' })).toBeVisible({ timeout: 10000 });
   });
@@ -88,14 +89,11 @@ test.describe('Tasks', () => {
       updated_at: new Date().toISOString()
     };
 
-    // Single consolidated mock for the entire test
-    await page.route('**/api/v1/tasks*', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/101')) {
-        await route.fulfill({ status: 200, body: JSON.stringify(task) });
-      } else {
-        await route.fulfill({ status: 200, body: JSON.stringify([task]) });
-      }
+    await page.route(/\/api\/v1\/tasks\/101/, async (route) => {
+      await route.fulfill({ status: 200, body: JSON.stringify(task) });
+    });
+    await page.route(/\/api\/v1\/tasks$/, async (route) => {
+      await route.fulfill({ status: 200, body: JSON.stringify([task]) });
     });
 
     await page.goto('/tasks');
@@ -119,7 +117,7 @@ test.describe('Tasks', () => {
       { id: 2, title: 'Completed Task', status: 'COMPLETED', created_at: new Date().toISOString() },
     ];
 
-    await page.route('**/api/v1/tasks', async (route) => {
+    await page.route(/\/api\/v1\/tasks$/, async (route) => {
       await route.fulfill({ status: 200, body: JSON.stringify(tasks) });
     });
 
