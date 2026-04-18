@@ -10,7 +10,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture(autouse=True)
 def mock_celery():
     """Mock Celery apply_async so no workers are actually triggered during integration tests."""
-    with patch("app.routes.tasks.process_task.apply_async") as mock:
+    with patch("app.worker.tasks.process_task.apply_async") as mock:
         yield mock
 
 async def test_create_task_success(client: AsyncClient, create_test_user: dict):
@@ -21,8 +21,9 @@ async def test_create_task_success(client: AsyncClient, create_test_user: dict):
         "priority": 5
     }
     response = await client.post("/api/v1/tasks", json=task_data, headers=create_test_user)
-    assert response.status_code == 201
+    assert response.status_code == 202
     assert response.json()["title"] == task_data["title"]
+    mock_celery.assert_called_once()
 
 async def test_list_tasks(client: AsyncClient, create_test_user: dict):
     """Case 2: List tasks for the current user"""
@@ -32,7 +33,9 @@ async def test_list_tasks(client: AsyncClient, create_test_user: dict):
     
     response = await client.get("/api/v1/tasks", headers=create_test_user)
     assert response.status_code == 200
-    assert len(response.json()) >= 2
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 2
 
 async def test_get_task_by_id(client: AsyncClient, create_test_user: dict):
     """Case 3: Get task details by ID"""
@@ -87,7 +90,12 @@ async def test_access_other_user_task(client: AsyncClient, create_test_user: dic
     task_id = create_response.json()["id"]
     
     # Login as user 2
-    user2_data = {"email": "user2@example.com", "username": "user2", "password": "Password123!"}
+    suffix = str(uuid.uuid4())[:8]
+    user2_data = {
+        "email": f"user2_{suffix}@example.com",
+        "username": f"user2_{suffix}",
+        "password": "Password123!"
+    }
     await client.post("/api/v1/auth/register", json=user2_data)
     login_response = await client.post("/api/v1/auth/login", json={"email": user2_data["email"], "password": user2_data["password"]})
     user2_token = login_response.json()["access_token"]
@@ -96,3 +104,41 @@ async def test_access_other_user_task(client: AsyncClient, create_test_user: dic
     # Try to access user 1's task with user 2's headers
     response = await client.get(f"/api/v1/tasks/{task_id}", headers=user2_headers)
     assert response.status_code == 404
+
+async def test_create_task_unauthenticated(client: AsyncClient):
+    """Case 9: Create a task without token"""
+    response = await client.post("/api/v1/tasks", json={"title": "No Auth Task", "priority": 1})
+    assert response.status_code == 401
+
+async def test_list_tasks_empty(client: AsyncClient, create_test_user: dict):
+    """Case 10: List tasks when none exist for the user"""
+    response = await client.get("/api/v1/tasks", headers=create_test_user)
+    assert response.status_code == 200
+    # Current implementation returns a list, not a paginated object
+    assert response.json() == []
+
+async def test_cancel_task(client: AsyncClient, create_test_user: dict):
+    """Case 11: Successful task cancellation"""
+    create_response = await client.post("/api/v1/tasks", json={"title": "To Cancel", "priority": 1}, headers=create_test_user)
+    task_id = create_response.json()["id"]
+    
+    # The spec implies a POST /cancel endpoint returning 200 + status
+    response = await client.post(f"/api/v1/tasks/{task_id}/cancel", headers=create_test_user)
+    assert response.status_code == 200
+    assert response.json()["status"] == "CANCELLED"
+
+async def test_cancel_completed_task(client: AsyncClient, create_test_user: dict, db_session):
+    """Case 12: Cannot cancel a COMPLETED task"""
+    create_response = await client.post("/api/v1/tasks", json={"title": "Already Done", "priority": 1}, headers=create_test_user)
+    task_id = create_response.json()["id"]
+    
+    # Manually mark as completed in DB
+    from app.db.models import Task
+    from sqlalchemy import select
+    res = await db_session.execute(select(Task).filter(Task.id == task_id))
+    task = res.scalar_one()
+    task.status = "COMPLETED"
+    await db_session.commit()
+    
+    response = await client.post(f"/api/v1/tasks/{task_id}/cancel", headers=create_test_user)
+    assert response.status_code == 400

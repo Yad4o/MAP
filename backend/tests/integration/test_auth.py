@@ -32,6 +32,7 @@ async def test_login_success(client: AsyncClient, test_user_data: dict):
     })
     assert response.status_code == 200
     assert "access_token" in response.json()
+    assert "refresh_token" in response.json()
 
 async def test_login_invalid_credentials(client: AsyncClient, test_user_data: dict):
     """Case 4: Login with wrong password"""
@@ -51,7 +52,13 @@ async def test_get_me_authenticated(client: AsyncClient, create_test_user: dict)
 async def test_get_me_unauthenticated(client: AsyncClient):
     """Case 6: Get current user details without token"""
     response = await client.get("/api/v1/auth/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
+
+async def test_get_me_expired_token(client: AsyncClient):
+    """Case 8: Get current user details with expired token"""
+    expired = "Bearer eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE2MDAwMDAwMDB9.invalidsig"
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": expired})
+    assert response.status_code == 401
 
 async def test_logout_success(client: AsyncClient, create_test_user: dict):
     """Case 7: Successful logout"""

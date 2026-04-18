@@ -24,7 +24,7 @@ def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
     return TaskService(repo)
 
 
-@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskRead, status_code=status.HTTP_202_ACCEPTED)
 async def create_task(
     task_data: TaskCreateRequest,
     current_user = Depends(get_current_user),

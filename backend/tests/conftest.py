@@ -1,31 +1,6 @@
 import os
-import subprocess
-import sys
-
-# Define absolute path for the test database
-DB_PATH = os.path.abspath(os.path.join(os.getcwd(), "test_integration.db"))
-TEST_DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
-
-# Set environment variable early for all imports to pick it up
-os.environ["DATABASE_URL"] = TEST_DB_URL
-
 import pytest
-import pytest_asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from httpx import AsyncClient, ASGITransport
-
-<<<<<<< HEAD
-# Now import app modules
-from app.config import settings
-=======
-import os
->>>>>>> main
-from app.main import app
-from app.dependencies import get_db
-from app.db.base import Base
-from app.core.redis import override_redis_client, set_test_mode
+from app.core.redis import set_test_mode
 
 # Set dummy OpenAI key for tests
 os.environ["OPENAI_API_KEY"] = "sk-mock-key-for-tests-12345"
@@ -46,118 +21,6 @@ class MockRedis:
 def setup_test_mode():
     set_test_mode(True)
 
-# ---------------------------------------------------------------------------
-# 1. Test database URL — SQLite so no real Neon DB is needed during tests
-# ---------------------------------------------------------------------------
-@pytest.fixture(scope="session", autouse=True)
-def setup_database():
-    # Final check: settings.DATABASE_URL should match TEST_DB_URL
-    settings.DATABASE_URL = TEST_DB_URL
-    
-    if os.path.exists(DB_PATH):
-        try:
-            os.remove(DB_PATH)
-        except PermissionError:
-            pass
-            
-    # Run alembic upgrade head once to ensure migrations are compatible and applied
-    subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
-        env={**os.environ, "PYTHONPATH": "."},
-        check=True
-    )
-    
-    yield TEST_DB_URL
-    
-    # Cleanup after session
-    try:
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-    except PermissionError:
-        pass
-
-@pytest.fixture
-def test_db_url(setup_database):
-    return setup_database
-
-
-# ---------------------------------------------------------------------------
-# 2. Engine — creates all tables before each test, drops them after
-#    Scoped to "function" so every test gets a completely clean database
-# ---------------------------------------------------------------------------
-@pytest.fixture
-async def engine(test_db_url):
-    engine = create_async_engine(
-        test_db_url, 
-        echo=False, 
-        poolclass=StaticPool,
-        connect_args={"check_same_thread": False}
-    )
-    
-    # Safety measure: ensure all tables exist for this test run
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        
-    yield engine
-    
-    # Drop tables after test as requested
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
-
-@pytest.fixture
-async def db_session(engine):
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
-        yield session
-        await session.rollback()
-
-
-# ---------------------------------------------------------------------------
-# 4. client — AsyncClient with get_db overridden to use the test db_session
-#    Use this fixture in any test that calls an API endpoint
-# ---------------------------------------------------------------------------
-@pytest_asyncio.fixture(scope="function")  # must stay function-scoped — MockRedis is stateful
-async def client(db_session):
-    async def override_get_db():
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    
-    mock_redis = MockRedis()
-    override_redis_client(mock_redis)
-    
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
-        
-    app.dependency_overrides.clear()
-    override_redis_client(None)
-
-
-# ---------------------------------------------------------------------------
-# 5. auth_headers — registers and logs in a test user, returns Bearer token
-#    Use this fixture in any test that requires authentication
-# ---------------------------------------------------------------------------
-@pytest_asyncio.fixture(scope="function")
-async def create_test_user(client, test_user_data: dict):
-    """registers a user via API, logs in, returns auth headers dict"""
-    await client.post("/api/v1/auth/register", json=test_user_data)
-    response = await client.post("/api/v1/auth/login", json={
-        "email": test_user_data["email"],
-        "password": test_user_data["password"]
-    })
-    access_token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {access_token}"}
-
-@pytest_asyncio.fixture(scope="function")
-async def auth_headers(create_test_user):
-    return create_test_user
-
-
-# ---------------------------------------------------------------------------
-# 6. test_user_data — returns the test user's credentials as a plain dict
-#    Use when a test needs to know what the test user's details are
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def test_user_data():
     return {
@@ -165,23 +28,3 @@ def test_user_data():
         "username": "testuser",
         "password": "testpassword123"
     }
-
-
-# ---------------------------------------------------------------------------
-# 7. test_user — creates and returns a test user UUID
-#    Use this fixture in any test that needs a user ID
-# ---------------------------------------------------------------------------
-@pytest.fixture
-async def test_user(db_session):
-    """Create a test user and return their UUID as string."""
-    from app.db.models import User
-    user = User(
-        email="test@map.com",
-        username="testuser",
-        password_hash="hashed123"
-    )
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
-    return user.id
-

@@ -4,6 +4,9 @@ Revision ID: c1f70ee49300
 Revises: 
 Create Date: 2026-03-15 18:26:06.726671
 
+NOTE: This initial migration includes 'tasks' and 'task_steps' tables which were previously
+defined in a separate migration (create_tasks_and_task_steps) but have been folded here
+for schema consolidation.
 """
 from typing import Sequence, Union
 
