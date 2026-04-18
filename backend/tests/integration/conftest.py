@@ -14,8 +14,9 @@ from app.dependencies import get_db
 from app.db.base import Base
 from app.core.redis import override_redis_client
 
-# Define absolute path for the test database
-DB_PATH = os.path.abspath(os.path.join(os.getcwd(), "test_integration.db"))
+# Define absolute paths relative to the backend directory
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+DB_PATH = os.path.join(BACKEND_DIR, "test_integration.db")
 TEST_DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
 # Set environment variable early for all imports to pick it up
@@ -32,11 +33,11 @@ def setup_database():
         except PermissionError:
             pass
             
-    # Run alembic upgrade head once to ensure migrations are compatible and applied
+    # Run alembic upgrade head using BACKEND_DIR as both cwd and PYTHONPATH
     subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
-        env={**os.environ, "PYTHONPATH": "."},
-        cwd="backend",
+        env={**os.environ, "PYTHONPATH": BACKEND_DIR},
+        cwd=BACKEND_DIR,
         check=True
     )
     
@@ -67,11 +68,10 @@ async def engine(test_db_url, setup_database):
 
 @pytest.fixture
 async def db_session(engine):
-    async with engine.connect() as conn:
-        trans = await conn.begin()
-        async_session = AsyncSession(bind=conn, expire_on_commit=False)
-        yield async_session
-        await trans.rollback()
+    async with engine.begin() as conn:
+        session = AsyncSession(bind=conn, expire_on_commit=False)
+        yield session
+        await conn.rollback()
 
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session):

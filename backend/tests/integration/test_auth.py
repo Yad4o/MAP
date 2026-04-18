@@ -51,7 +51,7 @@ async def test_get_me_authenticated(client: AsyncClient, create_test_user: dict)
 async def test_get_me_unauthenticated(client: AsyncClient):
     """Case 6: Get current user details without token"""
     response = await client.get("/api/v1/auth/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 async def test_get_me_expired_token(client: AsyncClient):
     """Case 8: Get current user details with expired token"""

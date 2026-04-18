@@ -9,7 +9,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture(autouse=True)
 def mock_celery():
-    """Mock Celery apply_async so no workers are actually triggered during integration tests."""
+    # Patch where it's imported (routes.tasks), not where it's defined (worker.tasks)
     with patch("app.routes.tasks.process_task.apply_async") as mock:
         yield mock
 
@@ -117,8 +117,8 @@ async def test_access_other_user_task(client: AsyncClient, create_test_user: dic
 async def test_create_task_unauthenticated(client: AsyncClient):
     """Case 9: Create a task without token"""
     response = await client.post("/api/v1/tasks", json={"title": "No Auth Task", "priority": 1})
-    # FastAPI HTTPBearer returns 403 Forbidden when the Authorization header is missing
-    assert response.status_code == 403
+    # The app now explicitly returns 401 Unauthorized when the Authorization header is missing
+    assert response.status_code == 401
 
 async def test_list_tasks_empty(client: AsyncClient, create_test_user: dict):
     """Case 10: List tasks when none exist for the user"""
@@ -133,7 +133,7 @@ async def test_cancel_task(client: AsyncClient, create_test_user: dict, mock_cel
     task_id = create_response.json()["id"]
     mock_celery.assert_called_once()
     
-    # The spec implies a POST /cancel endpoint returning 200 + status
+    # Cancelling a 'PENDING' task is allowed as it's not a terminal state
     response = await client.post(f"/api/v1/tasks/{task_id}/cancel", headers=create_test_user)
     assert response.status_code == 200
     assert response.json()["status"] == "CANCELLED"  # Matches TaskStatus.CANCELLED enum value
@@ -151,6 +151,8 @@ async def test_cancel_completed_task(client: AsyncClient, create_test_user: dict
     task = res.scalar_one()
     task.status = "COMPLETED"
     await db_session.flush()
+    await db_session.refresh(task)
+    assert task.status == "COMPLETED"
     
     response = await client.post(f"/api/v1/tasks/{task_id}/cancel", headers=create_test_user)
     assert response.status_code == 400
