@@ -94,6 +94,8 @@ def upgrade() -> None:
     op.create_table('task_steps',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('task_id', sa.UUID(), nullable=False),
+    sa.Column('title', sa.String(length=500), nullable=False),
+    sa.Column('order', sa.Integer(), nullable=False),
     sa.Column('step_index', sa.SmallInteger(), nullable=False),
     sa.Column('step_type', sa.String(length=50), nullable=False),
     sa.Column('agent_name', sa.String(length=50), nullable=False),
@@ -108,6 +110,7 @@ def upgrade() -> None:
     sa.Column('error', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_task_steps_task_id'), 'task_steps', ['task_id'], unique=False)
@@ -115,7 +118,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('title', sa.String(length=500), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
     sa.Column('task_type', sa.String(length=50), nullable=True),
     sa.Column('priority', sa.SmallInteger(), nullable=False),
     sa.Column('status', sa.String(length=30), nullable=False),
@@ -128,6 +131,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tasks_created_at'), 'tasks', ['created_at'], unique=False)

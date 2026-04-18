@@ -36,6 +36,7 @@ def setup_database():
     subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         env={**os.environ, "PYTHONPATH": "."},
+        cwd="backend",
         check=True
     )
     
@@ -48,11 +49,11 @@ def setup_database():
     except PermissionError:
         pass
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_db_url(setup_database):
     return setup_database
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def engine(test_db_url, setup_database):
     engine = create_async_engine(
         test_db_url, 
@@ -67,11 +68,10 @@ async def engine(test_db_url, setup_database):
 @pytest.fixture
 async def db_session(engine):
     async with engine.connect() as conn:
-        await conn.begin()
-        await conn.begin_nested()
+        trans = await conn.begin()
         async_session = AsyncSession(bind=conn, expire_on_commit=False)
         yield async_session
-        await conn.rollback()
+        await trans.rollback()
 
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session):
@@ -80,9 +80,8 @@ async def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     
-    # MockRedis is available from the root conftest via fixture or import
-    # For simplicity and reliability in the worker layer, we use it here too
-    from conftest import MockRedis
+    # Use the shared MockRedis from utils
+    from tests.utils import MockRedis
     mock_redis = MockRedis()
     override_redis_client(mock_redis)
     

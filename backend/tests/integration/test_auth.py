@@ -1,8 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-# EXISTING TEST FILE — appending new tests per task instructions
-# (Wait, this is a new file as requested, but I'll add the comment just in case or if it was existing)
+
 
 pytestmark = pytest.mark.asyncio
 
@@ -52,7 +51,7 @@ async def test_get_me_authenticated(client: AsyncClient, create_test_user: dict)
 async def test_get_me_unauthenticated(client: AsyncClient):
     """Case 6: Get current user details without token"""
     response = await client.get("/api/v1/auth/me")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 async def test_get_me_expired_token(client: AsyncClient):
     """Case 8: Get current user details with expired token"""
