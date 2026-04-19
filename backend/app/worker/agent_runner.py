@@ -34,14 +34,14 @@ class AgentRunner:
         # Inline imports are used here to prevent circular import issues and premature DB initialization 
         # when the module is loaded by the Celery worker.
         from app.db.base import AsyncSessionLocal
-        from app.db.repositories.task import TaskRepository
+        from app.db.repositories.task_repo import TaskRepository
         from agents.controller.agent_controller import AgentController
         
         async with AsyncSessionLocal() as session:
-            task_repo = TaskRepository()
+            task_repo = TaskRepository(session)
             
             # Fetch task from DB
-            task = await task_repo.get(session, self.task_id)
+            task = await task_repo.get_by_id(self.task_id)
             if not task:
                 logger.error(f"AgentRunner: Task {self.task_id} not found")
                 return {"status": "FAILED", "task_id": str(self.task_id), "error": "Task not found"}
