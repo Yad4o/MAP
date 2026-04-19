@@ -1,24 +1,9 @@
 """
-tests/agents/test_memory_agent.py
+backend/tests/agents/test_memory_agent.py
 ───────────────────────────────────
 Unit tests for:
   - agents/memory/memory_agent.py  (MemoryAgent)
   - agents/memory/vector_store.py  (VectorStore)
-
-All OpenAI embedding calls are mocked — no real API key is required.
-
-Test coverage:
-  1.  MemoryAgent "store" message_type calls vector_store.add()
-  2.  MemoryAgent "retrieve" message_type calls vector_store.search()
-  3.  MemoryAgent unknown message_type returns build_error(...)
-  4.  VectorStore.add() embeds text and adds to index without error
-  5.  VectorStore.search() returns top-k results with scores
-  6.  FAISS index is saved to data/faiss/{user_id}/index.faiss after add()
-  7.  FAISS index is loaded from disk on next instantiation (persistence test)
-  8.  VectorStore.search() on empty index returns []
-  9.  Multi-user isolation: user A's vectors are not returned for user B
-  10. Embedding mock: add() calls OpenAI embeddings exactly once per text
-  11. search() respects top_k parameter
 """
 
 import json

@@ -62,11 +62,6 @@ class AnalyzerAgent(BaseAgent):
 
     def __init__(self, task_id: uuid.UUID, config: dict | None = None):
         super().__init__(task_id, config)
-        self._llm = ChatOpenAI(
-            model=_MODEL,
-            temperature=_TEMPERATURE,
-            api_key=os.getenv("OPENAI_API_KEY", ""),
-        )
 
     async def run(self, message: AgentMessage) -> AgentMessage:
         """
