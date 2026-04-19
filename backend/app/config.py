@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # ── AI Providers ──────────────────────────────────────────
     OPENAI_API_KEY: str = Field(default="")
     GEMINI_API_KEY: str = Field(default="")
+    GROQ_API_KEY: str = Field(default="")
+    GROQ_BASE_URL: str = Field(default="https://api.groq.com/openai/v1")
     PRIMARY_AI_PROVIDER: str = Field(default="openai")
     DEFAULT_MODEL: str = Field(default="gpt-4o")
     FALLBACK_MODEL: str = Field(default="mistral-7b-instruct")
@@ -60,6 +62,7 @@ class Settings(BaseSettings):
     ANALYZER_CONFIDENCE_THRESHOLD: float = Field(default=0.70)
     MAX_TASK_RETRY_COUNT: int = Field(default=3)
     TASK_TIMEOUT_SECONDS: int = Field(default=3600)
+    MAX_TOKENS: int = Field(default=4000)
 
     # ── Rate Limiting ─────────────────────────────────────────
     RATE_LIMIT_FREE_RPM: int = Field(default=100)

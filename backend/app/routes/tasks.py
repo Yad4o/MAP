@@ -11,7 +11,7 @@ from app.dependencies import get_current_user
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskStatusResponse
 from app.services.task_service import TaskService
 from app.db.repositories.task_repo import TaskRepository
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 from app.worker.tasks import process_task
 
 
@@ -24,7 +24,7 @@ def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
     return TaskService(repo)
 
 
-@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskRead, status_code=status.HTTP_202_ACCEPTED)
 async def create_task(
     task_data: TaskCreateRequest,
     current_user = Depends(get_current_user),
@@ -100,3 +100,18 @@ async def delete_task(
         return None
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
+
+
+@router.post("/{task_id}/cancel", response_model=TaskRead)
+async def cancel_task(
+    task_id: uuid.UUID,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """Cancel a specific task."""
+    try:
+        return await task_service.cancel_task(task_id, current_user.id)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+    except TaskStateTransitionError as e:
+        raise HTTPException(status_code=400, detail=str(e))

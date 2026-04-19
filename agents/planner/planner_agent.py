@@ -8,11 +8,8 @@ import json
 import logging
 import time
 import uuid
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-
-# Importing settings from the backend app
 from backend.app.config import settings
+from backend.app.core.fallback_engine import fallback_engine
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage, AgentMetadata
 from agents.planner.prompts import PLANNER_SYSTEM_PROMPT, build_planner_prompt
@@ -30,12 +27,6 @@ class PlannerAgent(BaseAgent):
 
     def __init__(self, task_id: uuid.UUID, config: dict | None = None):
         super().__init__(task_id, config)
-        # Initialize ChatOpenAI with settings from backend
-        self.llm = ChatOpenAI(
-            model=settings.DEFAULT_MODEL,
-            temperature=settings.PLANNER_TEMPERATURE,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
 
     async def run(self, message: AgentMessage) -> AgentMessage:
         """
@@ -47,21 +38,31 @@ class PlannerAgent(BaseAgent):
             return self.build_error("No task_description provided in payload.")
 
         messages = [
-            SystemMessage(content=PLANNER_SYSTEM_PROMPT),
-            HumanMessage(content=build_planner_prompt(task_description))
+            {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
+            {"role": "user", "content": build_planner_prompt(task_description)}
         ]
 
         retries = 1
         content = ""
         last_error = "Unknown error"
+        overall_fallback_used = False
 
         while retries >= 0:
             start_time = time.time()
             append_feedback = False
             try:
-                # Call LLM
-                response = await self.llm.ainvoke(messages)
-                content = response.content
+                # Call LLM using fallback_engine
+                # OLD: llm = ChatOpenAI(...); response = await llm.ainvoke(messages)
+                # NEW: using fallback_engine.chat_completion
+                content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
+                    messages=messages,
+                    model=settings.DEFAULT_MODEL,
+                    temperature=settings.PLANNER_TEMPERATURE,
+                    max_tokens=settings.MAX_TOKENS,
+                )
+                
+                # Track if fallback was used in any attempt
+                overall_fallback_used = overall_fallback_used or fallback_used
                 
                 # Strip markdown fences if present
                 if content.strip().startswith("```"):
@@ -81,14 +82,13 @@ class PlannerAgent(BaseAgent):
 
                 # Populate metadata
                 latency_ms = int((time.time() - start_time) * 1000)
-                metadata_raw = getattr(response, "response_metadata", {}) or {}
-                usage = metadata_raw.get("token_usage", {})
                 
                 metadata = AgentMetadata(
                     model_used=settings.DEFAULT_MODEL,
-                    tokens_in=usage.get("prompt_tokens", 0),
-                    tokens_out=usage.get("completion_tokens", 0),
-                    latency_ms=latency_ms
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                    latency_ms=latency_ms,
+                    fallback_used=overall_fallback_used
                 )
 
                 return self.build_response(
@@ -109,11 +109,13 @@ class PlannerAgent(BaseAgent):
 
             if append_feedback:
                 # Add feedback for next attempt
-                messages.append(AIMessage(content=content)) # Add the bad response with correct role
-                messages.append(HumanMessage(
-                    content=f"The previous response failed validation: {last_error}. "
+                messages.append({"role": "assistant", "content": content}) # Add the bad response with correct role
+                messages.append({
+                    "role": "user", 
+                    "content": f"The previous response failed validation: {last_error}. "
                     "Please provide a corrected JSON execution plan following the schema strictly."
-                ))
+                })
+                # Note: overall_fallback_used already tracks fallback usage across retries
             
             retries -= 1
 
