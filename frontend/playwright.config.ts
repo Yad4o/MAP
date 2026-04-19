@@ -9,12 +9,20 @@ import { defineConfig, devices } from '@playwright/test';
  */
 
 export default defineConfig({
+<<<<<<< HEAD
   testDir: './tests/e2e',
   testMatch: '**/*.spec.ts',
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {
     timeout: 10000
+=======
+  testDir: './tests',
+  /* Maximum time one test can run for. */
+  timeout: 30 * 1000,
+  expect: {
+    timeout: 5000
+>>>>>>> b3566e77e384fcd230560d6d5f1c882dee91ef09
   },
   /* Run tests in files in parallel */
   fullyParallel: true,
