@@ -54,7 +54,7 @@ def setup_database():
 def test_db_url(setup_database):
     return setup_database
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def engine(test_db_url, setup_database):
     engine = create_async_engine(
         test_db_url, 
@@ -66,12 +66,19 @@ async def engine(test_db_url, setup_database):
     yield engine
     await engine.dispose()
 
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def db_session(engine):
-    async with engine.begin() as conn:
+    # Use engine.connect() (not engine.begin()) so we own the full transaction
+    # lifecycle. engine.begin() auto-commits on clean exit, which conflicts with
+    # our explicit rollback and raises PendingRollbackError / InvalidRequestError
+    # on every test's teardown.
+    async with engine.connect() as conn:
+        await conn.begin()
         session = AsyncSession(bind=conn, expire_on_commit=False)
         yield session
+        # Roll back all DB changes made during the test — leaves DB clean for next test.
         await conn.rollback()
+    # engine.connect().__aexit__ closes the connection cleanly after rollback.
 
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session):
@@ -106,7 +113,7 @@ async def create_test_user(client, test_user_data: dict):
 async def auth_headers(create_test_user):
     return create_test_user
 
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def test_user(db_session):
     """Create a test user and return their UUID as string."""
     from app.db.models import User
@@ -116,6 +123,12 @@ async def test_user(db_session):
         password_hash="hashed123"
     )
     db_session.add(user)
-    await db_session.commit()
+    # flush() sends the INSERT to the DB engine so the row gets a PK and is
+    # visible within this session — but does NOT commit the connection-level
+    # transaction. The rollback in db_session.__aexit__ will still erase this
+    # row after the test, preserving full isolation.
+    # commit() here would punch through the rollback boundary and permanently
+    # write to the SQLite file before the fixture teardown could clean up.
+    await db_session.flush()
     await db_session.refresh(user)
     return user.id
