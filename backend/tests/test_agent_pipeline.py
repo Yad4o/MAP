@@ -366,7 +366,7 @@ async def test_end_to_end_task_status_transitions_and_retrieve(engine, db_sessio
     # 1. Seed
     user = User(email="runner_e2e@test.com", username="e2erunner", password_hash="hash")
     db_session.add(user)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(user)
 
     task = Task(
@@ -376,15 +376,20 @@ async def test_end_to_end_task_status_transitions_and_retrieve(engine, db_sessio
         status="PENDING",
     )
     db_session.add(task)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(task)
     task_id = task.id
 
-    TestSession = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def shared_session_manager():
+        yield db_session
+
     status_at_pipeline_call = {}
 
     async def mock_run_pipeline(self):
-        async with TestSession() as s:
+        async with shared_session_manager() as s:
             row = (await s.execute(select(Task).where(Task.id == task_id))).scalar_one()
             status_at_pipeline_call["status"] = row.status
         return {
@@ -398,7 +403,7 @@ async def test_end_to_end_task_status_transitions_and_retrieve(engine, db_sessio
 
     with patch.object(AgentController, "run_pipeline", mock_run_pipeline), \
          patch.object(AgentController, "__init__", lambda self, task_id, task_description, config=None: None), \
-         patch("app.db.base.AsyncSessionLocal", TestSession):
+         patch("app.db.base.AsyncSessionLocal", shared_session_manager):
         
         # Set task_id manually since we mocked __init__
         # Wait, AgentRunner instantiates AgentController(self.task_id, task.description)
@@ -409,11 +414,14 @@ async def test_end_to_end_task_status_transitions_and_retrieve(engine, db_sessio
         
         runner = AgentRunner(task_id)
         result = await runner.run()
+        
+        # Refresh the task in the test session because the runner's session updated it
+        await db_session.refresh(task)
 
         assert status_at_pipeline_call.get("status") == "PROCESSING"
         assert result["status"] == "COMPLETED"
         
-        async with TestSession() as verify:
+        async with shared_session_manager() as verify:
             final_task = (await verify.execute(select(Task).where(Task.id == task_id))).scalar_one()
         assert final_task.status == "COMPLETED"
         assert final_task.result is not None
