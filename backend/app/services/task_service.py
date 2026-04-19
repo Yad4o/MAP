@@ -122,6 +122,23 @@ class TaskService:
         current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, status)
 
+    async def cancel_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskRead:
+        """Cancel a task if it's not already in a terminal state."""
+        updated = await self.repo.update_status_if_not_terminal(task_id, user_id, TaskStatus.CANCELLED)
+        if updated:
+            return TaskRead.model_validate(updated, from_attributes=True)
+        
+        # Determine failure reason
+        existing = await self.repo.get(task_id)
+        if not existing:
+            raise TaskNotFoundError(task_id)
+        
+        self._verify_ownership(existing, user_id)
+        
+        # Must be terminal state
+        current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
+        raise TaskStateTransitionError(current_status, TaskStatus.CANCELLED)
+
     def _verify_ownership(self, task: Any, user_id: uuid.UUID) -> None:
         """Helper to verify task ownership."""
         if task.user_id != user_id:

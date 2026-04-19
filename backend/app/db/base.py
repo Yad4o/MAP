@@ -12,6 +12,22 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import JSONB, INET
+from sqlalchemy import JSON
+from sqlalchemy.sql import functions
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+@compiles(INET, "sqlite")
+def compile_inet_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
+@compiles(functions.now, "sqlite")
+def compile_now_sqlite(element, compiler, **kw):
+    return "CURRENT_TIMESTAMP"
 
 # ── Engine ────────────────────────────────────────────────────
 # Created once at module load. Shared across all requests.
