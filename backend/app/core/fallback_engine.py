@@ -79,8 +79,20 @@ class FallbackEngine:
     """
     
     def __init__(self):
-        """Initialize FallbackEngine with OpenAI client."""
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        """Initialize FallbackEngine with the appropriate AI client."""
+        # Determine which API key and base URL to use
+        api_key = settings.OPENAI_API_KEY
+        base_url = None
+
+        if settings.GROQ_API_KEY:
+            api_key = settings.GROQ_API_KEY
+            base_url = settings.GROQ_BASE_URL
+        elif settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("gsk_"):
+            # Auto-detect Groq key in OpenAI field
+            api_key = settings.OPENAI_API_KEY
+            base_url = settings.GROQ_BASE_URL
+
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.breakers: Dict[str, CircuitBreaker] = {}
     
     def _get_breaker(self, model: str) -> CircuitBreaker:

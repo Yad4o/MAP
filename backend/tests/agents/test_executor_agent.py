@@ -385,24 +385,26 @@ class TestExecutorAgent:
                 assert "LangGraph dependencies not installed" in result.payload["error"]
 
     @pytest.mark.asyncio
-    async def test_executor_agent_missing_llm(self, executor_agent):
-        """Test ExecutorAgent handles missing LLM in config"""
-        executor_agent.config = {}  # Remove LLM
-        
+    async def test_executor_agent_runs_with_fallback_llm(self, executor_agent):
+        """Test ExecutorAgent runs successfully using FallbackChatModel"""
         message = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=executor_agent.task_id,
             sender="controller",
             recipient="executor",
             message_type="execute_step",
-            payload={}
+            payload={"step": {"description": "Test step"}}
         )
         
-        with patch('agents.executor.executor_agent.HumanMessage') as mock_human:
-            with patch('agents.executor.executor_agent.create_react_agent'):
+        with patch('agents.executor.executor_agent.HumanMessage'):
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
+                mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Success")]}
+                mock_create_agent.return_value = mock_agent
+                
                 result = await executor_agent.run(message)
-                assert result.message_type == "error"
-                assert "No LLM provided in config" in result.payload["error"]
+                assert result.message_type == "step_result"
+                assert result.payload["step_result"]["output"] == "Success"
 
     @pytest.mark.asyncio
     async def test_executor_agent_default_tool_selection(self, executor_agent):
