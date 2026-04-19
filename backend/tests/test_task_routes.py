@@ -72,7 +72,7 @@ def test_create_task(override_dependencies, test_client):
     if response.status_code != 201:
         print(f"Error response: {response.json()}")
     
-    assert response.status_code == 201
+    assert response.status_code == 202
     data = response.json()
     assert data["title"] == "Test Task"
     assert data["description"] == "Test description for task"
@@ -194,6 +194,7 @@ def test_task_response_shapes(override_dependencies, test_client):
     """Test that all endpoints return correct response shapes."""
     # Create task
     create_response = test_client.post("/api/v1/tasks/", json={"title": "Test", "description": "Test description"})
+    assert create_response.status_code == 202
     task_data = create_response.json()
     
     # Test create response shape

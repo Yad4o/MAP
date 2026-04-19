@@ -2,9 +2,6 @@
 db/repositories/task_repo.py
 ─────────────────────────────
 Data access layer for tasks and task_steps.
-
-Phase 0: Signatures only.
-Phase 2 (Member building DB layer): Fill in the implementations.
 """
 
 import uuid
@@ -31,13 +28,14 @@ class TaskRepository(TaskRepositoryProtocol):
         priority: int = 5,
         config: dict | None = None,
     ) -> Task:
-        """Create a new task with individual parameters."""
+        """Create a new task."""
         task = Task(
             user_id=user_id,
             title=title,
             description=description,
             priority=priority,
-            config=config
+            config=config,
+            status=TaskStatus.PENDING.value
         )
         self.db.add(task)
         await self.db.commit()
@@ -64,13 +62,13 @@ class TaskRepository(TaskRepositoryProtocol):
         # Get total count first
         count_query = select(func.count()).select_from(Task).where(Task.user_id == user_id)
         if status is not None:
-            count_query = count_query.where(Task.status == status)
+            count_query = count_query.where(Task.status == status.value if isinstance(status, TaskStatus) else status)
         total = (await self.db.execute(count_query)).scalar_one()
         
         # Get paginated results
-        query = select(Task).options(selectinload(Task.steps)).where(Task.user_id == user_id)
+        query = select(Task).options(selectinload(Task.steps)).where(Task.user_id == user_id).order_by(Task.created_at.desc())
         if status is not None:
-            query = query.where(Task.status == status)
+            query = query.where(Task.status == status.value if isinstance(status, TaskStatus) else status)
         query = query.offset((page - 1) * page_size).limit(page_size)
         result = await self.db.execute(query)
         tasks = result.scalars().all()
@@ -83,7 +81,7 @@ class TaskRepository(TaskRepositoryProtocol):
         status: TaskStatus,
         extra_fields: dict[str, Any] | None = None,
     ) -> None:
-        values = {"status": status}
+        values = {"status": status.value if isinstance(status, TaskStatus) else status}
         if extra_fields is not None:
             values.update(extra_fields)
         await self.db.execute(update(Task).where(Task.id == task_id).values(**values))
@@ -104,41 +102,40 @@ class TaskRepository(TaskRepositoryProtocol):
         await self.db.execute(query)
         await self.db.commit()
 
-    async def get(self, task_id: uuid.UUID) -> Any | None:
+    async def get(self, task_id: uuid.UUID) -> Task | None:
         """Get a task by ID."""
         return await self.get_by_id(task_id)
 
-    async def get_all_by_user(self, user_id: uuid.UUID) -> list:
+    async def get_all_by_user(self, user_id: uuid.UUID) -> list[Task]:
         """Get all tasks for a user."""
-        tasks, _ = await self.list_by_user(user_id)
+        tasks, _ = await self.list_by_user(user_id, page_size=100)
         return tasks
 
-    async def update(self, task_id: uuid.UUID, data: Any) -> Any | None:
+    async def update(self, task_id: uuid.UUID, data: Any) -> Task | None:
         """Update a task."""
-        # For now, this is a basic implementation
         task = await self.get_by_id(task_id)
         if not task:
             return None
         
-        # Update all provided fields dynamically
-        update_data = data.model_dump(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
         for field, value in update_data.items():
-            setattr(task, field, value)
+            if hasattr(task, field):
+                setattr(task, field, value)
         
         await self.db.commit()
         await self.db.refresh(task)
         return task
 
-    async def update_owned(self, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Any | None:
+    async def update_owned(self, task_id: uuid.UUID, user_id: uuid.UUID, data: Any) -> Task | None:
         """Update a task with ownership check."""
         task = await self.get_by_id_and_user(task_id, user_id)
         if not task:
             return None
         
-        # Update all provided fields dynamically
-        update_data = data.model_dump(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True) if hasattr(data, 'model_dump') else data
         for field, value in update_data.items():
-            setattr(task, field, value)
+            if hasattr(task, field):
+                setattr(task, field, value)
         
         await self.db.commit()
         await self.db.refresh(task)
@@ -170,7 +167,7 @@ class TaskRepository(TaskRepositoryProtocol):
         user_id: uuid.UUID,
         new_status: TaskStatus,
     ) -> Task | None:
-        """Atomically update task status only if not in a terminal state (COMPLETED, FAILED, CANCELLED)."""
+        """Atomically update task status only if not in a terminal state."""
         terminal_states = [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.CANCELLED.value]
         
         query = (
@@ -180,7 +177,7 @@ class TaskRepository(TaskRepositoryProtocol):
                 Task.user_id == user_id,
                 Task.status.notin_(terminal_states)
             )
-            .values(status=new_status.value)
+            .values(status=new_status.value if isinstance(new_status, TaskStatus) else new_status)
             .returning(Task)
         )
         
@@ -205,11 +202,29 @@ class TaskStepRepository:
         step_type: str,
         agent_name: str,
         input_payload: dict,
+        title: str | None = None,
     ) -> TaskStep:
-        raise NotImplementedError("Phase 2 — implement this")
+        """Create a new task step."""
+        step = TaskStep(
+            task_id=task_id,
+            step_index=step_index,
+            step_type=step_type,
+            agent_name=agent_name,
+            input_payload=input_payload,
+            title=title or f"Step {step_index}",
+            order=step_index, # Using step_index for order by default
+            status="PENDING"
+        )
+        self.db.add(step)
+        await self.db.commit()
+        await self.db.refresh(step)
+        return step
 
     async def list_by_task(self, task_id: uuid.UUID) -> list[TaskStep]:
-        raise NotImplementedError("Phase 2 — implement this")
+        """List all steps for a task."""
+        query = select(TaskStep).where(TaskStep.task_id == task_id).order_by(TaskStep.order)
+        result = await self.db.execute(query)
+        return result.scalars().all()
 
     async def complete_step(
         self,
@@ -221,4 +236,29 @@ class TaskStepRepository:
         latency_ms: int = 0,
         confidence: float | None = None,
     ) -> None:
-        raise NotImplementedError("Phase 2 — implement this")
+        """Complete a task step."""
+        query = (
+            update(TaskStep)
+            .where(TaskStep.id == step_id)
+            .values(
+                status="COMPLETED",
+                output_payload=output_payload,
+                model_used=model_used,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                latency_ms=latency_ms,
+                confidence=confidence,
+                completed_at=func.now()
+            )
+        )
+        await self.db.execute(query)
+        await self.db.commit()
+
+    async def delete(self, step_id: uuid.UUID) -> bool:
+        """Delete a task step."""
+        step = await self.db.get(TaskStep, step_id)
+        if not step:
+            return False
+        await self.db.delete(step)
+        await self.db.commit()
+        return True
