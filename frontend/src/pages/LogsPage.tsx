@@ -24,8 +24,9 @@ export default function LogsPage() {
   const { data: logs, isLoading, isFetching, isError } = useQuery({
     queryKey: ["logs", level, search],
     queryFn: () => logsApi.getLogs({ level, search }),
-    // Refresh every 5 seconds per instructions
     refetchInterval: 5000,
+    // Don't treat a 404 as a hard error — backend may not have the table yet
+    retry: 1,
   });
 
   // Handle auto-scroll logic

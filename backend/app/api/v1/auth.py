@@ -9,6 +9,7 @@ Phase 1 (Member building API routes): Fill in the implementations
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.api.deps import get_auth_service
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
@@ -54,10 +55,23 @@ async def login(
 
 @router.post("/refresh", response_model=TokenPair)
 async def refresh_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
     service: AuthService = Depends(get_auth_service),
 ):
-    """Rotate refresh token and issue new access token."""
-    raise NotImplementedError("Phase 1 — implement this")
+    """Rotate refresh token and issue a new access token.
+
+    The caller must send the raw refresh token in the Authorization header
+    as: ``Authorization: Bearer <refresh_token>``.
+    """
+    from fastapi import HTTPException
+    from app.core.exceptions import InvalidCredentials
+
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=401, detail="Refresh token required")
+    try:
+        return await service.refresh(credentials.credentials)
+    except (InvalidCredentials, NotImplementedError):
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
 
 @router.post("/logout", status_code=204)

@@ -6,7 +6,7 @@ from app.main import app
 from app.dependencies import get_db
 from app.core.redis import override_redis_client
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def client(db_session):
     async def override_get_db():
         yield db_session
@@ -24,7 +24,7 @@ async def client(db_session):
     app.dependency_overrides.clear()
     override_redis_client(None)
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def create_test_user(client, test_user_data: dict):
     """registers a user via API, logs in, returns auth headers dict"""
     await client.post("/api/v1/auth/register", json=test_user_data)
@@ -35,6 +35,6 @@ async def create_test_user(client, test_user_data: dict):
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def auth_headers(create_test_user):
     return create_test_user

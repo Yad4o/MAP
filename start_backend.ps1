@@ -28,4 +28,5 @@ Write-Host ""
 Write-Host "  Press CTRL+C to stop." -ForegroundColor Gray
 Write-Host ""
 
+$env:PYTHONPATH = "$PSScriptRoot"
 uvicorn app.main:app --reload

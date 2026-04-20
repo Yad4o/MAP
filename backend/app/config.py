@@ -95,3 +95,8 @@ class Settings(BaseSettings):
 
 # Single shared instance — import this everywhere
 settings = Settings()
+
+# FORCE overrides to bypass stale environment variables during hot-reload
+settings.PRIMARY_AI_PROVIDER = "groq"
+settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
+settings.FALLBACK_MODEL = "llama-3.1-8b-instant"

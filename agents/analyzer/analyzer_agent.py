@@ -21,8 +21,8 @@ import uuid
 from agents.analyzer.prompts import ANALYZER_SYSTEM_PROMPT
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage, AgentMetadata
-from backend.app.config import settings
-from backend.app.core.fallback_engine import fallback_engine
+from app.config import settings
+from app.core.fallback_engine import fallback_engine
 
 logger = logging.getLogger(__name__)
 

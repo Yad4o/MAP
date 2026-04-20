@@ -34,10 +34,16 @@ async def _run_agent_task(task_id: str):
             runner = AgentRunner(task_id)
             result = await runner.run()
             
-            # 3. Update status to COMPLETED
-            logger.info(f"Task {task_id}: status -> COMPLETED")
-            await repo.set_result(tid, result)
-            await repo.update_status(tid, TaskStatus.COMPLETED)
+            # 3. Update status based on result
+            final_status = result.get("status", TaskStatus.COMPLETED.value).upper()
+            logger.info(f"Task {task_id}: status -> {final_status}")
+            
+            if final_status == "FAILED":
+                await repo.set_error(tid, result)
+            else:
+                await repo.set_result(tid, result)
+                
+            await repo.update_status(tid, TaskStatus(final_status))
             return result
             
         except Exception as e:
@@ -55,16 +61,21 @@ async def _set_task_failed(task_id: str):
 
 
 def _run_async(coro):
-    """Helper to run a coroutine, handling existing event loops (e.g. in tests)."""
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                return executor.submit(asyncio.run, coro).result()
-        return loop.run_until_complete(coro)
-    except RuntimeError:
-        return asyncio.run(coro)
+    """
+    Run an async coroutine from a sync context safely.
+
+    Celery workers run in a plain thread with no active event loop, so
+    asyncio.run() is always safe there.
+
+    In dev mode (task_always_eager=True) the Celery task is called
+    *inside* FastAPI's event loop.  Calling loop.run_until_complete()
+    on a running loop deadlocks, so we dispatch to a dedicated thread
+    with its own event loop in all cases.
+    """
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(asyncio.run, coro)
+        return future.result()
 
 
 @celery_app.task(

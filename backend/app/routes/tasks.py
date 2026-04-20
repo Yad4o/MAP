@@ -115,3 +115,40 @@ async def cancel_task(
         raise HTTPException(status_code=404, detail="Task not found")
     except TaskStateTransitionError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{task_id}/retry", response_model=TaskRead, status_code=status.HTTP_202_ACCEPTED)
+async def retry_task(
+    task_id: uuid.UUID,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """Re-queue a failed or cancelled task."""
+    try:
+        task = await task_service.get_task(task_id, current_user.id)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    from app.schemas.task import TaskStatus
+    if task.status not in (TaskStatus.FAILED, TaskStatus.CANCELLED):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot retry a task with status '{task.status}'. Only FAILED or CANCELLED tasks can be retried."
+        )
+
+    # Reset status to PENDING and re-dispatch
+    try:
+        from app.db.base import AsyncSessionLocal
+        from app.db.repositories.task_repo import TaskRepository as TR
+        async with AsyncSessionLocal() as db:
+            repo = TR(db)
+            await repo.update_status(task_id, TaskStatus.PENDING)
+            await db.commit()
+    except Exception:
+        pass  # If reset fails we still try to dispatch
+
+    process_task.apply_async(args=[str(task_id)])
+
+    # Return the refreshed task
+    return await task_service.get_task(task_id, current_user.id)
+

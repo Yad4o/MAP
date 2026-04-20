@@ -95,12 +95,63 @@ class AuthService:
 
     async def refresh(self, refresh_token: str) -> TokenPair:
         """
-        1. Look up session by refresh token hash
-        2. Verify not revoked and not expired
-        3. Revoke old session
-        4. Issue new access + refresh tokens
+        1. Find session whose hash matches the incoming raw refresh token.
+        2. Verify it is neither revoked nor expired.
+        3. Revoke the old session (token rotation).
+        4. Issue fresh access + refresh tokens.
         """
-        raise NotImplementedError("Phase 1 — implement this")
+        from app.core.exceptions import InvalidCredentials
+
+        session_repo = SessionRepository(self.db)
+
+        # Brute-force search: iterate active sessions for the token match.
+        # For large-scale deployments, store a short prefix index instead.
+        from sqlalchemy import select
+        from app.db.models.user import Session as SessionModel
+        from sqlalchemy.orm import selectinload
+
+        result = await self.db.execute(
+            select(SessionModel)
+            .where(
+                SessionModel.revoked_at == None,  # noqa: E711
+                SessionModel.expires_at > datetime.utcnow(),
+            )
+            .options(selectinload(SessionModel.user))
+        )
+        sessions = result.scalars().all()
+
+        matched_session = None
+        for s in sessions:
+            if verify_password(refresh_token, s.refresh_token_hash):
+                matched_session = s
+                break
+
+        if not matched_session:
+            raise InvalidCredentials()
+
+        user = matched_session.user
+
+        # Revoke old session
+        await session_repo.revoke(matched_session.id)
+
+        # Issue new tokens
+        raw_refresh_token, refresh_token_hash = generate_refresh_token()
+        access_token, jti, access_expires_at = create_access_token(user.id, user.role)
+
+        session_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        await session_repo.create(
+            user_id=user.id,
+            refresh_token_hash=refresh_token_hash,
+            access_jti=jti,
+            expires_at=session_expires,
+        )
+
+        return TokenPair(
+            access_token=access_token,
+            refresh_token=raw_refresh_token,
+            token_type="bearer",
+            expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
 
     async def logout(self, user_id: uuid.UUID, access_jti: str) -> None:
         """
