@@ -29,6 +29,7 @@ class MockTaskService:
             "retry_count": 0,
             "config": None,
             "created_at": datetime.datetime.utcnow(),
+            "updated_at": None,
             "started_at": None,
             "completed_at": None,
             "result": None,
@@ -75,6 +76,8 @@ class MockTaskService:
             task["priority"] = data.priority
         if data.config is not None:
             task["config"] = data.config
+        
+        task["updated_at"] = datetime.datetime.utcnow()
         
         return TaskRead(**task)
     

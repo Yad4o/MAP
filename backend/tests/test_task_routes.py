@@ -198,7 +198,7 @@ def test_task_response_shapes(override_dependencies, test_client):
     task_data = create_response.json()
     
     # Test create response shape
-    required_fields = {"id", "user_id", "title", "description", "status", "task_type", "priority", "retry_count", "config", "created_at", "started_at", "completed_at", "result", "error"}
+    required_fields = {"id", "user_id", "title", "description", "status", "task_type", "priority", "retry_count", "config", "created_at", "updated_at", "started_at", "completed_at", "result", "error"}
     assert set(task_data.keys()) == required_fields
     
     # Test get response shape

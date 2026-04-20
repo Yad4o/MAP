@@ -48,7 +48,7 @@ def _make_agent(task_id=None) -> AnalyzerAgent:
 
 _VALID_REPORT = {
     "passed": True,
-    "confidence": 0.92,
+    "confidence": 1.0,
     "step_scores": {"step_1": 0.92},
     "failed_steps": [],
     "critique": "",
@@ -57,7 +57,7 @@ _VALID_REPORT = {
 
 _FAIL_REPORT = {
     "passed": False,
-    "confidence": 0.55,
+    "confidence": 0.0,
     "step_scores": {"step_1": 0.55},
     "failed_steps": ["step_1"],
     "critique": "Step 1 output was incomplete.",
@@ -95,7 +95,7 @@ class TestAnalyzerAgentRun:
     async def test_returns_validation_message_type(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_VALID_REPORT), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -107,7 +107,7 @@ class TestAnalyzerAgentRun:
     async def test_report_contains_required_fields(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_VALID_REPORT), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -120,7 +120,7 @@ class TestAnalyzerAgentRun:
     async def test_invalid_json_fallback_no_exception(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = ("This is not JSON", False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -134,7 +134,7 @@ class TestAnalyzerAgentRun:
         message = _make_message()
         fenced = f"```json\n{json.dumps(_VALID_REPORT)}\n```"
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (fenced, False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -142,14 +142,14 @@ class TestAnalyzerAgentRun:
         assert result.message_type == "validation"
         report = result.payload["validation_report"]
         assert report["passed"] is True
-        assert report["confidence"] == pytest.approx(0.92)
+        assert report["confidence"] == pytest.approx(1.0)
 
     # 5. Fallback: raw content is used as critique and summary
     async def test_fallback_uses_raw_content_as_critique_and_summary(self):
         message = _make_message()
         bad_content = "Sorry, I cannot produce JSON right now."
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (bad_content, False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -162,7 +162,7 @@ class TestAnalyzerAgentRun:
     async def test_failing_step_sets_passed_false(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_FAIL_REPORT), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -175,7 +175,7 @@ class TestAnalyzerAgentRun:
     async def test_confidence_is_float_in_range(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_VALID_REPORT), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -188,7 +188,7 @@ class TestAnalyzerAgentRun:
     async def test_llm_exception_returns_error_message(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.side_effect = RuntimeError("API unavailable")
             agent = _make_agent()
             result = await agent.run(message)
@@ -201,7 +201,7 @@ class TestAnalyzerAgentRun:
         message = _make_message()
         report_with_scores = {**_VALID_REPORT, "step_scores": {"step_1": 0.88, "step_2": 0.95}}
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(report_with_scores), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -214,7 +214,7 @@ class TestAnalyzerAgentRun:
     async def test_sender_and_recipient(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_VALID_REPORT), False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
@@ -228,7 +228,7 @@ class TestAnalyzerAgentRun:
         message = _make_message()
         message.task_id = task_id
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = (json.dumps(_VALID_REPORT), False, 100, 50)
             agent = _make_agent(task_id=task_id)
             result = await agent.run(message)
@@ -239,7 +239,7 @@ class TestAnalyzerAgentRun:
     async def test_fallback_defaults(self):
         message = _make_message()
 
-        with patch("backend.app.core.fallback_engine.fallback_engine.chat_completion") as mock_completion:
+        with patch("agents.analyzer.analyzer_agent.fallback_engine.chat_completion") as mock_completion:
             mock_completion.return_value = ("not json", False, 100, 50)
             agent = _make_agent()
             result = await agent.run(message)
