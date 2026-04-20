@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from agents.planner.planner_agent import PlannerAgent
 from agents.executor.executor_agent import ExecutorAgent
 from agents.shared.message import AgentMessage, AgentMetadata
+from app.config import settings
 
 
 class TestPlannerAgentFallback:
@@ -54,7 +55,7 @@ class TestPlannerAgentFallback:
                     # Verify fallback engine was called
                     mock_fallback_engine.chat_completion.assert_called_once()
                     call_args = mock_fallback_engine.chat_completion.call_args
-                    assert call_args[1]['model'] == 'gpt-4o'
+                    assert call_args[1]['model'] == settings.DEFAULT_MODEL
                     assert call_args[1]['temperature'] == 0.7
                     
                     # Verify response structure
