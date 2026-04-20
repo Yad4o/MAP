@@ -107,6 +107,7 @@ class TaskRead(BaseModel):
     retry_count: int
     config: dict[str, Any] | None
     created_at: datetime
+    updated_at: datetime | None = None
     started_at: datetime | None
     completed_at: datetime | None
     result: dict[str, Any] | None
@@ -124,6 +125,7 @@ class TaskResponse(BaseModel):
     priority: int
     retry_count: int
     created_at: datetime
+    updated_at: datetime | None = None
     started_at: datetime | None
     completed_at: datetime | None
 

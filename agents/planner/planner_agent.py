@@ -8,8 +8,8 @@ import json
 import logging
 import time
 import uuid
-from backend.app.config import settings
-from backend.app.core.fallback_engine import fallback_engine
+from app.config import settings
+from app.core.fallback_engine import fallback_engine
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage, AgentMetadata
 from agents.planner.prompts import PLANNER_SYSTEM_PROMPT, build_planner_prompt

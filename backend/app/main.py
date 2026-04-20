@@ -48,29 +48,22 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ───────────────────────────────────────────────
-    # Uncomment each router as it is built in the corresponding phase.
 
     # Phase 1 — Auth
     from app.api.v1.auth import router as auth_router
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
-    # Phase 2 - Tasks
-    # Note: Router has prefix="/tasks" and tags=["tasks"] in routes/tasks.py
-    # Combined with prefix="/api/v1" here results in /api/v1/tasks endpoint
+    # Phase 2 — Tasks
     from app.routes.tasks import router as tasks_router
     app.include_router(tasks_router, prefix="/api/v1")
 
-    # Phase 4 — Agents
-    # from app.api.v1.agents import router as agents_router
-    # app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"])
+    # Phase 3 — Logs (system event stream)
+    from app.api.v1.logs import router as logs_router
+    app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
 
-    # Phase 1+ — Admin, Configs, Logs
-    # from app.api.v1.admin import router as admin_router
-    # from app.api.v1.configs import router as configs_router
-    # from app.api.v1.logs import router as logs_router
-    # app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
-    # app.include_router(configs_router, prefix="/api/v1/configs", tags=["configs"])
-    # app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
+    # Phase 3 — Admin
+    from app.api.v1.admin import router as admin_router
+    app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 
     # ── Health Check ──────────────────────────────────────────
     @app.get("/health", tags=["system"])

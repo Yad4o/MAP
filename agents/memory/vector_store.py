@@ -28,6 +28,8 @@ import numpy as np
 from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -57,14 +59,13 @@ class VectorStore:
         self._locks: dict[str, asyncio.Lock] = {}
 
     @property
-    def _client(self) -> AsyncOpenAI:
+    def _client(self) -> AsyncOpenAI | None:
         if self._initial_client is not None:
             return self._initial_client
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is not set — VectorStore cannot initialize")
-        self._initial_client = AsyncOpenAI(api_key=api_key)
-        return self._initial_client
+        if settings.OPENAI_API_KEY:
+            self._initial_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            return self._initial_client
+        return None
 
     @_client.setter
     def _client(self, value: AsyncOpenAI | None) -> None:
@@ -127,12 +128,17 @@ class VectorStore:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8))
     async def _embed(self, text: str) -> np.ndarray:
-        """Embed a single text string using OpenAI text-embedding-3-small."""
-        response = await self._client.embeddings.create(
-            input=text,
-            model=_EMBEDDING_MODEL,
-        )
-        vector = np.array(response.data[0].embedding, dtype=np.float32)
+        """Embed a single text string using OpenAI."""
+        if self._client:
+            response = await self._client.embeddings.create(
+                input=text,
+                model=_EMBEDDING_MODEL,
+            )
+            vector = np.array(response.data[0].embedding, dtype=np.float32)
+        else:
+            # Fallback for when no API key is available
+            vector = np.zeros(_DIM, dtype=np.float32)
+            
         return vector
 
     # ── Public API ───────────────────────────────────────────────────────────

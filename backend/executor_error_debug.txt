@@ -1,0 +1,59 @@
+Traceback (most recent call last):
+  File "D:\Projects\MAP\agents\executor\executor_agent.py", line 206, in run
+    result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\pregel\__init__.py", line 1604, in ainvoke
+    async for chunk in self.astream(
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\pregel\__init__.py", line 1493, in astream
+    async for _ in runner.atick(
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\pregel\runner.py", line 130, in atick
+    await arun_with_retry(t, retry_policy, stream=self.use_astream)
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\pregel\retry.py", line 102, in arun_with_retry
+    await task.proc.ainvoke(task.input, config)
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\utils\runnable.py", line 428, in ainvoke
+    input = await asyncio.create_task(coro, context=context)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\runnables\base.py", line 4797, in ainvoke
+    return await self._acall_with_config(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\runnables\base.py", line 1991, in _acall_with_config
+    output: Output = await coro_with_context(coro, context)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\runnables\base.py", line 4729, in _ainvoke
+    output = await acall_func_with_variable_args(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langgraph\prebuilt\chat_agent_executor.py", line 462, in acall_model
+    response = await model_runnable.ainvoke(state, config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\runnables\base.py", line 3089, in ainvoke
+    input_ = await coro_with_context(part(), context, create_task=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\runnables\base.py", line 5443, in ainvoke
+    return await self.bound.ainvoke(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 394, in ainvoke
+    llm_result = await self.agenerate_prompt(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 968, in agenerate_prompt
+    return await self.agenerate(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 926, in agenerate
+    raise exceptions[0]
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 1094, in _agenerate_with_cache
+    result = await self._agenerate(
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\langchain_openai\chat_models\base.py", line 858, in _agenerate
+    response = await self.async_client.create(**payload)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\openai\resources\chat\completions.py", line 1661, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\openai\_base_client.py", line 1843, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\openai\_base_client.py", line 1537, in request
+    return await self._request(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "D:\Projects\MAP\backend\venv\Lib\site-packages\openai\_base_client.py", line 1638, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': "Failed to call a function. Please adjust your prompt. See 'failed_generation' for more details.", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '<function=code_interpreter>{"code": "def is_prime(n: int) -> bool:\\n    """Check if a number is prime."""\\n    if n <= 1:\\n        return False\\n    if n == 2:\\n        return True\\n    if n % 2 == 0:\\n        return False\\n    max_divisor = int(n**0.5) + 1\\n    for d in range(3, max_divisor, 2):\\n        if n % d == 0:\\n            return False\\n    return True"}</function>'}}

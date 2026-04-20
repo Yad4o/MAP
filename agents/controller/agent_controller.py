@@ -93,7 +93,7 @@ class AgentController:
         return {
             "status": "COMPLETED" if validation_report.get("passed", True) else "FAILED",
             "plan": plan_dict,
-            "step_results": [msg.payload.get("step_result") for msg in step_results],
+            "step_results": [msg.payload.get("step_result") or msg.payload for msg in step_results],
             "validation": validation_report,
             "summary": validation_report.get("summary", ""),
             "steps_completed": len(step_results)
