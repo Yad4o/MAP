@@ -30,17 +30,33 @@ class FallbackEngine:
     Simplified LLM engine that directly calls the primary model (Groq).
     Keeps the name FallbackEngine for backward compatibility with imports.
     """
-    
+
     def __init__(self):
-        """Initialize with Groq configuration."""
-        api_key = settings.GROQ_API_KEY
-        base_url = settings.GROQ_BASE_URL
-        
-        # If no explicit GROQ_API_KEY, fallback to OPENAI_API_KEY if it's a Groq key
-        if not api_key and settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("gsk_"):
-            api_key = settings.OPENAI_API_KEY
-            
-        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        """Initialize with lazy client creation."""
+        self._client = None
+        self._lock = asyncio.Lock()
+
+    @property
+    async def client(self) -> AsyncOpenAI:
+        """Lazy initialization of the Groq client."""
+        if self._client is None:
+            async with self._lock:
+                if self._client is None:
+                    api_key = settings.GROQ_API_KEY
+                    base_url = settings.GROQ_BASE_URL
+
+                    # If no explicit GROQ_API_KEY, fallback to OPENAI_API_KEY if it's a Groq key
+                    if not api_key and settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("gsk_"):
+                        api_key = settings.OPENAI_API_KEY
+
+                    if not api_key:
+                        raise RuntimeError(
+                            "GROQ_API_KEY is not set. Please set it in your environment or .env file. "
+                            "You can get one at https://console.groq.com/keys"
+                        )
+
+                    self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        return self._client
     
     async def chat_completion(
         self,
@@ -63,10 +79,11 @@ class FallbackEngine:
         """
         request_id = str(uuid.uuid4())[:8]
         logger.info(f"[{request_id}] Calling model directly: {model}")
-        
+
         try:
+            client = await self.client
             response = await asyncio.wait_for(
-                self.client.chat.completions.create(
+                client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,

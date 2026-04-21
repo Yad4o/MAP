@@ -23,7 +23,7 @@ export const getTaskStatus = async (id: string | number): Promise<TaskStatusResp
 };
 
 export const createTask = async (task: TaskCreate): Promise<Task> => {
-  const { data } = await apiClient.post<Task>('/tasks', task);
+  const { data } = await apiClient.post<Task>('/tasks', task, { timeout: 60000 });
   return data;
 };
 
@@ -41,6 +41,6 @@ export const cancelTask = async (id: string | number): Promise<void> => {
 };
 
 export const retryTask = async (id: string | number): Promise<Task> => {
-  const { data } = await apiClient.post<Task>(`/tasks/${id}/retry`);
+  const { data } = await apiClient.post<Task>(`/tasks/${id}/retry`, {}, { timeout: 60000 });
   return data;
 };

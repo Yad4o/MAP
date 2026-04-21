@@ -76,7 +76,7 @@ export const taskHandlers = [
       created_at: new Date().toISOString(),
     }
     mockTasks.push(newTask)
-    return HttpResponse.json<Task>(newTask, { status: 201 })
+    return HttpResponse.json<Task>(newTask, { status: 202 })
   }),
 
   // GET /api/v1/tasks/:id/status — stateful polling

@@ -66,10 +66,10 @@ def test_create_task(override_dependencies, test_client):
         "status": "PENDING",
         "priority": 5
     }
-    
-    response = test_client.post("/api/v1/tasks/", json=task_data)
-    
-    if response.status_code != 201:
+
+    response = test_client.post("/api/v1/tasks", json=task_data)
+
+    if response.status_code != 202:
         print(f"Error response: {response.json()}")
     
     assert response.status_code == 202
@@ -84,7 +84,7 @@ def test_create_task(override_dependencies, test_client):
 
 def test_list_tasks_empty(override_dependencies, test_client):
     """Test listing tasks when no tasks exist."""
-    response = test_client.get("/api/v1/tasks/")
+    response = test_client.get("/api/v1/tasks")
     
     assert response.status_code == 200
     data = response.json()
@@ -98,7 +98,7 @@ async def test_list_tasks_with_tasks(override_dependencies, test_client):
     await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Task 1", description="Description 1"))
     await override_dependencies.create_task(mock_user.id, TaskCreateRequest(title="Task 2", description="Description 2"))
     
-    response = test_client.get("/api/v1/tasks/")
+    response = test_client.get("/api/v1/tasks")
     
     assert response.status_code == 200
     data = response.json()
@@ -193,7 +193,7 @@ def test_delete_task_not_found(override_dependencies, test_client):
 def test_task_response_shapes(override_dependencies, test_client):
     """Test that all endpoints return correct response shapes."""
     # Create task
-    create_response = test_client.post("/api/v1/tasks/", json={"title": "Test", "description": "Test description"})
+    create_response = test_client.post("/api/v1/tasks", json={"title": "Task 1", "description": "Description 1"})
     assert create_response.status_code == 202
     task_data = create_response.json()
     
@@ -206,7 +206,7 @@ def test_task_response_shapes(override_dependencies, test_client):
     assert set(get_response.json().keys()) == required_fields
     
     # Test list response shape
-    list_response = test_client.get("/api/v1/tasks/")
+    list_response = test_client.get("/api/v1/tasks")
     assert isinstance(list_response.json(), list)
     if list_response.json():
         assert set(list_response.json()[0].keys()) == required_fields
