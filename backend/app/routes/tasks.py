@@ -32,10 +32,14 @@ async def create_task(
 ):
     """Create a new task."""
     task = await task_service.create_task(current_user.id, task_data)
-    
+
     # Dispatch Celery job for processing here in the route layer
-    process_task.apply_async(args=[str(task.id)])
-    
+    # In development (eager mode), add a small countdown to ensure
+    # the DB transaction is fully committed before the worker reads it
+    from app.config import settings
+    countdown = 1 if settings.is_development else 0
+    process_task.apply_async(args=[str(task.id)], countdown=countdown)
+
     return task
 
 
@@ -137,17 +141,13 @@ async def retry_task(
         )
 
     # Reset status to PENDING and re-dispatch
-    try:
-        from app.db.base import AsyncSessionLocal
-        from app.db.repositories.task_repo import TaskRepository as TR
-        async with AsyncSessionLocal() as db:
-            repo = TR(db)
-            await repo.update_status(task_id, TaskStatus.PENDING)
-            await db.commit()
-    except Exception:
-        pass  # If reset fails we still try to dispatch
+    from app.schemas.task import TaskStatus
+    await task_service.repo.update_status(task_id, TaskStatus.PENDING)
 
-    process_task.apply_async(args=[str(task_id)])
+    # Add countdown in development mode to ensure DB commit completes
+    from app.config import settings
+    countdown = 1 if settings.is_development else 0
+    process_task.apply_async(args=[str(task_id)], countdown=countdown)
 
     # Return the refreshed task
     return await task_service.get_task(task_id, current_user.id)
