@@ -34,6 +34,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <>
+      {/* ── Celestial Intelligence: Animated Galaxy Background ── */}
+      <div className="galaxy-bg" aria-hidden="true" />
+      <div className="galaxy-orb-3" aria-hidden="true" />
+
       <Toaster />
       <Routes>
         <Route path="/" element={<Navigate to="/tasks" replace />} />
