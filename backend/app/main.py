@@ -10,12 +10,39 @@ Usage:
     uvicorn app.main:app --reload
 """
 
+import logging
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.core.redis_client import init_redis, close_redis
+from app.core.db_logger import setup_database_logging
+
+# Configure logging at application startup
+print("=== CONFIGURING LOGGING ===")
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout,
+)
+
+# Setup database logging for frontend display
+setup_database_logging()
+# Suppress noisy third-party logs
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.CRITICAL)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.CRITICAL)
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+
+# Test logging to verify configuration
+logger = logging.getLogger(__name__)
+logger.info("=== MAP Application Starting ===")
+logger.debug(f"Log level set to: {settings.LOG_LEVEL}")
+logger.info(f"Environment: {settings.APP_ENV}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -71,6 +98,17 @@ def create_app() -> FastAPI:
     async def health():
         """Basic health check. Returns 200 if the app is running."""
         return {"status": "ok", "env": settings.APP_ENV}
+
+    # Test Logging
+    @app.get("/test-logging", tags=["system"])
+    async def test_logging():
+        """Test endpoint to verify logging is working."""
+        logger = logging.getLogger(__name__)
+        logger.info("=== Test log message ===")
+        logger.debug("Debug level test")
+        logger.warning("Warning level test")
+        logger.error("Error level test")
+        return {"message": "Check your terminal for log output"}
 
     return app
 
