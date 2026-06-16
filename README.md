@@ -210,6 +210,27 @@ RS256 JWT with 15-minute access tokens and 30-day refresh tokens. Token revocati
   │ Persists results → PostgreSQL                       │
   └─────────────────────────────────────────────────────┘
 ```
+### LangGraph state graph
+
+```mermaid
+stateDiagram-v2
+    [*] --> Planner
+    Planner --> Executor
+    Executor --> Analyzer : success
+    Executor --> ErrorHandler : failure
+    Analyzer --> Memory : success
+    Analyzer --> ErrorHandler : failure
+    Memory --> [*]
+    ErrorHandler --> [*]
+
+    state Executor {
+        [*] --> Reason
+        Reason --> Act
+        Act --> Observe
+        Observe --> Reason
+        Observe --> [*] : done
+    }
+```
 
 ### Agent Message Format
 
