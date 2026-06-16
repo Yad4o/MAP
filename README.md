@@ -53,7 +53,10 @@ MAP accepts high-level task requests — natural language descriptions of comple
 
 ---
 
+
 ## Architecture
+<img width="2257" height="1670" alt="image" src="https://github.com/user-attachments/assets/fc58a0be-18b4-4027-a799-8232d8020f42" />
+
 
 ```
   ┌──────────────────────────────────────────────────┐
