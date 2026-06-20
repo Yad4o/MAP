@@ -13,8 +13,9 @@ Usage:
 import logging
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from app.config import settings
@@ -66,16 +67,34 @@ def create_app() -> FastAPI:
 
     # ── CORS ──────────────────────────────────────────────────
     # Development: wildcard for convenience.
-    # Production: restrict to the explicit allowlist from CORS_ALLOWED_ORIGINS.
-    cors_origins = ["*"] if settings.is_development else settings.cors_origins_list
+    # Production: explicit allowlist from CORS_ALLOWED_ORIGINS env var.
+    # allow_origin_regex is used as a belt-and-suspenders fallback so that
+    # preflight OPTIONS requests always get an Allow-Origin header even
+    # when the exact origin match misses due to trailing slashes etc.
+    if settings.is_production:
+        cors_origins = settings.cors_origins_list
+        # Build a regex that matches every origin in the list exactly
+        import re
+        escaped = [re.escape(o.rstrip('/')) for o in cors_origins]
+        cors_regex = "^(" + "|".join(escaped) + ")$"
+    else:
+        cors_origins = ["*"]
+        cors_regex = None
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
+        allow_origin_regex=cors_regex,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"],
     )
+
+    # ── 404 handler — ensures CORS headers are present on unknown routes ──
+    @app.exception_handler(404)
+    async def not_found_handler(request: Request, exc):
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
 
     # ── Routers ───────────────────────────────────────────────
 
