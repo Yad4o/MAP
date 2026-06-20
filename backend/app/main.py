@@ -65,10 +65,12 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ──────────────────────────────────────────────────
-    # Flexible CORS for development
+    # Development: wildcard for convenience.
+    # Production: restrict to the explicit allowlist from CORS_ALLOWED_ORIGINS.
+    cors_origins = ["*"] if settings.is_development else settings.cors_origins_list
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

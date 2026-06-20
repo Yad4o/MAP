@@ -96,7 +96,13 @@ class Settings(BaseSettings):
 # Single shared instance — import this everywhere
 settings = Settings()
 
-# FORCE overrides to bypass stale environment variables during hot-reload
-settings.PRIMARY_AI_PROVIDER = "groq"
-settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
-settings.FALLBACK_MODEL = "llama-3.1-8b-instant"
+# ── Development-only overrides ────────────────────────────────
+# These lines force Groq locally so the dev environment uses the
+# free tier without touching the .env every time.
+# In production (APP_ENV=production) the env vars set in Render's
+# dashboard take effect as normal — these lines are skipped.
+if settings.is_development:
+    settings.PRIMARY_AI_PROVIDER = "groq"
+    settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
+    settings.FALLBACK_MODEL = "llama-3.1-8b-instant"
+
