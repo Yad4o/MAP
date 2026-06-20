@@ -77,6 +77,8 @@ def create_app() -> FastAPI:
         escaped_origins = []
         for o in cors_origins:
             o = o.rstrip('/')
+            if not o.startswith('http'):
+                o = 'https://' + o
             escaped_origins.append(re.escape(o))
             # If the origin is a vercel.app domain, also allow all Vercel preview subdomains
             if "vercel.app" in o:
