@@ -26,15 +26,16 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install runtime system deps only
+# Install runtime system deps + supervisord (manages uvicorn + celery in one container)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 && rm -rf /var/lib/apt/lists/*
+    libpq5 supervisor && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
 COPY . .
 
-# Copy entrypoint and make executable before switching to non-root user
+# Copy entrypoint + supervisord config, make entrypoint executable
 COPY entrypoint.sh /entrypoint.sh
+COPY supervisord.conf /app/supervisord.conf
 RUN chmod +x /entrypoint.sh
 
 # Run as non-root user
@@ -43,6 +44,5 @@ USER appuser
 
 EXPOSE 8000
 
-# entrypoint.sh runs: alembic upgrade head → uvicorn
-# The Celery worker overrides this CMD in render.yaml.
+# entrypoint.sh runs: alembic upgrade head → supervisord (uvicorn + celery)
 CMD ["/entrypoint.sh"]
