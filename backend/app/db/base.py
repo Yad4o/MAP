@@ -10,6 +10,7 @@ Phase 1: Uncomment get_db and wire it into FastAPI dependencies.
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.config import settings
 from sqlalchemy.ext.compiler import compiles
@@ -46,10 +47,9 @@ engine_kwargs = {
 
 # Only add pool settings for non-SQLite databases
 if not is_sqlite:
-    engine_kwargs.update({
-        "pool_size": settings.DB_POOL_SIZE,
-        "max_overflow": settings.DB_MAX_OVERFLOW,
-    })
+    # NullPool: no connection reuse — each request gets a fresh connection.
+    # This prevents asyncpg "another operation is in progress" race conditions.
+    engine_kwargs["poolclass"] = NullPool
 
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 
