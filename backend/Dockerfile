@@ -33,11 +33,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy application code
 COPY . .
 
+# Copy entrypoint and make executable before switching to non-root user
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Run as non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
-
+# entrypoint.sh runs: alembic upgrade head → uvicorn
+# The Celery worker overrides this CMD in render.yaml.
+CMD ["/entrypoint.sh"]
