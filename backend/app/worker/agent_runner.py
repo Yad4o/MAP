@@ -36,10 +36,10 @@ class AgentRunner:
         import sys
         from pathlib import Path
         
-        # Ensure project root is in python path so 'agents' can be imported
-        project_root = str(Path(__file__).resolve().parent.parent.parent.parent)
-        if project_root not in sys.path:
-            sys.path.insert(0, project_root)
+        # Ensure backend root is in python path so 'agents' can be imported
+        backend_root = str(Path(__file__).resolve().parent.parent.parent)
+        if backend_root not in sys.path:
+            sys.path.insert(0, backend_root)
 
         from app.db.base import AsyncSessionLocal
         from app.db.repositories.task_repo import TaskRepository
