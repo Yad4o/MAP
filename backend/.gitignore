@@ -1,4 +1,5 @@
 .env
+*.pem
 
 # ignore pytest artifacts
 pytest_*.txt
