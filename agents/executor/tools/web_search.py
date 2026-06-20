@@ -3,17 +3,22 @@ agents/executor/tools/web_search.py
 ────────────────────────────────────
 Web search tool for the Executor Agent.
 
-Phase 0: Stub only.
-Phase 4: Implement using SerpAPI or DuckDuckGo.
+Uses DuckDuckGo (no API key required). Requires the `duckduckgo-search`
+package — see backend/requirements.txt.
 """
 
 import asyncio
+import logging
+
 from langchain.tools import BaseTool
 from pydantic import BaseModel, Field
+
 try:
     from duckduckgo_search import DDGS
 except ImportError:
     DDGS = None
+
+logger = logging.getLogger(__name__)
 
 
 class WebSearchInput(BaseModel):
@@ -32,26 +37,40 @@ class WebSearchTool(BaseTool):
     def _run(self, query: str, num_results: int = 5) -> str:
         """Sync implementation of web search."""
         if DDGS is None:
-            return "Error: duckduckgo-search package not installed. Install with: pip install duckduckgo-search"
-        
+            # Surface this as a clearly-labeled tool error rather than a
+            # plausible-looking result string, so the analyzer/controller
+            # can detect the failure instead of treating it as real data.
+            logger.error(
+                "web_search unavailable: duckduckgo-search not installed "
+                "(pip install -r backend/requirements.txt)"
+            )
+            return (
+                "TOOL_ERROR: web_search is unavailable because the "
+                "'duckduckgo-search' package is not installed on this worker. "
+                "Do not present any URLs or facts from this message as search "
+                "results — none were retrieved. Install with: "
+                "pip install -r backend/requirements.txt"
+            )
+
         try:
             ddgs = DDGS()
             results = ddgs.text(query, max_results=num_results)
-            
+
             if not results:
                 return f"No results found for query: {query}"
-            
+
             formatted_results = []
             for i, result in enumerate(results, 1):
-                title = result.get('title', 'No title')
-                url = result.get('href', 'No URL')
-                summary = result.get('body', 'No summary')
+                title = result.get("title", "No title")
+                url = result.get("href", "No URL")
+                summary = result.get("body", "No summary")
                 formatted_results.append(f"{i}. {title}\n   URL: {url}\n   Summary: {summary}\n")
-            
+
             return "\n".join(formatted_results)
-            
+
         except Exception as e:
-            return f"Error performing web search: {str(e)}"
+            logger.exception("web_search failed for query=%r", query)
+            return f"TOOL_ERROR: web search failed: {e}"
 
     async def _arun(self, query: str, num_results: int = 5) -> str:
         """Async version - runs blocking I/O in thread pool executor."""
