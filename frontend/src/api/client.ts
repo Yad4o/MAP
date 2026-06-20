@@ -12,8 +12,14 @@ import { useAuthStore } from '../store/authStore';
 import { AxiosHeaders } from 'axios';
 
 
+let envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+if (envBaseUrl && !envBaseUrl.endsWith('/api/v1')) {
+  // Automatically fix the URL if the user forgot to add /api/v1
+  envBaseUrl = envBaseUrl.replace(/\/+$/, '') + '/api/v1';
+}
+
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
+  envBaseUrl ??
   (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
   'http://localhost:8000/api/v1';
 
