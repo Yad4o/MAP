@@ -7,6 +7,10 @@
 
 set -e   # exit immediately on any error
 
+# alembic env.py does `from app.config import settings`
+# — PYTHONPATH must include the working dir so Python can find the app package.
+export PYTHONPATH=/app
+
 echo "=== Running database migrations ==="
 alembic upgrade head
 echo "=== Migrations complete ==="
