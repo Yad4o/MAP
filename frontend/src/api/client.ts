@@ -37,6 +37,11 @@ let refreshPromise: Promise<{ access_token: string; refresh_token: string }> | n
 
 apiClient.interceptors.request.use(
   (config) => {
+    // Prevent absolute path override: if url starts with '/', strip it so it appends to baseURL
+    if (config.url && config.url.startsWith('/')) {
+      config.url = config.url.substring(1);
+    }
+    
     const token = useAuthStore.getState().accessToken;
     const headers = AxiosHeaders.from(config.headers);
     if (token && !headers.has('Authorization')) {
