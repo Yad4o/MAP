@@ -73,10 +73,15 @@ def create_app() -> FastAPI:
     # when the exact origin match misses due to trailing slashes etc.
     if settings.is_production:
         cors_origins = settings.cors_origins_list
-        # Build a regex that matches every origin in the list exactly
         import re
-        escaped = [re.escape(o.rstrip('/')) for o in cors_origins]
-        cors_regex = "^(" + "|".join(escaped) + ")$"
+        escaped_origins = []
+        for o in cors_origins:
+            o = o.rstrip('/')
+            escaped_origins.append(re.escape(o))
+            # If the origin is a vercel.app domain, also allow all Vercel preview subdomains
+            if "vercel.app" in o:
+                escaped_origins.append(r"https://.*\.vercel\.app")
+        cors_regex = "^(" + "|".join(escaped_origins) + ")$"
     else:
         cors_origins = ["*"]
         cors_regex = None
