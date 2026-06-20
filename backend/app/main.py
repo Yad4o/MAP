@@ -65,10 +65,12 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ──────────────────────────────────────────────────
-    # Flexible CORS for development
+    # Wildcard in development for convenience; locked to configured
+    # origins (CORS_ALLOWED_ORIGINS) in production. Bearer-token auth
+    # (not cookies) means allow_credentials stays False either way.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["*"] if settings.is_development else settings.cors_origins_list,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
