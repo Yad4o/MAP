@@ -17,7 +17,7 @@ from typing import Dict, Any, List, Optional
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.outputs import ChatResult, ChatGeneration
 from pydantic import Field
@@ -173,13 +173,42 @@ Please use the available tools to complete this step. Provide a clear result whe
             for msg in messages:
                 if AIMessage is not None and hasattr(msg, 'tool_calls') and msg.tool_calls:
                     actual_tool_calls.extend([tc.get('name', 'unknown') for tc in msg.tool_calls])
-            
+
+            # Extract tool call inputs (e.g. the code the agent wrote) and
+            # tool outputs (e.g. code_interpreter's "```python\n...\n```\n\nOutput:\n...").
+            # Without this, only the LLM's closing narration is kept as `output`,
+            # and the actual code/artifacts a tool produced are discarded —
+            # the user sees a description of the function instead of the function.
+            tool_inputs: List[Dict[str, Any]] = []
+            tool_outputs: List[str] = []
+            for msg in messages:
+                if AIMessage is not None and isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                    for tc in msg.tool_calls:
+                        tool_inputs.append({
+                            "tool": tc.get("name", "unknown"),
+                            "args": tc.get("args", {}),
+                        })
+                if isinstance(msg, ToolMessage):
+                    content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    tool_outputs.append(content)
+
+            # Prefer the richest available artifact as the canonical output:
+            # a code_interpreter tool result (which now includes the source
+            # code) is more useful than the LLM's paraphrase of it.
+            code_artifacts = [
+                out for out in tool_outputs if "```" in out or "Output:" in out
+            ]
+            primary_output = code_artifacts[-1] if code_artifacts else final_message
+
             # Build step result
             step_result = {
                 "step_id": step.get("id", "unknown"),
                 "description": step_description,
                 "status": "completed",
-                "output": final_message,
+                "output": primary_output,
+                "summary": final_message,
+                "code_artifacts": code_artifacts,
+                "tool_inputs": tool_inputs,
                 "tool_calls_used": list(dict.fromkeys(actual_tool_calls)),  # Remove duplicates, preserve insertion order
                 "latency_ms": int((end_time - start_time) * 1000),
                 "tokens_used": {
