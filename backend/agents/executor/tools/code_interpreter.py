@@ -21,7 +21,15 @@ class CodeInterpreterTool(BaseTool):
     args_schema: type[BaseModel] = CodeInterpreterInput
 
     def _run(self, code: str) -> str:
-        """Execute Python code in a restricted namespace."""
+        """
+        Execute Python code in a restricted namespace.
+
+        The return value always includes the executed source code
+        (fenced as a code block) followed by its stdout/error output.
+        Without this, the code the agent wrote is discarded the moment
+        exec() returns, leaving only the LLM's narration of what it did
+        — the actual function/script is never visible to the user.
+        """
         # Create a restricted namespace with safe builtins
         safe_builtins = {
             'abs': abs,
@@ -50,31 +58,32 @@ class CodeInterpreterTool(BaseTool):
             'Exception': Exception,
             'NameError': NameError,
         }
-        
+
         # Create restricted globals with math module
         restricted_globals = {
             '__builtins__': safe_builtins,
             'math': __import__('math'),
         }
-        
+
         # Capture stdout
         stdout_buffer = io.StringIO()
-        
+        code_block = f"```python\n{code}\n```"
+
         try:
             with contextlib.redirect_stdout(stdout_buffer):
                 # Execute the code
                 exec(code, restricted_globals, {})
-            
+
             # Get captured output
             output = stdout_buffer.getvalue()
-            
+
             if output.strip():
-                return f"Output:\n{output}"
+                return f"{code_block}\n\nOutput:\n{output}"
             else:
-                return "Code executed successfully (no output)"
-                
+                return f"{code_block}\n\nCode executed successfully (no output)"
+
         except Exception as e:
-            return f"Error executing code: {str(e)}"
+            return f"{code_block}\n\nError executing code: {str(e)}"
 
     async def _arun(self, code: str) -> str:
         """Async version - delegates to sync version."""
