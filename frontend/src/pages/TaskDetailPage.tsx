@@ -13,7 +13,6 @@ import {
   Ban, 
   ChevronDown, 
   ChevronRight,
-  Clipboard,
   AlertCircle,
   Loader2,
   Calendar,
@@ -25,6 +24,7 @@ import {
 } from 'lucide-react';
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
+import TaskResultView from '../components/task/TaskResultView';
 
 /**
  * TaskDetailPage.tsx
@@ -45,7 +45,6 @@ export default function TaskDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: task, isLoading: isQueryLoading, error } = useTaskDetail(id);
-  const [copied, setCopied] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -136,20 +135,6 @@ export default function TaskDetailPage() {
 
   const toggleStep = (stepId: string) => {
     setExpandedSteps(prev => ({ ...prev, [stepId]: !prev[stepId] }));
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard
-      .writeText(JSON.stringify(task.result, null, 2))
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch((err: unknown) => {
-        // Clipboard can fail on HTTP or when browser permission is denied.
-        // A toast notification should replace this in the next pass.
-        console.error('Clipboard write failed:', err);
-      });
   };
 
   return (
@@ -247,19 +232,8 @@ export default function TaskDetailPage() {
                   <FileJson className="w-4 h-4 text-green-400" />
                   <h3 className="font-bold text-sm">Task Result</h3>
                 </div>
-                <button 
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-400"
-                >
-                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Clipboard className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied!' : 'Copy JSON'}
-                </button>
               </div>
-              <div className="p-4 bg-black/30 font-mono text-xs overflow-x-auto max-h-[500px]">
-                <pre className="text-slate-300">
-                  {JSON.stringify(task.result, null, 2)}
-                </pre>
-              </div>
+              <TaskResultView result={task.result} />
             </section>
           )}
 
