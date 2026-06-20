@@ -45,13 +45,18 @@ async def get_logs(
 ):
     """
     Return structured log entries from the database.
-    Admins see all logs; regular users see only their own.
+    Admins see all logs; regular users see system logs (user_id IS NULL)
+    and their own task logs.
     """
+    from sqlalchemy import or_, null
+
     stmt = select(Log).order_by(desc(Log.created_at)).limit(limit)
 
-    # Non-admin users only see their own logs
+    # Non-admin users see system logs (no user attached) + their own logs
     if current_user.role not in ("ADMIN", "SYSTEM"):
-        stmt = stmt.where(Log.user_id == current_user.id)
+        stmt = stmt.where(
+            or_(Log.user_id == None, Log.user_id == current_user.id)  # noqa: E711
+        )
 
     # Filter by level
     if level and level != "ALL":

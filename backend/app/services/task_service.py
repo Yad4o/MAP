@@ -11,7 +11,7 @@ from typing import Any, List
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
-from app.schemas.task import TaskRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskStatusResponse
+from app.schemas.task import TaskRead, TaskDetailRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskStatusResponse
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
 
 
@@ -34,7 +34,7 @@ class TaskService:
         # Use Pydantic's ORM handling with from_attributes=True
         return TaskRead.model_validate(task, from_attributes=True)
 
-    async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskRead:
+    async def get_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskDetailRead:
         """Get a task by ID, validating ownership."""
         task = await self.repo.get(task_id)
         if not task:
@@ -43,7 +43,7 @@ class TaskService:
         self._verify_ownership(task, user_id)
         
         # Use Pydantic's ORM handling with from_attributes=True
-        return TaskRead.model_validate(task, from_attributes=True)
+        return TaskDetailRead.model_validate(task, from_attributes=True)
 
     async def get_task_status(self, task_id: uuid.UUID, user_id: uuid.UUID) -> TaskStatusResponse:
         """Fetch only the task's status, enforcing ownership."""
