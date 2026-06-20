@@ -103,6 +103,19 @@ def create_app() -> FastAPI:
     async def not_found_handler(request: Request, exc):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
+    # ── 500 handler — ensures CORS headers are present on crashes ──
+    import traceback
+    from fastapi.exceptions import RequestValidationError
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "error": str(exc)},
+        )
+
     # ── Routers ───────────────────────────────────────────────
 
     # Phase 1 — Auth
