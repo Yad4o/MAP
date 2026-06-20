@@ -203,7 +203,7 @@ def test_task_response_shapes(override_dependencies, test_client):
     
     # Test get response shape
     get_response = test_client.get(f"/api/v1/tasks/{task_data['id']}")
-    assert set(get_response.json().keys()) == required_fields
+    assert set(get_response.json().keys()) == required_fields | {"steps"}
     
     # Test list response shape
     list_response = test_client.get("/api/v1/tasks")

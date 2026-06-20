@@ -76,6 +76,25 @@ class TaskListParams(BaseModel):
 
 # ── Responses ─────────────────────────────────────────────────
 
+class StepRead(BaseModel):
+    id: UUID
+    step_index: int
+    step_type: str
+    agent_name: str | None
+    status: StepStatus
+    model_used: str | None
+    tokens_in: int | None
+    tokens_out: int | None
+    latency_ms: int | None
+    confidence: float | None
+    input_payload: dict[str, Any] | None
+    output_payload: dict[str, Any] | None
+    created_at: datetime
+    completed_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+
+
 class TaskStepResponse(BaseModel):
     id: UUID
     step_index: int
@@ -114,6 +133,12 @@ class TaskRead(BaseModel):
     error: dict[str, Any] | None
 
     model_config = {"from_attributes": True}
+
+
+class TaskDetailRead(TaskRead):
+    """Task detail schema including execution steps."""
+    steps: list[StepRead] = []
+
 
 
 class TaskResponse(BaseModel):

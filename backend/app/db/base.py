@@ -14,7 +14,7 @@ from sqlalchemy.orm import DeclarativeBase
 from app.config import settings
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import JSONB, INET
-from sqlalchemy import JSON
+from sqlalchemy import JSON, BigInteger
 from sqlalchemy.sql import functions
 
 @compiles(JSONB, "sqlite")
@@ -28,6 +28,10 @@ def compile_inet_sqlite(type_, compiler, **kw):
 @compiles(functions.now, "sqlite")
 def compile_now_sqlite(element, compiler, **kw):
     return "CURRENT_TIMESTAMP"
+
+@compiles(BigInteger, "sqlite")
+def compile_bigint_sqlite(type_, compiler, **kw):
+    return "INTEGER"
 
 # ── Engine ────────────────────────────────────────────────────
 # Created once at module load. Shared across all requests.

@@ -18,10 +18,15 @@ celery_app = Celery(
     include=["app.worker.tasks"],
 )
 
+# Upstash Redis SSL configuration (guard CERT_NONE to development)
+ssl_conf = {}
+if settings.CELERY_BROKER_URL.startswith("rediss://"):
+    ssl_conf["broker_use_ssl"] = {"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED}
+if settings.CELERY_RESULT_BACKEND.startswith("rediss://"):
+    ssl_conf["redis_backend_use_ssl"] = {"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED}
+
 celery_app.conf.update(
-    # Upstash Redis SSL configuration (guard CERT_NONE to development)
-    broker_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED},
-    redis_backend_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE if settings.is_development else ssl.CERT_REQUIRED},
+    **ssl_conf,
 
     # Development: Run tasks synchronously without a worker
     task_always_eager=settings.is_development,

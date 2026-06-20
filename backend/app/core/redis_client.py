@@ -11,10 +11,13 @@ async def init_redis():
         raise RuntimeError("REDIS_URL is not set in settings. Cannot initialise Redis.")
     # Connect to the Upstash URL from settings with SSL cert reqs set to None and decode responses as UTF-8
     # We use ssl.CERT_NONE for ssl_cert_reqs per redis-py API
+    kwargs = {"decode_responses": True}
+    if settings.REDIS_URL.startswith("rediss://"):
+        kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+
     _redis_client = aioredis.from_url(
         settings.REDIS_URL,
-        ssl_cert_reqs=ssl.CERT_NONE,
-        decode_responses=True
+        **kwargs
     )
 
 async def get_redis():

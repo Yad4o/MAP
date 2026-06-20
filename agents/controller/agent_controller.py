@@ -4,13 +4,15 @@ agents/controller/agent_controller.py
 Orchestrates the full agent pipeline for a single task:
   Planner → Executor → Analyzer → Memory
 
-Phase 0: Class skeleton, method signatures only.
-Phase 4: Implement run_pipeline() — dispatch agents in sequence,
-         pass messages between them, handle failures.
+Writes TaskStep records to the DB at each stage so the
+frontend Task Detail page can display live execution steps.
 """
 
 import logging
+import time
 import uuid
+from datetime import datetime, timezone
+
 from agents.shared.message import AgentMessage
 
 from agents.planner.planner_agent import PlannerAgent
@@ -47,13 +49,18 @@ class AgentController:
         5. Send completed results to MemoryAgent → store context
         6. Return final synthesized result dict
         """
+        logger.info(f"[controller] Pipeline starting for task {self.task_id}")
+
         # 1. Planner
         plan_message = await self._run_planner(self.task_description)
         if plan_message.message_type == "error":
-            return {"error": plan_message.payload.get("error", "Planner error"), "status": "FAILED"}
-            
+            err = plan_message.payload.get("error", "Planner error")
+            logger.error(f"[controller] Planner failed: {err}")
+            return {"error": err, "status": "FAILED"}
+
         plan_dict = plan_message.payload.get("plan", {})
         steps = plan_dict.get("steps", [])
+        logger.info(f"[controller] Plan received with {len(steps)} steps")
 
         # 2. Executor loop
         step_results = await self._run_executor(steps)
@@ -61,37 +68,34 @@ class AgentController:
         # 3. Analyzer
         validation_message = await self._run_analyzer(step_results, plan_dict)
         validation_report = validation_message.payload.get("validation_report", {})
-        
+
         # 4. Retry loop (max 2 retries)
         retries = 0
         while retries < 2 and not validation_report.get("passed", True):
             retries += 1
             failed_steps = validation_report.get("failed_steps", [])
             retried_any = False
-            
+
             for i, step in enumerate(steps):
-                # Canonical identifier is the step's declared "id" field (1-based, as used in the plan).
-                # failed_steps from the analyzer must use the same id values.
                 step_id = str(step.get("id", ""))
-                # If failed_steps is empty the analyzer gave no specifics — retry all;
-                # otherwise only retry steps whose canonical id appears in the list.
                 if not failed_steps or step_id in failed_steps:
-                    step_results[i] = await self._execute_step(step)
+                    step_results[i] = await self._execute_step(step, step_index=i)
                     retried_any = True
 
             if not retried_any:
                 break
 
-            # Re-analyze all steps — non-retried results are carried over from the previous pass.
             validation_message = await self._run_analyzer(step_results, plan_dict)
             validation_report = validation_message.payload.get("validation_report", {})
-        
-        # 5. Memory (store) — pass the validation message directly.
+
+        # 5. Memory (store)
         await self._run_memory(validation_message)
-        
-        # Format the final result
+
+        final_status = "COMPLETED" if validation_report.get("passed", True) else "FAILED"
+        logger.info(f"[controller] Pipeline finished for task {self.task_id} — status={final_status}")
+
         return {
-            "status": "COMPLETED" if validation_report.get("passed", True) else "FAILED",
+            "status": final_status,
             "plan": plan_dict,
             "step_results": [msg.payload.get("step_result") or msg.payload for msg in step_results],
             "validation": validation_report,
@@ -99,11 +103,57 @@ class AgentController:
             "steps_completed": len(step_results)
         }
 
+    # ── Helpers ───────────────────────────────────────────────
+
+    async def _persist_step(
+        self,
+        step_index: int,
+        step_type: str,
+        agent_name: str,
+        status: str,
+        input_payload: dict | None = None,
+        output_payload: dict | None = None,
+        model_used: str | None = None,
+        tokens_in: int | None = None,
+        tokens_out: int | None = None,
+        latency_ms: int | None = None,
+        confidence: float | None = None,
+    ) -> None:
+        """Persist a TaskStep record to the database for frontend display."""
+        try:
+            from app.db.base import AsyncSessionLocal
+            from app.db.models.task import TaskStep
+
+            async with AsyncSessionLocal() as db:
+                step = TaskStep(
+                    task_id=self.task_id,
+                    step_index=step_index,
+                    step_type=step_type,
+                    agent_name=agent_name,
+                    status=status,
+                    title=f"Step {step_index + 1}: {agent_name}",
+                    order=step_index,
+                    input_payload=input_payload,
+                    output_payload=output_payload,
+                    model_used=model_used,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                    latency_ms=latency_ms,
+                    confidence=confidence,
+                    completed_at=datetime.now(timezone.utc) if status in ("COMPLETED", "FAILED") else None,
+                )
+                db.add(step)
+                await db.commit()
+                logger.debug(f"[controller] Persisted step {step_index} ({agent_name}) status={status}")
+        except Exception as e:
+            # Never let DB persistence failure break the pipeline
+            logger.warning(f"[controller] Failed to persist step {step_index}: {e}")
+
     async def _run_planner(self, task_description: str) -> AgentMessage:
         """Send task description to planner, return plan message."""
-        # message_type="plan" is the agreed *request* type the PlannerAgent
-        # expects — it is the dispatching key, not a description of content.
-        # See agent message contract in agents/shared/message.py.
+        logger.info(f"[controller] Running PlannerAgent")
+        t0 = time.monotonic()
+
         msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -112,9 +162,26 @@ class AgentController:
             message_type="plan",
             payload={"task_description": task_description}
         )
-        return await self.planner.run(msg)
+        result = await self.planner.run(msg)
+        latency = int((time.monotonic() - t0) * 1000)
 
-    async def _execute_step(self, step: dict) -> AgentMessage:
+        status = "FAILED" if result.message_type == "error" else "COMPLETED"
+        meta = result.payload.get("metadata", {})
+        await self._persist_step(
+            step_index=0,
+            step_type="PLAN",
+            agent_name="PlannerAgent",
+            status=status,
+            input_payload={"task_description": task_description},
+            output_payload=result.payload,
+            model_used=meta.get("model_used"),
+            tokens_in=meta.get("tokens_in"),
+            tokens_out=meta.get("tokens_out"),
+            latency_ms=latency,
+        )
+        return result
+
+    async def _execute_step(self, step: dict, step_index: int = 0) -> AgentMessage:
         """Execute a single step: retrieve memory, call executor."""
         # Memory (retrieve)
         context = []
@@ -133,9 +200,12 @@ class AgentController:
             context_msg = await self.memory.run(retrieve_msg)
             context = context_msg.payload.get("memory_context", [])
         except Exception as e:
-            logger.warning(f"Memory retrieve failed: {e}")
+            logger.warning(f"[controller] Memory retrieve failed: {e}")
 
         # Executor
+        logger.info(f"[controller] Running ExecutorAgent for step {step_index}: {step.get('description', '')[:60]}")
+        t0 = time.monotonic()
+
         exec_msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -144,18 +214,38 @@ class AgentController:
             message_type="execute_step",
             payload={"step": step, "context": context}
         )
-        return await self.executor.run(exec_msg)
+        result = await self.executor.run(exec_msg)
+        latency = int((time.monotonic() - t0) * 1000)
+
+        status = "FAILED" if result.message_type == "error" else "COMPLETED"
+        meta = result.payload.get("metadata", {})
+        await self._persist_step(
+            step_index=step_index + 1,  # +1 because planner is step 0
+            step_type="EXECUTE",
+            agent_name="ExecutorAgent",
+            status=status,
+            input_payload={"step": step},
+            output_payload=result.payload,
+            model_used=meta.get("model_used"),
+            tokens_in=meta.get("tokens_in"),
+            tokens_out=meta.get("tokens_out"),
+            latency_ms=latency,
+        )
+        return result
 
     async def _run_executor(self, steps: list[dict]) -> list[AgentMessage]:
         """Execute each plan step sequentially, return list of step result messages."""
         step_results = []
-        for step in steps:
-            result_msg = await self._execute_step(step)
+        for i, step in enumerate(steps):
+            result_msg = await self._execute_step(step, step_index=i)
             step_results.append(result_msg)
         return step_results
 
     async def _run_analyzer(self, step_results: list[AgentMessage], plan_dict: dict) -> AgentMessage:
         """Validate all step results, return validation message."""
+        logger.info(f"[controller] Running AnalyzerAgent")
+        t0 = time.monotonic()
+
         msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -167,12 +257,29 @@ class AgentController:
                 "plan": plan_dict
             }
         )
-        return await self.analyzer.run(msg)
+        result = await self.analyzer.run(msg)
+        latency = int((time.monotonic() - t0) * 1000)
+
+        status = "FAILED" if result.message_type == "error" else "COMPLETED"
+        meta = result.payload.get("metadata", {})
+        await self._persist_step(
+            step_index=len(step_results) + 1,
+            step_type="ANALYZE",
+            agent_name="AnalyzerAgent",
+            status=status,
+            input_payload={"num_steps": len(step_results)},
+            output_payload=result.payload,
+            model_used=meta.get("model_used"),
+            tokens_in=meta.get("tokens_in"),
+            tokens_out=meta.get("tokens_out"),
+            latency_ms=latency,
+        )
+        return result
 
     async def _run_memory(self, validation_message: AgentMessage | None) -> None:
         """Store task context in vector store using the final validation message."""
         if not validation_message:
-            logger.warning("_run_memory called with no validation_message — memory store skipped.")
+            logger.warning("[controller] _run_memory called with no validation_message — skipped.")
             return
 
         validation_report = validation_message.payload.get("validation_report", {})
@@ -192,6 +299,6 @@ class AgentController:
                 }
             )
             await self.memory.run(store_msg)
+            logger.info(f"[controller] Memory stored for task {self.task_id}")
         except Exception as e:
-            logger.warning(f"Memory store failed: {e}")
-
+            logger.warning(f"[controller] Memory store failed: {e}")

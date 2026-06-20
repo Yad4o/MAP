@@ -20,10 +20,9 @@ class TestFallbackEngine:
     @pytest.fixture
     def fallback_engine_with_mocks(self, mock_openai_client):
         """Create engine with mocked OpenAI client."""
-        with patch('app.core.fallback_engine.AsyncOpenAI') as mock_async_openai:
-            mock_async_openai.return_value = mock_openai_client
-            engine = FallbackEngine()
-            return engine, mock_openai_client
+        engine = FallbackEngine()
+        engine._client = mock_openai_client
+        return engine, mock_openai_client
     
     @pytest.mark.asyncio
     async def test_primary_model_success(self, fallback_engine_with_mocks):

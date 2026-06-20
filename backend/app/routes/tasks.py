@@ -8,7 +8,7 @@ import uuid
 
 from app.db.base import get_db
 from app.dependencies import get_current_user
-from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskStatusResponse
+from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskDetailRead, TaskStatusResponse
 from app.services.task_service import TaskService
 from app.db.repositories.task_repo import TaskRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
@@ -52,7 +52,7 @@ async def list_tasks(
     return await task_service.list_tasks(current_user.id)
 
 
-@router.get("/{task_id}", response_model=TaskRead)
+@router.get("/{task_id}", response_model=TaskDetailRead)
 async def get_task(
     task_id: uuid.UUID,
     current_user = Depends(get_current_user),

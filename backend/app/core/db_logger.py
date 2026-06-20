@@ -65,11 +65,26 @@ class DatabaseLogHandler(logging.Handler):
 
 
 def setup_database_logging():
-    """Setup database logging handler."""
+    """Setup database logging handler for the frontend log viewer.
+
+    Attaches to the 'app' and 'agents' namespace loggers so that all
+    child loggers (e.g. app.worker.agent_runner, agents.controller.*) 
+    automatically propagate their records here via the normal logging 
+    hierarchy.  The handler must NOT be attached to the root logger to
+    avoid capturing SQLAlchemy / uvicorn noise that would create a write
+    storm to the logs table.
+    """
     db_handler = DatabaseLogHandler()
-    
-    # Only add to specific loggers to avoid infinite loops
+    db_handler.setLevel(logging.DEBUG)  # capture everything; let the logger decide the level
+
     app_logger = logging.getLogger("app")
     app_logger.addHandler(db_handler)
-    
+
+    agents_logger = logging.getLogger("agents")
+    agents_logger.addHandler(db_handler)
+
+    # Also capture the __main__ logger used during startup
+    main_logger = logging.getLogger("__main__")
+    main_logger.addHandler(db_handler)
+
     return db_handler
