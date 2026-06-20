@@ -13,9 +13,11 @@ import { AxiosHeaders } from 'axios';
 
 
 let envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-if (envBaseUrl && !envBaseUrl.endsWith('/api/v1')) {
-  // Automatically fix the URL if the user forgot to add /api/v1
-  envBaseUrl = envBaseUrl.replace(/\/+$/, '') + '/api/v1';
+if (envBaseUrl) {
+  envBaseUrl = envBaseUrl.replace(/\/+$/, ''); // strip trailing slashes first
+  if (!envBaseUrl.endsWith('/api/v1')) {
+    envBaseUrl += '/api/v1';
+  }
 }
 
 const BASE_URL =
