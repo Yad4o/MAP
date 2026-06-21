@@ -293,6 +293,7 @@ function RadarWheel() {
 }
 
 
+function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <div className="mb-12 text-center">
       <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-[#A1A1AA]">{eyebrow}</p>
