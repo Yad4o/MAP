@@ -41,9 +41,11 @@ function RootRoute() {
 export default function App() {
   return (
     <>
-      {/* ── Celestial Intelligence: Animated Galaxy Background ── */}
-      <div className="galaxy-bg" aria-hidden="true" />
-      <div className="galaxy-orb-3" aria-hidden="true" />
+      {/* Galaxy background removed: it was a leftover from an earlier
+          purple "Celestial Intelligence" theme and is no longer used by
+          any route. It still rendered 4 fixed, infinitely-animating
+          blur(70-80px) layers on every page (including the landing
+          page's WebGL hero), which was a major source of jank. */}
 
       <Toaster />
       <Routes>
