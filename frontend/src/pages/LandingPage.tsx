@@ -15,7 +15,7 @@ import {
   Lock,
   Layers,
   Server,
-  Github,
+  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 
@@ -345,7 +345,7 @@ export default function LandingPage() {
             rel="noreferrer"
             className="btn-secondary"
           >
-            <Github className="w-4 h-4" /> View on GitHub
+            <ExternalLink className="w-4 h-4" /> View on GitHub
           </a>
         </div>
       </section>
