@@ -8,6 +8,7 @@ import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
 import { AuthOrnament } from '../components/auth/AuthOrnament';
+import { AuthLiveField } from '../components/auth/AuthLiveField';
 
 const schema = z
   .object({
@@ -84,6 +85,7 @@ export default function RegisterPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
       <DotGrid />
+      <AuthLiveField />
       <AuthOrnament side="left" />
       <AuthOrnament side="right" />
 
@@ -98,11 +100,19 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-sm py-8">
         {/* Brand mark */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
+            <span className="absolute inset-0 rounded-xl border border-white/10 animate-ping [animation-duration:2.4s]" />
             <Cpu className="h-5 w-5 text-white" />
           </div>
           <h1 className="text-xl font-semibold text-white">Create your account</h1>
           <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
+          <div className="flex items-center gap-1.5 text-[10px] text-[#4f4f4f]">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            System live
+          </div>
         </div>
 
         {serverError && (
