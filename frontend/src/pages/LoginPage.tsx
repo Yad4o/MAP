@@ -22,7 +22,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Cpu } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
@@ -33,6 +33,19 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+// Tiny decorative dots — pure CSS, zero cost
+function DotGrid() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.035]"
+      style={{
+        backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
+    />
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -60,11 +73,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold text-white text-center mb-8">
-          Sign in to MAP
-        </h1>
+    <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
+      <DotGrid />
+
+      {/* Soft glow behind card */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-sm">
+        {/* Brand mark */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
+            <Cpu className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-xl font-semibold text-white">Sign in to MAP</h1>
+          <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
+        </div>
 
         {serverError && (
           <div
@@ -117,7 +145,28 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center mt-6 text-sm text-slate-500">
+        {/* Divider */}
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#1E1E1E]" />
+          <span className="text-xs text-[#444]">or</span>
+          <div className="h-px flex-1 bg-[#1E1E1E]" />
+        </div>
+
+        {/* Feature hints */}
+        <div className="mb-6 rounded-lg border border-[#1E1E1E] bg-white/[0.02] px-4 py-3 space-y-2">
+          {[
+            'Plan → Execute → Validate → Remember',
+            'LangGraph ReAct agent loop',
+            'Real-time task streaming',
+          ].map((hint) => (
+            <p key={hint} className="flex items-center gap-2 text-xs text-[#555]">
+              <span className="h-1 w-1 rounded-full bg-[#333] flex-shrink-0" />
+              {hint}
+            </p>
+          ))}
+        </div>
+
+        <p className="text-center text-sm text-slate-500">
           Don't have an account?{' '}
           <Link to="/register" className="text-white hover:underline underline-offset-2">
             Sign up
