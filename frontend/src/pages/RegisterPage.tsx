@@ -7,6 +7,7 @@ import { Loader2, Cpu } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
+import { AuthOrnament } from '../components/auth/AuthOrnament';
 
 const schema = z
   .object({
@@ -83,6 +84,8 @@ export default function RegisterPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
       <DotGrid />
+      <AuthOrnament side="left" />
+      <AuthOrnament side="right" />
 
       {/* Soft glow behind card */}
       <div
