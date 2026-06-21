@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { LiveSystemPanel } from '../components/landing/LiveSystemPanel';
+import { LiveParticleField } from '../components/landing/LiveParticleField';
 import { PipelineModules } from '../components/landing/PipelineModules';
 import { ArchitectureFlow } from '../components/landing/ArchitectureFlow';
 import { ExecutionTimeline } from '../components/landing/ExecutionTimeline';
@@ -349,7 +350,7 @@ export default function LandingPage() {
 
       {/* ── Hero ── */}
       <section className="relative flex h-[88vh] min-h-[640px] items-center justify-center overflow-hidden border-b border-[#1E1E1E]">
-        <EchoWave />
+        <LiveParticleField />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: 'radial-gradient(ellipse 60% 80% at 38% 50%, transparent 30%, #050505 100%)' }}
