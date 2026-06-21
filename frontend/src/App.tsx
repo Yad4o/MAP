@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import LandingPage from './pages/LandingPage'
 import TaskListPage from './pages/TaskListPage'
 import TaskCreatePage from './pages/TaskCreatePage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -31,6 +32,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function RootRoute() {
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  if (isAuthenticated) return <Navigate to="/tasks" replace />
+  return <LandingPage />
+}
+
 export default function App() {
   return (
     <>
@@ -40,7 +47,7 @@ export default function App() {
 
       <Toaster />
       <Routes>
-        <Route path="/" element={<Navigate to="/tasks" replace />} />
+        <Route path="/" element={<RootRoute />} />
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

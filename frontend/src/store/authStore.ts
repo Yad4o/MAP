@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { authApi } from "../api/auth";
+import { getApiErrorMessage } from "../lib/errors";
 import type { UserResponse } from "../types";
 
 interface AuthState {
@@ -57,10 +58,10 @@ export const useAuthStore = create<AuthState>()(
           // Store the user
           get().setUser(user);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Login failed';
+          const errorMessage = getApiErrorMessage(error);
           set({ error: errorMessage });
           get().clearAuth();
-          throw error;
+          throw new Error(errorMessage);
         } finally {
           set({ isLoading: false });
         }

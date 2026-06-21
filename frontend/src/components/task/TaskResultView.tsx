@@ -11,6 +11,7 @@ import {
   Code2,
   Clipboard,
 } from 'lucide-react';
+import { FormattedOutput } from './CodeBlock';
 
 /**
  * TaskResultView.tsx
@@ -54,6 +55,8 @@ interface StepResult {
   description?: string;
   status?: string;
   output?: string;
+  summary?: string;
+  code_artifacts?: string[];
   error?: string;
   agent?: string;
   tool_calls_used?: string[];
@@ -92,7 +95,16 @@ function isRecognizedShape(result: unknown): result is TaskResult {
 }
 
 export default function TaskResultView({ result }: TaskResultViewProps) {
-  const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({});
+  const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>(() => {
+    if (!result || typeof result !== 'object') return {};
+    const r = result as TaskResult;
+    const initial: Record<number, boolean> = {};
+    (r.step_results ?? []).forEach((step, idx) => {
+      const hasCode = !!step.output && /```/.test(step.output);
+      if (hasCode || step.error) initial[idx] = true;
+    });
+    return initial;
+  });
   const [showRawJson, setShowRawJson] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -302,7 +314,13 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
                       {step.output && (
                         <div className="p-3 rounded-lg bg-black/30 border border-white/5">
                           <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Output</p>
-                          <p className="text-xs text-slate-300 whitespace-pre-wrap">{step.output}</p>
+                          <FormattedOutput text={step.output} />
+                        </div>
+                      )}
+                      {step.summary && step.summary !== step.output && (
+                        <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Agent Summary</p>
+                          <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{step.summary}</p>
                         </div>
                       )}
                       {step.trace && step.trace.length > 0 && (

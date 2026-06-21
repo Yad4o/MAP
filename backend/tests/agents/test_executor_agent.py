@@ -25,6 +25,7 @@ from agents.executor.tools.web_search import WebSearchTool
 from agents.executor.tools.file_reader import FileReaderTool
 from agents.executor.tools.code_interpreter import CodeInterpreterTool
 from agents.shared.message import AgentMessage, AgentMetadata
+from langchain_core.messages import AIMessage, ToolMessage
 
 
 class TestWebSearchTool:
@@ -337,6 +338,35 @@ except NameError:
             result = await code_interpreter_tool._arun("test code")
             assert result == "test result"
             mock_run.assert_called_once_with("test code")
+
+    def test_code_interpreter_returns_source_code(self, code_interpreter_tool):
+        """
+        Regression test: the executed source code must be present in the
+        return value, not just stdout. Without this, the tool's return
+        value is discarded the instant exec() finishes and only the LLM's
+        narration of "what it did" survives — the user never sees the
+        actual function/script that was written.
+        """
+        code = "def add_numbers(a, b):\n    return a + b\n\nprint(add_numbers(5, 7))"
+        result = code_interpreter_tool._run(code)
+        assert "def add_numbers(a, b):" in result
+        assert "return a + b" in result
+        assert "12" in result
+
+    def test_code_interpreter_returns_source_code_on_error(self, code_interpreter_tool):
+        """Source code must also be preserved when execution raises, so the
+        user/agent can see exactly what was attempted."""
+        code = "print(undefined_variable)"
+        result = code_interpreter_tool._run(code)
+        assert "print(undefined_variable)" in result
+        assert "Error executing code" in result
+
+    def test_code_interpreter_returns_source_code_on_no_output(self, code_interpreter_tool):
+        """Source code must be preserved even when the code produces no stdout."""
+        code = "def add_numbers(a, b):\n    return a + b"
+        result = code_interpreter_tool._run(code)
+        assert "def add_numbers(a, b):" in result
+        assert "executed successfully" in result.lower()
 
 
 class TestExecutorAgent:
@@ -713,6 +743,84 @@ class TestExecutorAgent:
                 # Verify empty tool_calls when no tools used
                 if not step_result["tool_calls_used"]:
                     assert step_result["tool_calls_used"] == []
+
+    @pytest.mark.asyncio
+    async def test_executor_agent_surfaces_generated_code_in_output(self, executor_agent):
+        """
+        Regression test for: agent describes the code it wrote ("The function
+        `add_numbers` is defined...") instead of showing the code itself.
+
+        Uses real AIMessage/ToolMessage instances (not bare MagicMock) so the
+        isinstance() checks in executor_agent.run() actually engage — this is
+        what distinguishes this test from the older mock-based tests, which
+        intentionally bypass the new code path since they use plain MagicMocks.
+        """
+        message = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=executor_agent.task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={
+                "step": {
+                    "id": "code_step_1",
+                    "description": "Write a function that adds two numbers",
+                    "tool_names": ["code_interpreter"]
+                }
+            }
+        )
+
+        source_code = "def add_numbers(a, b):\n    return a + b\n\nprint(add_numbers(5, 7))"
+        tool_result_content = f"```python\n{source_code}\n```\n\nOutput:\n12\n"
+
+        ai_with_tool_call = AIMessage(
+            content="",
+            tool_calls=[{
+                "name": "code_interpreter",
+                "args": {"code": source_code},
+                "id": "call_1",
+                "type": "tool_call",
+            }],
+        )
+        tool_result_message = ToolMessage(
+            content=tool_result_content,
+            tool_call_id="call_1",
+        )
+        final_narration = AIMessage(
+            content="The function `add_numbers` is defined to take two parameters and returns their sum."
+        )
+
+        with patch('agents.executor.executor_agent.HumanMessage'):
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
+                mock_agent.ainvoke.return_value = {
+                    "messages": [ai_with_tool_call, tool_result_message, final_narration]
+                }
+                mock_create_agent.return_value = mock_agent
+
+                result = await executor_agent.run(message)
+
+                step_result = result.payload["step_result"]
+
+                # The actual source code must be present in `output`, not
+                # just the LLM's paraphrase of what it did.
+                assert "def add_numbers(a, b):" in step_result["output"]
+                assert "return a + b" in step_result["output"]
+
+                # The narration is preserved separately, not lost.
+                assert "defined to take two parameters" in step_result["summary"]
+
+                # code_artifacts should contain the tool result verbatim.
+                assert any("def add_numbers" in artifact for artifact in step_result["code_artifacts"])
+
+                # tool_inputs should contain the raw code the agent passed in,
+                # independent of whatever the tool returned.
+                assert any(
+                    ti["tool"] == "code_interpreter" and ti["args"].get("code") == source_code
+                    for ti in step_result["tool_inputs"]
+                )
+
+
 
 
 class TestIntegration:
