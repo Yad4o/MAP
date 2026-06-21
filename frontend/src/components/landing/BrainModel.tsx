@@ -18,7 +18,7 @@ export function BrainModel() {
 
   return (
     <Float speed={1.1} rotationIntensity={0.12} floatIntensity={0.5}>
-      <group ref={groupRef} scale={2.5} dispose={null}>
+      <group ref={groupRef} dispose={null}>
         <primitive object={scene} />
       </group>
     </Float>
