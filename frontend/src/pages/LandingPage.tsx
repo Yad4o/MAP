@@ -1,4 +1,3 @@
-import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { LiveSystemPanel } from '../components/landing/LiveSystemPanel';
@@ -11,9 +10,103 @@ import { Terminal } from '../components/landing/Terminal';
 import { SecurityFlow } from '../components/landing/SecurityFlow';
 import { MetricsSection } from '../components/landing/MetricsSection';
 
-// Code-split: three.js + @react-three/fiber + drei stay out of the main bundle
-// and only load once the hero mounts.
-const BrainScene = lazy(() => import('../components/landing/BrainScene'));
+// ─── Lightweight neural-net illustration (pure CSS/SVG, zero WebGL) ──────────
+// Replaces Three.js BrainScene to eliminate hero lag entirely.
+// Pinned to the right half of the hero; invisible on narrow screens.
+function NeuralWeb() {
+  const nodes: { cx: number; cy: number; r: number; delay: number }[] = [
+    { cx: 72, cy: 18, r: 3.5, delay: 0 },
+    { cx: 52, cy: 34, r: 2.5, delay: 0.4 },
+    { cx: 88, cy: 38, r: 2, delay: 0.8 },
+    { cx: 64, cy: 52, r: 4, delay: 0.2 },
+    { cx: 40, cy: 55, r: 2.5, delay: 1.1 },
+    { cx: 82, cy: 62, r: 2, delay: 0.6 },
+    { cx: 58, cy: 72, r: 3, delay: 0.9 },
+    { cx: 76, cy: 80, r: 2.5, delay: 0.3 },
+    { cx: 44, cy: 78, r: 2, delay: 1.4 },
+    { cx: 68, cy: 90, r: 2, delay: 0.7 },
+    { cx: 90, cy: 50, r: 1.5, delay: 1.2 },
+    { cx: 35, cy: 42, r: 1.5, delay: 1.6 },
+  ];
+
+  const edges: [number, number][] = [
+    [0, 1], [0, 2], [1, 3], [2, 3], [1, 4], [3, 5],
+    [3, 6], [4, 8], [5, 7], [6, 7], [6, 8], [7, 9],
+    [2, 10], [1, 11], [11, 4],
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 lg:block">
+      <svg
+        viewBox="0 0 120 110"
+        preserveAspectRatio="xMidYMid meet"
+        className="h-full w-full"
+        aria-hidden="true"
+      >
+        <defs>
+          <radialGradient id="nglow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+          {/* Travelling pulse along edges */}
+          <style>{`
+            @keyframes pulse-edge {
+              0%   { stroke-dashoffset: 60; opacity: 0; }
+              15%  { opacity: 0.55; }
+              85%  { opacity: 0.55; }
+              100% { stroke-dashoffset: 0;  opacity: 0; }
+            }
+            @keyframes node-breathe {
+              0%, 100% { r: var(--rb); opacity: 0.45; }
+              50%       { r: calc(var(--rb) * 1.55); opacity: 0.9; }
+            }
+            .n-edge { stroke-dasharray: 60; animation: pulse-edge 3.6s ease-in-out infinite; }
+            .n-node { animation: node-breathe 3s ease-in-out infinite; }
+          `}</style>
+        </defs>
+
+        {/* Static dim connectors */}
+        {edges.map(([a, b], i) => (
+          <line
+            key={`s${i}`}
+            x1={nodes[a].cx} y1={nodes[a].cy}
+            x2={nodes[b].cx} y2={nodes[b].cy}
+            stroke="#ffffff" strokeOpacity="0.07" strokeWidth="0.6"
+          />
+        ))}
+
+        {/* Animated travelling pulses */}
+        {edges.map(([a, b], i) => (
+          <line
+            key={`e${i}`}
+            x1={nodes[a].cx} y1={nodes[a].cy}
+            x2={nodes[b].cx} y2={nodes[b].cy}
+            stroke="#ffffff" strokeWidth="0.8"
+            className="n-edge"
+            style={{ animationDelay: `${(i * 0.29) % 3.6}s` }}
+          />
+        ))}
+
+        {/* Nodes */}
+        {nodes.map((n, i) => (
+          <circle
+            key={i}
+            cx={n.cx} cy={n.cy}
+            r={n.r}
+            fill="url(#nglow)"
+            className="n-node"
+            style={
+              {
+                '--rb': `${n.r}px`,
+                animationDelay: `${n.delay}s`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
@@ -27,7 +120,7 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
 export default function LandingPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#050505] text-white">
-      {/* Faint engineering grid, present everywhere */}
+      {/* Engineering grid */}
       <div
         className="fixed inset-0 -z-10 opacity-[0.04]"
         style={{
@@ -36,7 +129,7 @@ export default function LandingPage() {
           backgroundSize: '64px 64px',
         }}
       />
-      {/* Subtle film-grain noise */}
+      {/* Film-grain noise */}
       <div
         className="pointer-events-none fixed inset-0 -z-10 opacity-[0.025] mix-blend-overlay"
         style={{
@@ -50,18 +143,10 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <span className="font-semibold tracking-tight">MAP</span>
           <div className="hidden items-center gap-7 text-sm text-[#A1A1AA] sm:flex">
-            <a href="#architecture" className="transition-colors hover:text-white">
-              Architecture
-            </a>
-            <a href="#agents" className="transition-colors hover:text-white">
-              Agents
-            </a>
-            <a href="#terminal" className="transition-colors hover:text-white">
-              Terminal
-            </a>
-            <a href="#security" className="transition-colors hover:text-white">
-              Security
-            </a>
+            <a href="#architecture" className="transition-colors hover:text-white">Architecture</a>
+            <a href="#agents" className="transition-colors hover:text-white">Agents</a>
+            <a href="#terminal" className="transition-colors hover:text-white">Terminal</a>
+            <a href="#security" className="transition-colors hover:text-white">Security</a>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/login" className="px-2 text-sm text-[#A1A1AA] transition-colors hover:text-white">
@@ -77,28 +162,45 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <section className="relative flex h-[88vh] min-h-[640px] items-center justify-center overflow-hidden border-b border-[#1E1E1E]">
-        <div className="absolute inset-0">
-          <Suspense
-            fallback={
-              <div className="flex h-full w-full items-center justify-center">
-                <div className="h-48 w-48 animate-pulse rounded-full border border-[#1E1E1E]" />
-              </div>
-            }
-          >
-            <BrainScene />
-          </Suspense>
-        </div>
+        {/* Neural web — right side decoration, zero WebGL */}
+        <NeuralWeb />
+
+        {/* Radial vignette so text stays readable over the animation */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 60% 80% at 38% 50%, transparent 30%, #050505 100%)',
+          }}
+        />
 
         <LiveSystemPanel />
         <PipelineModules />
 
         <div className="pointer-events-none relative z-10 px-6 text-center">
-          <h1 className="mb-5 text-4xl font-semibold tracking-tight sm:text-6xl">Autonomous AI Workflows.</h1>
-          <p className="mx-auto mb-9 max-w-xl text-base text-[#A1A1AA] sm:text-lg">
+          {/* Pill badge */}
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#1E1E1E] bg-white/[0.04] px-3.5 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="text-xs font-medium text-[#A1A1AA]">Multi-Agent AI Automation Platform</span>
+          </div>
+
+          <h1 className="mb-5 text-4xl font-semibold tracking-tight sm:text-6xl">
+            Autonomous AI Workflows.
+          </h1>
+          <p className="mx-auto mb-3 max-w-xl text-base text-[#A1A1AA] sm:text-lg">
             Designed for planning, execution, validation, and memory across complex AI systems.
           </p>
+          {/* Stat strip */}
+          <div className="mx-auto mb-9 flex max-w-xs items-center justify-center gap-6 text-xs text-[#555]">
+            <span>4 Agents</span>
+            <span className="h-3 w-px bg-[#2E2E2E]" />
+            <span>LangGraph ReAct</span>
+            <span className="h-3 w-px bg-[#2E2E2E]" />
+            <span>FastAPI · Redis</span>
+          </div>
+
           <div className="pointer-events-auto flex items-center justify-center gap-3">
             <Link
               to="/register"
