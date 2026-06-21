@@ -26,6 +26,7 @@ import { Loader2, Cpu } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
+import { AuthOrnament } from '../components/auth/AuthOrnament';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -75,6 +76,8 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
       <DotGrid />
+      <AuthOrnament side="left" />
+      <AuthOrnament side="right" />
 
       {/* Soft glow behind card */}
       <div
