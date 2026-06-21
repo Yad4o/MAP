@@ -11,7 +11,7 @@ export function PipelineModules() {
       {MODULES.map((mod) => (
         <div
           key={mod.name}
-          className={`absolute z-20 hidden items-center gap-2 rounded-lg border border-[#1E1E1E] bg-[#0B0B0B]/80 px-3 py-2 text-xs backdrop-blur-md md:flex ${mod.position}`}
+          className={`absolute z-20 hidden items-center gap-2 rounded-lg border border-[#1E1E1E] bg-[#0B0B0B]/95 px-3 py-2 text-xs md:flex ${mod.position}`}
         >
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ADE80] opacity-60" />
