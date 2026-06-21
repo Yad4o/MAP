@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Cpu } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
@@ -22,9 +22,44 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
+// Tiny decorative dots — pure CSS, zero cost
+function DotGrid() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.035]"
+      style={{
+        backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
+    />
+  );
+}
+
+// Password strength indicator
+function PasswordStrength({ value }: { value: string }) {
+  const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(value)).length;
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const colors = ['', 'bg-red-500', 'bg-yellow-500', 'bg-blue-400', 'bg-emerald-400'];
+  if (!value) return null;
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <div className="flex flex-1 gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={`h-0.5 flex-1 rounded-full transition-colors ${i <= score ? colors[score] : 'bg-[#1E1E1E]'}`}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-[#555]">{labels[score]}</span>
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [passwordValue, setPasswordValue] = useState('');
 
   const {
     register,
@@ -46,9 +81,26 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold text-white text-center mb-8">Create your account</h1>
+    <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
+      <DotGrid />
+
+      {/* Soft glow behind card */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-sm py-8">
+        {/* Brand mark */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
+            <Cpu className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-xl font-semibold text-white">Create your account</h1>
+          <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
+        </div>
 
         {serverError && (
           <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-5 text-sm text-red-300">
@@ -88,8 +140,10 @@ export default function RegisterPage() {
               autoComplete="new-password"
               placeholder="Password"
               aria-invalid={!!errors.password}
+              onChange={(e) => setPasswordValue(e.target.value)}
               className={`w-full rounded-lg bg-white/5 border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-white/30 ${errors.password ? 'border-red-500/50' : 'border-white/10'}`}
             />
+            <PasswordStrength value={passwordValue} />
             {errors.password && <p className="text-xs text-red-400 mt-1.5">{errors.password.message}</p>}
           </div>
 
@@ -113,6 +167,15 @@ export default function RegisterPage() {
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create account'}
           </button>
         </form>
+
+        {/* Micro trust badges */}
+        <div className="mt-5 flex items-center justify-center gap-4 text-[10px] text-[#444]">
+          <span>Local-first</span>
+          <span className="h-3 w-px bg-[#1E1E1E]" />
+          <span>No card required</span>
+          <span className="h-3 w-px bg-[#1E1E1E]" />
+          <span>Open platform</span>
+        </div>
 
         <p className="text-center mt-6 text-sm text-slate-500">
           Already have an account?{' '}
