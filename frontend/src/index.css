@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -249,6 +249,7 @@
 
   /* ── Gradient Page Title ── */
   .gradient-title {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
     background: var(--grad-title);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
