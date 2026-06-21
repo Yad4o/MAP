@@ -23,7 +23,7 @@ export function LiveSystemPanel() {
   }, []);
 
   return (
-    <div className="absolute top-6 right-6 z-20 hidden w-56 rounded-xl border border-[#1E1E1E] bg-[#0B0B0B]/85 p-4 backdrop-blur-md lg:block">
+    <div className="absolute top-6 right-6 z-20 hidden w-56 rounded-xl border border-[#1E1E1E] bg-[#0B0B0B]/95 p-4 lg:block">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[11px] font-semibold tracking-wider text-white">MAP SYSTEM</span>
         <span className="text-[10px] tabular-nums text-[#A1A1AA]">{latency}ms</span>
