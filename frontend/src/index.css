@@ -10,34 +10,34 @@
    ===================================================== */
 
 :root {
-  /* ── Surface Hierarchy ── */
-  --surface:               #140727;
-  --surface-dim:           #140727;
-  --surface-container-low: #190b30;
-  --surface-container:     #201139;
-  --surface-container-high:#271641;
-  --surface-container-highest: #2e1c4b;
-  --surface-bright:        #352254;
-  --surface-variant:       #2e1c4b;
+  /* ── Surface Hierarchy (matches login/register: bg-[#0a0a0a]) ── */
+  --surface:               #0a0a0a;
+  --surface-dim:           #0a0a0a;
+  --surface-container-low: #111111;
+  --surface-container:     #151515;
+  --surface-container-high:#1a1a1a;
+  --surface-container-highest: #1f1f1f;
+  --surface-bright:        #262626;
+  --surface-variant:       #1a1a1a;
 
-  /* ── Brand Colors ── */
-  --primary:               #ba9eff;
-  --primary-dim:           #8455ef;
-  --primary-container:     #ae8dff;
-  --on-primary:            #39008c;
-  --secondary:             #c285fb;
-  --secondary-container:   #622599;
+  /* ── Brand Colors (cyan, matches login/register accent) ── */
+  --primary:               #22d3ee;
+  --primary-dim:           #06b6d4;
+  --primary-container:     #67e8f9;
+  --on-primary:            #003544;
+  --secondary:             #67e8f9;
+  --secondary-container:   #0e7490;
   --tertiary:              #8ce7ff;
-  --on-background:         #eee0ff;
-  --on-surface:            #eee0ff;
-  --on-surface-variant:    #b5a4cd;
-  --outline:               #7e6f95;
-  --outline-variant:       #4f4165;
+  --on-background:         #ffffff;
+  --on-surface:            #ffffff;
+  --on-surface-variant:    #a1a1aa;
+  --outline:               #3f3f46;
+  --outline-variant:       #27272a;
 
   /* ── Signature Gradient ── */
-  --grad-primary: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 55%, #4C1D95 100%);
-  --grad-title:   linear-gradient(135deg, #C4B5FD 0%, #8B5CF6 100%);
-  --grad-cyan:    linear-gradient(135deg, #8ce7ff 0%, #4B0082 100%);
+  --grad-primary: linear-gradient(135deg, #22d3ee 0%, #06b6d4 55%, #0e7490 100%);
+  --grad-title:   linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
+  --grad-cyan:    linear-gradient(135deg, #8ce7ff 0%, #0e7490 100%);
 
   /* ── Glass ── */
   --glass-bg:     rgba(255, 255, 255, 0.04);
@@ -46,8 +46,8 @@
   --glass-saturate: 180%;
 
   /* ── Glow ── */
-  --glow-primary: 0 0 20px rgba(139, 92, 246, 0.55), 0 0 45px rgba(139, 92, 246, 0.25);
-  --glow-primary-intense: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.4);
+  --glow-primary: 0 0 20px rgba(6, 182, 212, 0.55), 0 0 45px rgba(6, 182, 212, 0.25);
+  --glow-primary-intense: 0 0 30px rgba(6, 182, 212, 0.8), 0 0 60px rgba(6, 182, 212, 0.4);
   --glow-cyan: 0 0 20px rgba(140, 231, 255, 0.4);
 
   /* ── Transition ── */
@@ -76,7 +76,7 @@
   }
 
   ::selection {
-    background: rgba(139, 92, 246, 0.35);
+    background: rgba(6, 182, 212, 0.35);
     color: #fff;
   }
 
@@ -86,11 +86,11 @@
   }
   ::-webkit-scrollbar-track { background: var(--surface-container-low); }
   ::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.4);
+    background: rgba(6, 182, 212, 0.4);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.7);
+    background: rgba(6, 182, 212, 0.7);
   }
 }
 
@@ -116,7 +116,7 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       0 20px 60px -15px rgba(0, 0, 0, 0.6),
-      0 0 0 1px rgba(75, 0, 130, 0.1);
+      0 0 0 1px rgba(6, 182, 212, 0.08);
     transition: box-shadow 300ms var(--ease-magnetic), transform 300ms var(--ease-magnetic);
   }
 
@@ -124,14 +124,14 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.15),
       0 25px 70px -15px rgba(0, 0, 0, 0.7),
-      0 0 0 1px rgba(139, 92, 246, 0.2),
-      0 0 30px rgba(139, 92, 246, 0.08);
+      0 0 0 1px rgba(6, 182, 212, 0.2),
+      0 0 30px rgba(6, 182, 212, 0.08);
     transform: translateY(-2px) scale(1.005);
   }
 
   /* ── Elevated Glass (Sidebar / Dialogs) ── */
   .glass-elevated {
-    background: rgba(10, 10, 30, 0.75);
+    background: rgba(10, 10, 10, 0.75);
     backdrop-filter: blur(32px) saturate(200%);
     -webkit-backdrop-filter: blur(32px) saturate(200%);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -203,7 +203,7 @@
     font-size: 0.9375rem;
     color: var(--primary);
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(6, 182, 212, 0.3);
     border-radius: 0.5rem;
     cursor: pointer;
     backdrop-filter: blur(12px);
@@ -212,11 +212,11 @@
   }
 
   .btn-secondary:hover {
-    background: rgba(139, 92, 246, 0.1);
-    border-color: rgba(139, 92, 246, 0.7);
-    box-shadow: 0 0 18px rgba(139, 92, 246, 0.25), inset 0 0 12px rgba(139, 92, 246, 0.05);
+    background: rgba(6, 182, 212, 0.1);
+    border-color: rgba(6, 182, 212, 0.7);
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.25), inset 0 0 12px rgba(6, 182, 212, 0.05);
     transform: translateY(-1px) scale(1.02);
-    color: #c4b5fd;
+    color: #67e8f9;
   }
 
   .btn-secondary:active { transform: scale(0.98); }
@@ -229,7 +229,7 @@
     font-size: 0.9375rem;
     color: var(--on-surface);
     background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(79, 65, 101, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.625rem;
     outline: none;
     transition: border-color 300ms var(--ease-magnetic),
@@ -241,10 +241,10 @@
   .form-input::placeholder { color: var(--on-surface-variant); opacity: 0.7; }
 
   .form-input:focus {
-    background: rgba(20, 7, 39, 0.7);
-    border-color: rgba(139, 92, 246, 0.7);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18),
-                0 0 16px rgba(139, 92, 246, 0.1);
+    background: rgba(10, 10, 10, 0.7);
+    border-color: rgba(6, 182, 212, 0.7);
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.18),
+                0 0 16px rgba(6, 182, 212, 0.1);
   }
 
   /* ── Gradient Page Title ── */
@@ -307,14 +307,14 @@
     height: 10px;
     border-radius: 50%;
     background: var(--primary);
-    box-shadow: 0 0 8px var(--primary), 0 0 16px rgba(139,92,246,0.5);
+    box-shadow: 0 0 8px var(--primary), 0 0 16px rgba(6, 182, 212, 0.5);
     animation: orb-pulse 2.5s ease-in-out infinite;
     flex-shrink: 0;
   }
 
   @keyframes orb-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--primary), 0 0 16px rgba(139,92,246,0.5); }
-    50%       { opacity: 0.6; transform: scale(0.8); box-shadow: 0 0 4px var(--primary), 0 0 8px rgba(139,92,246,0.3); }
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px var(--primary), 0 0 16px rgba(6, 182, 212, 0.5); }
+    50%       { opacity: 0.6; transform: scale(0.8); box-shadow: 0 0 4px var(--primary), 0 0 8px rgba(6, 182, 212, 0.3); }
   }
 
   /* ── Nav Active Pill ── */

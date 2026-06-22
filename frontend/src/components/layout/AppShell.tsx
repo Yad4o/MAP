@@ -38,7 +38,7 @@ export default function AppShell() {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
       isActive
-        ? 'bg-violet-500/15 text-violet-400 shadow-sm shadow-violet-500/5'
+        ? 'bg-cyan-500/15 text-cyan-400 shadow-sm shadow-cyan-500/5'
         : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
     }`;
 
@@ -49,10 +49,10 @@ export default function AppShell() {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <LayoutDashboard size={16} className="text-white" />
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+          <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
             MAP Platform
           </span>
         </div>
@@ -70,7 +70,7 @@ export default function AppShell() {
             className={navLinkClass}
             onClick={() => setSidebarOpen(false)}
           >
-            <item.icon size={18} className="flex-shrink-0 transition-colors group-hover:text-violet-400" />
+            <item.icon size={18} className="flex-shrink-0 transition-colors group-hover:text-cyan-400" />
             <span>{item.label}</span>
           </NavLink>
         ))}
@@ -88,7 +88,7 @@ export default function AppShell() {
                 className={navLinkClass}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon size={18} className="flex-shrink-0 transition-colors group-hover:text-violet-400" />
+                <item.icon size={18} className="flex-shrink-0 transition-colors group-hover:text-cyan-400" />
                 <span>{item.label}</span>
               </NavLink>
             ))}
@@ -99,7 +99,7 @@ export default function AppShell() {
       {/* User Profile Footer */}
       <div className="p-4 border-t border-white/5">
         <div className="flex items-center gap-3 px-2 mb-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 border border-violet-500/20 flex items-center justify-center text-sm font-bold text-violet-300">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500/30 to-cyan-700/30 border border-cyan-500/20 flex items-center justify-center text-sm font-bold text-cyan-300">
             {(user?.username ?? user?.email ?? 'U').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -121,11 +121,11 @@ export default function AppShell() {
   );
 
   return (
-    <div className="flex h-screen w-full bg-[#020617] overflow-hidden">
+    <div className="flex h-screen w-full bg-[#0a0a0a] overflow-hidden">
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 z-40">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center">
             <LayoutDashboard size={14} className="text-white" />
           </div>
           <span className="text-sm font-bold text-slate-200">MAP</span>
@@ -148,7 +148,7 @@ export default function AppShell() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static z-50 top-0 left-0 h-full w-64 flex-shrink-0 bg-slate-900/50 backdrop-blur-xl border-r border-white/5 flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:static z-50 top-0 left-0 h-full w-64 flex-shrink-0 bg-[#0a0a0a]/80 backdrop-blur-xl border-r border-white/5 flex flex-col transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
