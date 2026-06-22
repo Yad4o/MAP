@@ -411,8 +411,19 @@ const PLANS = [
 function PlanTab({ user }: { user: UserResponse | null }) {
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<(typeof PLANS)[0] | null>(null);
+  const setUser = useAuthStore((s) => s.setUser);
 
+  // currentTier is derived from user so it re-renders when setUser is called
   const currentTier = user?.tier ?? "free";
+
+  const handleUpgraded = (newTier: "free" | "pro" | "enterprise") => {
+    if (user) {
+      setUser({ ...user, tier: newTier });
+    }
+    setShowPayModal(false);
+    setSelectedPlan(null);
+    toast.success(`You're now on the ${newTier.charAt(0).toUpperCase() + newTier.slice(1)} plan!`);
+  };
 
   return (
     <div className="space-y-8">
@@ -437,6 +448,11 @@ function PlanTab({ user }: { user: UserResponse | null }) {
             ✓ Pro features active
           </span>
         )}
+        {currentTier === "enterprise" && (
+          <span className="text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 font-semibold">
+            ✓ Enterprise active
+          </span>
+        )}
       </div>
 
       {/* Plan cards */}
@@ -450,13 +466,18 @@ function PlanTab({ user }: { user: UserResponse | null }) {
                 plan.highlight
                   ? "border-indigo-500/30 shadow-lg shadow-indigo-500/10"
                   : ""
-              }`}
+              } ${isCurrent ? "ring-1 ring-indigo-500/20" : ""}`}
             >
               {plan.highlight && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
                     <Sparkles size={10} /> Most Popular
                   </span>
+                </div>
+              )}
+              {isCurrent && (
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">Active</span>
                 </div>
               )}
               <div className="mb-4">
@@ -491,7 +512,7 @@ function PlanTab({ user }: { user: UserResponse | null }) {
                     : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
                 }`}
               >
-                {isCurrent ? "Current Plan" : plan.cta}
+                {isCurrent ? "✓ Current Plan" : plan.cta}
               </button>
             </div>
           );
@@ -508,117 +529,171 @@ function PlanTab({ user }: { user: UserResponse | null }) {
 
       {/* Payment Modal */}
       {showPayModal && selectedPlan && (
-        <PaymentModal plan={selectedPlan} onClose={() => { setShowPayModal(false); setSelectedPlan(null); }} />
+        <PaymentModal
+          plan={selectedPlan}
+          onClose={() => { setShowPayModal(false); setSelectedPlan(null); }}
+          onUpgraded={handleUpgraded}
+        />
       )}
     </div>
   );
 }
 
-function PaymentModal({ plan, onClose }: { plan: typeof PLANS[0]; onClose: () => void }) {
-  const [step, setStep] = useState<"choose" | "card">("choose");
+function PaymentModal({
+  plan,
+  onClose,
+  onUpgraded,
+}: {
+  plan: typeof PLANS[0];
+  onClose: () => void;
+  onUpgraded: (tier: "free" | "pro" | "enterprise") => void;
+}) {
   const [payMethod, setPayMethod] = useState<"card" | "upi">("card");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Controlled inputs
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [upiId, setUpiId] = useState("");
+
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (payMethod === "card") {
+      const digits = cardNumber.replace(/\s/g, "");
+      if (digits.length < 16) errs.cardNumber = "Enter a valid 16-digit card number";
+      if (!expiry.match(/^\d{2}\/\d{2}$/)) errs.expiry = "Format: MM/YY";
+      if (cvv.length < 3) errs.cvv = "Enter 3-digit CVV";
+      if (!cardName.trim()) errs.cardName = "Enter name on card";
+    } else {
+      if (!upiId.includes("@")) errs.upiId = "Enter a valid UPI ID (e.g. name@upi)";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handlePay = () => {
+    if (!validate()) return;
     setSubmitting(true);
+    // Simulate payment processing
     setTimeout(() => {
       setSubmitting(false);
-      setDone(true);
-    }, 1500);
+      onUpgraded(plan.tier);
+    }, 1600);
+  };
+
+  const formatCard = (v: string) =>
+    v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+
+  const formatExpiry = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 4);
+    return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
-      <div className="glass-card max-w-md w-full p-7 space-y-6 shadow-[0_0_80px_rgba(99,102,241,0.15)] ring-1 ring-white/15">
-        {done ? (
-          <div className="text-center space-y-5 py-4">
-            <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto">
-              <CheckCircle2 size={32} className="text-emerald-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Welcome to {plan.name}!</h3>
-              <p className="text-slate-400 text-sm mt-1">Your plan will be activated shortly.</p>
-            </div>
-            <button onClick={onClose} className="w-full py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-400 transition-colors">
-              Done
+      <div className="glass-card max-w-md w-full p-7 space-y-5 shadow-[0_0_80px_rgba(99,102,241,0.15)] ring-1 ring-white/15">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-white">Upgrade to {plan.name}</h3>
+            <p className="text-slate-500 text-xs mt-0.5">{plan.price} · {plan.period}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Payment method toggle */}
+        <div className="flex gap-2">
+          {(["card", "upi"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setPayMethod(m); setErrors({}); }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                payMethod === m
+                  ? "bg-indigo-500/20 border border-indigo-500/40 text-indigo-300"
+                  : "bg-white/[0.03] border border-white/10 text-slate-500 hover:text-white"
+              }`}
+            >
+              {m === "card" ? "💳 Card" : "🇮🇳 UPI"}
             </button>
+          ))}
+        </div>
+
+        {payMethod === "card" ? (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Card Number</label>
+              <input
+                value={cardNumber}
+                onChange={(e) => setCardNumber(formatCard(e.target.value))}
+                placeholder="1234 5678 9012 3456"
+                className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono transition-all ${errors.cardNumber ? "border-red-500/50" : "border-white/10"}`}
+              />
+              {errors.cardNumber && <p className="text-red-400 text-[11px]">{errors.cardNumber}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Expiry</label>
+                <input
+                  value={expiry}
+                  onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                  placeholder="MM/YY"
+                  className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono transition-all ${errors.expiry ? "border-red-500/50" : "border-white/10"}`}
+                />
+                {errors.expiry && <p className="text-red-400 text-[11px]">{errors.expiry}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">CVV</label>
+                <input
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="•••"
+                  className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono transition-all ${errors.cvv ? "border-red-500/50" : "border-white/10"}`}
+                />
+                {errors.cvv && <p className="text-red-400 text-[11px]">{errors.cvv}</p>}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Name on Card</label>
+              <input
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                placeholder="Full name"
+                className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all ${errors.cardName ? "border-red-500/50" : "border-white/10"}`}
+              />
+              {errors.cardName && <p className="text-red-400 text-[11px]">{errors.cardName}</p>}
+            </div>
           </div>
         ) : (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-white">Upgrade to {plan.name}</h3>
-                <p className="text-slate-500 text-xs mt-0.5">{plan.price} {plan.period}</p>
-              </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Payment method selector */}
-            <div className="flex gap-2">
-              {(["card", "upi"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setPayMethod(m)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                    payMethod === m
-                      ? "bg-indigo-500/20 border border-indigo-500/40 text-indigo-300"
-                      : "bg-white/[0.03] border border-white/10 text-slate-500 hover:text-white"
-                  }`}
-                >
-                  {m === "card" ? "💳 Card" : "🇮🇳 UPI"}
-                </button>
-              ))}
-            </div>
-
-            {payMethod === "card" ? (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Card Number</label>
-                  <input placeholder="1234 5678 9012 3456" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Expiry</label>
-                    <input placeholder="MM / YY" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">CVV</label>
-                    <input placeholder="•••" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Name on Card</label>
-                  <input placeholder="Full name" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40" />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">UPI ID</label>
-                  <input placeholder="yourname@upi" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono" />
-                </div>
-                <p className="text-xs text-slate-500">We'll send a payment request to your UPI app.</p>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-              <Shield size={14} className="text-slate-500 flex-shrink-0" />
-              <p className="text-[11px] text-slate-500">Secured by 256-bit encryption. We never store card data.</p>
-            </div>
-
-            <button
-              onClick={handlePay}
-              disabled={submitting}
-              className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 disabled:bg-indigo-500/40 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
-            >
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-              {submitting ? "Processing…" : `Pay ${plan.price}`}
-            </button>
-          </>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">UPI ID</label>
+            <input
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="yourname@upi"
+              className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/40 font-mono transition-all ${errors.upiId ? "border-red-500/50" : "border-white/10"}`}
+            />
+            {errors.upiId && <p className="text-red-400 text-[11px]">{errors.upiId}</p>}
+            <p className="text-xs text-slate-500">A payment request will be sent to your UPI app.</p>
+          </div>
         )}
+
+        <div className="flex items-center gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+          <Shield size={13} className="text-slate-600 flex-shrink-0" />
+          <p className="text-[11px] text-slate-600">256-bit encryption. We never store card details.</p>
+        </div>
+
+        <button
+          onClick={handlePay}
+          disabled={submitting}
+          className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+        >
+          {submitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+          {submitting ? "Processing…" : `Pay ${plan.price}`}
+        </button>
       </div>
     </div>
   );

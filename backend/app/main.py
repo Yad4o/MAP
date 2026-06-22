@@ -134,6 +134,10 @@ def create_app() -> FastAPI:
     from app.api.v1.admin import router as admin_router
     app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 
+    # API Keys
+    from app.api.v1.api_keys import router as api_keys_router
+    app.include_router(api_keys_router, prefix="/api/v1")
+
     # ── Health Check ──────────────────────────────────────────
     @app.get("/health", tags=["system"])
     async def health():
