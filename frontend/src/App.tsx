@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LandingPage from './pages/LandingPage'
 import TaskListPage from './pages/TaskListPage'
 import TaskCreatePage from './pages/TaskCreatePage'
@@ -41,24 +42,18 @@ function RootRoute() {
 export default function App() {
   return (
     <>
-      {/* Galaxy background removed: it was a leftover from an earlier
-          purple "Celestial Intelligence" theme and is no longer used by
-          any route. It still rendered 4 fixed, infinitely-animating
-          blur(70-80px) layers on every page (including the landing
-          page's WebGL hero), which was a major source of jank. */}
-
       <Toaster />
       <Routes>
         <Route path="/" element={<RootRoute />} />
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* All authenticated routes are rendered inside the AppShell layout */}
         <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route path="/tasks" element={<TaskListPage />} />
           <Route path="/tasks/new" element={<TaskCreatePage />} />
-          {/* PR fix: register TaskDetailPage under AppShell for polling, cancel/retry */}
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/logs" element={<LogsPage />} />
