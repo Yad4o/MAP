@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Cpu } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
@@ -24,7 +24,6 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
-// Tiny decorative dots — pure CSS, zero cost
 function DotGrid() {
   return (
     <div
@@ -37,7 +36,6 @@ function DotGrid() {
   );
 }
 
-// Password strength indicator
 function PasswordStrength({ value }: { value: string }) {
   const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(value)).length;
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
@@ -93,16 +91,20 @@ export default function RegisterPage() {
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative w-full max-w-sm py-8">
         {/* Brand mark */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
-            <span className="absolute inset-0 rounded-xl border border-white/10 animate-ping [animation-duration:2.4s]" />
-            <Cpu className="h-5 w-5 text-white" />
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-2xl border border-cyan-400/20 animate-ping [animation-duration:2.4s]" />
+            <img
+              src="/map-logo.png"
+              alt="MAP"
+              className="h-14 w-14 rounded-2xl object-contain drop-shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+            />
           </div>
           <h1 className="text-xl font-semibold text-white">Create your account</h1>
           <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
@@ -191,7 +193,7 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center mt-6 text-sm text-slate-500">
-          Already have an account?{' '}
+          Already have an account?{'  '}
           <Link to="/login" className="text-white hover:underline underline-offset-2">Sign in</Link>
         </p>
       </div>
