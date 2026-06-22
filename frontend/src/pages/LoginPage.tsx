@@ -125,6 +125,15 @@ export default function LoginPage() {
           </div>
 
           <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span />
+              <Link
+                to="/forgot-password"
+                className="text-xs text-[#555] hover:text-[#A1A1AA] transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               {...register('password')}
               type="password"
