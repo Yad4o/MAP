@@ -39,15 +39,15 @@ export function AuthOrnament({ side = 'left' }: { side?: 'left' | 'right' }) {
             .auth-core { animation: auth-core-pulse 3.2s ease-in-out infinite; }
           `}</style>
         </defs>
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#06b6d4" strokeOpacity="0.25" strokeWidth="0.5" />
-        <circle cx="50" cy="50" r="34" fill="none" stroke="#06b6d4" strokeOpacity="0.18" strokeWidth="0.4" />
-        <circle cx="50" cy="50" r="20" fill="none" stroke="#06b6d4" strokeOpacity="0.12" strokeWidth="0.3" />
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#6366f1" strokeOpacity="0.25" strokeWidth="0.5" />
+        <circle cx="50" cy="50" r="34" fill="none" stroke="#6366f1" strokeOpacity="0.18" strokeWidth="0.4" />
+        <circle cx="50" cy="50" r="20" fill="none" stroke="#6366f1" strokeOpacity="0.12" strokeWidth="0.3" />
         <line x1="4" y1="50" x2="96" y2="50" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="0.3" />
         <line x1="50" y1="4" x2="50" y2="96" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="0.3" />
         {noise.map((n, i) => (
-          <circle key={i} cx={n.cx} cy={n.cy} r="0.6" fill="#06b6d4" fillOpacity={n.op} />
+          <circle key={i} cx={n.cx} cy={n.cy} r="0.6" fill="#6366f1" fillOpacity={n.op} />
         ))}
-        <circle cx="50" cy="50" r="2.5" fill="#06b6d4" className="auth-core" />
+        <circle cx="50" cy="50" r="2.5" fill="#6366f1" className="auth-core" />
         <g className="auth-wheel-rim">
           {labels.map((label, i) => {
             const a = (i / labels.length) * 360 - 90;
@@ -60,7 +60,7 @@ export function AuthOrnament({ side = 'left' }: { side?: 'left' | 'right' }) {
                 x={x}
                 y={y}
                 fontSize="2.6"
-                fill="#06b6d4"
+                fill="#6366f1"
                 fillOpacity="0.55"
                 fontFamily="monospace"
                 textAnchor="middle"

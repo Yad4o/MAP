@@ -69,7 +69,7 @@ export default function TaskListPage() {
     return (
       <div className="flex glass-card h-64 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
           <p className="text-sm text-slate-500">Loading tasks…</p>
         </div>
       </div>
@@ -113,8 +113,8 @@ export default function TaskListPage() {
       {/* Empty state */}
       {!tasks || tasks.length === 0 ? (
         <div className="glass-card text-center p-16">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
-            <CheckSquare className="w-8 h-8 text-cyan-400" />
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-5">
+            <CheckSquare className="w-8 h-8 text-indigo-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">No tasks yet</h3>
           <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">
@@ -122,7 +122,7 @@ export default function TaskListPage() {
           </p>
           <Link
             to="/tasks/new"
-            className="text-cyan-400 hover:text-cyan-300 font-medium hover:underline inline-flex items-center gap-1 transition-colors"
+            className="text-indigo-400 hover:text-indigo-300 font-medium hover:underline inline-flex items-center gap-1 transition-colors"
           >
             <Plus size={16} />
             Create Task
@@ -142,7 +142,7 @@ export default function TaskListPage() {
             return (
               <div
                 key={task.id}
-                className="group glass-card p-5 hover:border-cyan-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
+                className="group glass-card p-5 hover:border-indigo-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5"
               >
                 {/* Status badge + delete */}
                 <div className="flex justify-between items-start mb-4">
@@ -197,7 +197,7 @@ export default function TaskListPage() {
                   </span>
                   <Link
                     to={`/tasks/${task.id}`}
-                    className="text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+                    className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
                   >
                     View →
                   </Link>

@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
         }}
       />
 
@@ -42,11 +42,11 @@ export default function ForgotPasswordPage() {
         {/* Brand mark */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="relative flex h-16 w-16 items-center justify-center">
-            <span className="absolute inset-0 rounded-2xl border border-cyan-400/20 animate-ping [animation-duration:2.4s]" />
+            <span className="absolute inset-0 rounded-2xl border border-indigo-400/20 animate-ping [animation-duration:2.4s]" />
             <img
               src="/map-logo.png"
               alt="MAP"
-              className="h-14 w-14 rounded-2xl object-contain drop-shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+              className="h-14 w-14 rounded-2xl object-contain drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
             />
           </div>
           <h1 className="text-xl font-semibold text-white">Reset your password</h1>

@@ -21,25 +21,33 @@ const renderWithProviders = (component: React.ReactElement) => {
 };
 
 describe('TaskCreatePage', () => {
-  it('shows error on empty title submission', async () => {
+  it('shows an error on a too-short submission', async () => {
     renderWithProviders(<TaskCreatePage />);
     const user = userEvent.setup();
 
-    const saveButton = screen.getByRole('button', { name: /save task/i });
-    await user.click(saveButton);
+    const composer = screen.getByPlaceholderText(/summarize last week's support tickets/i);
+    await user.type(composer, 'hi');
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    const sendButton = screen.getByRole('button', { name: /create task/i });
+    expect(sendButton).toBeDisabled();
+
+    // Send button is disabled for very short input, but Enter still
+    // routes through validation so the user gets a helpful message.
+    await user.type(composer, '{Enter}');
+
+    expect(await screen.findByText(/tell me a bit more/i)).toBeInTheDocument();
   });
 
-  it('submits form successfully without errors', async () => {
+  it('submits successfully once a real instruction is typed', async () => {
     renderWithProviders(<TaskCreatePage />);
     const user = userEvent.setup();
 
-    const titleInput = screen.getByLabelText(/title/i);
-    await user.type(titleInput, 'New Test Task');
+    const composer = screen.getByPlaceholderText(/summarize last week's support tickets/i);
+    await user.type(composer, 'Summarize the Q2 onboarding survey results');
 
-    const saveButton = screen.getByRole('button', { name: /save task/i });
-    await user.click(saveButton);
+    const sendButton = screen.getByRole('button', { name: /create task/i });
+    expect(sendButton).toBeEnabled();
+    await user.click(sendButton);
 
     // Error banner must never appear on a valid submission
     await waitFor(() => {
@@ -49,13 +57,13 @@ describe('TaskCreatePage', () => {
     });
   });
 
-  it('renders all form fields', () => {
+  it('renders the composer, priority pills, and back link', () => {
     renderWithProviders(<TaskCreatePage />);
 
-    expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save task/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/summarize last week's support tickets/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^high$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^medium$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^low$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to tasks/i })).toBeInTheDocument();
   });
 });
