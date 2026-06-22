@@ -3,18 +3,6 @@
  * ────────────────────────────────
  * Minimal, chatbot-style login screen — a single centered card, no
  * gradients/mesh/sparkle branding, similar to ChatGPT/Claude's login.
- *
- * Error handling:
- * - getApiErrorMessage() extracts the REAL backend reason (e.g. "Invalid
- *   email or password") instead of Axios's generic "Request failed with
- *   status code 401".
- * - The error is shown two ways at once: inline under the form (so it's
- *   visible immediately, doesn't require noticing a toast) AND as a toast
- *   (so it's visible even if focus/scroll position make the inline banner
- *   easy to miss). Neither approach involves a page reload — submission is
- *   always via handleSubmit, which calls preventDefault() internally.
- * - Network failures (server unreachable) are distinguished from invalid
- *   credentials so the message is accurate either way.
  */
 
 import { useState } from 'react';
@@ -22,7 +10,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Cpu } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
@@ -36,7 +24,6 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// Tiny decorative dots — pure CSS, zero cost
 function DotGrid() {
   return (
     <div
@@ -85,16 +72,20 @@ export default function LoginPage() {
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative w-full max-w-sm">
         {/* Brand mark */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#1E1E1E] bg-white/[0.04]">
-            <span className="absolute inset-0 rounded-xl border border-white/10 animate-ping [animation-duration:2.4s]" />
-            <Cpu className="h-5 w-5 text-white" />
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-2xl border border-cyan-400/20 animate-ping [animation-duration:2.4s]" />
+            <img
+              src="/map-logo.png"
+              alt="MAP"
+              className="h-14 w-14 rounded-2xl object-contain drop-shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+            />
           </div>
           <h1 className="text-xl font-semibold text-white">Sign in to MAP</h1>
           <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
