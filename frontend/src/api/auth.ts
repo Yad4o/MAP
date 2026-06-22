@@ -2,8 +2,6 @@
  * frontend/src/api/auth.ts
  * ─────────────────────────
  * All auth-related API calls.
- * Phase 1: These will call real backend once auth routes are implemented.
- * Until then, they throw — the MSW mock handler intercepts them first.
  */
 
 import apiClient from "./client";
@@ -45,10 +43,14 @@ export const authApi = {
     await apiClient.post("/auth/change-password", data);
   },
 
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post("/auth/reset-password", { email });
+  },
+
   refreshToken: async (refreshToken: string): Promise<TokenPair> => {
-  const res = await apiClient.post("/auth/refresh", {}, {
-    headers: { Authorization: `Bearer ${refreshToken}` },
-  });
-  return res.data;
-},
+    const res = await apiClient.post("/auth/refresh", {}, {
+      headers: { Authorization: `Bearer ${refreshToken}` },
+    });
+    return res.data;
+  },
 };
