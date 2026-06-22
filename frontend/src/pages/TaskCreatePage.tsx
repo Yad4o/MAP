@@ -3,7 +3,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { createTask } from '../api/tasks';
 import { TaskCreate, TaskStatus } from '../types/task';
-import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertTriangle, ArrowUp, Minus, ArrowDown } from 'lucide-react';
+
+const PRIORITY_OPTIONS = [
+  { value: 8, label: 'High', icon: ArrowUp, activeClass: 'bg-red-500/15 border-red-500/40 text-red-300' },
+  { value: 5, label: 'Medium', icon: Minus, activeClass: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
+  { value: 2, label: 'Low', icon: ArrowDown, activeClass: 'bg-slate-500/15 border-slate-500/40 text-slate-300' },
+] as const;
 
 export default function TaskCreatePage() {
   const navigate = useNavigate();
@@ -12,14 +18,19 @@ export default function TaskCreatePage() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<TaskCreate>({
     defaultValues: {
       title: '',
       description: '',
       status: TaskStatus.PENDING,
+      priority: 5,
     },
   });
+
+  const selectedPriority = watch('priority');
 
   const mutation = useMutation({
     mutationFn: createTask,
@@ -39,7 +50,7 @@ export default function TaskCreatePage() {
       <div className="flex items-center gap-4">
         <Link
           to="/tasks"
-          className="p-2.5 text-slate-400 hover:text-white bg-white/5 rounded-xl border border-white/10 hover:border-violet-500/30 hover:bg-violet-500/10 transition-all duration-200"
+          className="p-2.5 text-slate-400 hover:text-white bg-white/5 rounded-xl border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-500/10 transition-all duration-200"
           aria-label="Back to tasks"
         >
           <ArrowLeft size={18} />
@@ -71,7 +82,7 @@ export default function TaskCreatePage() {
               htmlFor="title"
               className="block text-sm font-medium text-slate-300"
             >
-              Title <span className="text-red-400">*</span>
+              What do you need done? <span className="text-red-400">*</span>
             </label>
             <input
               id="title"
@@ -80,7 +91,7 @@ export default function TaskCreatePage() {
                 required: 'Title is required',
                 minLength: { value: 1, message: 'Title is too short' }
               })}
-              placeholder="e.g. Update database schema"
+              placeholder="e.g. Summarize last week's support tickets"
               className={`form-input ${
                 errors.title
                   ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
@@ -125,23 +136,35 @@ export default function TaskCreatePage() {
             )}
           </div>
 
-          {/* Status field */}
+          {/* Priority field */}
           <div className="space-y-2">
-            <label
-              htmlFor="status"
-              className="block text-sm font-medium text-slate-300"
-            >
-              Status
+            <label className="block text-sm font-medium text-slate-300">
+              Priority
             </label>
-            <select
-              id="status"
-              {...register('status')}
-              className="form-input appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
-            >
-              <option value={TaskStatus.PENDING}>Pending</option>
-              <option value={TaskStatus.PROCESSING}>Processing</option>
-              <option value={TaskStatus.COMPLETED}>Completed</option>
-            </select>
+            <div className="grid grid-cols-3 gap-2">
+              {PRIORITY_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isActive = selectedPriority === opt.value;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => setValue('priority', opt.value)}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? opt.activeClass
+                        : 'bg-white/[0.02] border-white/10 text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* status stays PENDING for every new task; priority drives queue ordering */}
+            <input type="hidden" {...register('status')} />
+            <input type="hidden" {...register('priority')} />
           </div>
 
           {/* Actions */}

@@ -2,7 +2,6 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   CheckSquare,
-  LayoutDashboard,
   Clock,
   Terminal,
   Settings,
@@ -49,9 +48,11 @@ export default function AppShell() {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <LayoutDashboard size={16} className="text-white" />
-          </div>
+          <img
+            src="/map-logo.png"
+            alt="MAP"
+            className="w-8 h-8 rounded-lg object-contain"
+          />
           <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
             MAP Platform
           </span>
@@ -125,9 +126,11 @@ export default function AppShell() {
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center">
-            <LayoutDashboard size={14} className="text-white" />
-          </div>
+          <img
+            src="/map-logo.png"
+            alt="MAP"
+            className="w-7 h-7 rounded-lg object-contain"
+          />
           <span className="text-sm font-bold text-slate-200">MAP</span>
         </div>
         <button
