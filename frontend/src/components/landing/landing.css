@@ -1,0 +1,21 @@
+/* =====================================================
+   Landing page styles — scoped under .kimi-landing only.
+   Everything else in the app (login/register/tasks/admin)
+   uses its own design system in src/index.css and is
+   untouched by these rules.
+   ===================================================== */
+
+.kimi-landing {
+  font-family: 'PP Neue Montreal', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.kimi-landing .display-heading {
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #F5F3EE;
+}
