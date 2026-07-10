@@ -23,13 +23,13 @@ from app.core.redis_client import init_redis, close_redis
 from app.core.db_logger import setup_database_logging
 
 # Configure logging at application startup
-print("=== CONFIGURING LOGGING ===")
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout,
 )
+logging.getLogger(__name__).info("=== CONFIGURING LOGGING ===")
 
 # Setup database logging for frontend display
 setup_database_logging()

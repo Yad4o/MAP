@@ -10,6 +10,14 @@ from datetime import datetime
 
 from app.db.models.log import Log
 
+# Deliberately NOT under the "app" or "agents" namespace: those loggers
+# have DatabaseLogHandler attached, and this module's job is to report
+# failures *of* that handler. Logging through "app.*"/"agents.*" here
+# would propagate back into DatabaseLogHandler.emit(), which on a
+# persistent DB outage would spawn a new failure-logging thread per
+# failure, forever. This logger stays on the plain root handler instead.
+_fallback_logger = logging.getLogger("db_logger_fallback")
+
 
 class DatabaseLogHandler(logging.Handler):
     """Synchronous database logger to avoid async issues."""
@@ -27,7 +35,7 @@ class DatabaseLogHandler(logging.Handler):
                 daemon=True
             ).start()
         except Exception as e:
-            print(f"Database logging error: {e}")
+            _fallback_logger.exception(f"Database logging error: {e}")
     
     def _save_log_sync(self, record):
         """Save log record to database synchronously."""
@@ -61,7 +69,7 @@ class DatabaseLogHandler(logging.Handler):
             loop.close()
             
         except Exception as e:
-            print(f"Failed to save log to database: {e}")
+            _fallback_logger.exception(f"Failed to save log to database: {e}")
 
 
 def setup_database_logging():
