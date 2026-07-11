@@ -119,7 +119,7 @@ class TestWebSearchTool:
         """Test WebSearchTool handles missing DDGS dependency"""
         with patch('agents.executor.tools.web_search.DDGS', None):
             result = await web_search_tool._arun("test query")
-            assert "duckduckgo-search package not installed" in result
+            assert "'duckduckgo-search' package is not installed" in result
 
 
 class TestFileReaderTool:
@@ -327,9 +327,16 @@ except NameError:
     print("__import__ not available - sandbox secure")
 """
         result = code_interpreter_tool._run(code)
-        assert "eval not available" in result
-        assert "__import__ not available" in result
-        assert "SECURITY BREACH" not in result
+        # The tool always echoes the input source in a fenced code block
+        # ahead of the real output (see code_interpreter.py docstring), so
+        # asserting against the full `result` false-positives here: the
+        # literal string "SECURITY BREACH" appears in the *source* as an
+        # unexecuted print() argument, even though it never actually runs.
+        # Check only the real execution output instead.
+        output_section = result.split("Output:\n", 1)[-1] if "Output:\n" in result else result
+        assert "eval not available" in output_section
+        assert "__import__ not available" in output_section
+        assert "SECURITY BREACH" not in output_section
 
     @pytest.mark.asyncio
     async def test_code_interpreter_async_wrapper(self, code_interpreter_tool):

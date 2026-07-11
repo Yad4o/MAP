@@ -99,9 +99,14 @@ def create_app() -> FastAPI:
     )
 
     # ── 404 handler — ensures CORS headers are present on unknown routes ──
+    # Preserves the original detail (e.g. "Task not found") set by route
+    # handlers; only falls back to a generic message when the exception
+    # carries no detail of its own (i.e. a route that genuinely doesn't
+    # exist, which Starlette raises without a custom detail).
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc):
-        return JSONResponse(status_code=404, content={"detail": "Not found"})
+        detail = getattr(exc, "detail", None) or "Not found"
+        return JSONResponse(status_code=404, content={"detail": detail})
 
     # ── 500 handler — ensures CORS headers are present on crashes ──
     import traceback
