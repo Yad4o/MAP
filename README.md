@@ -1,5 +1,13 @@
 # MAP — Multi-Agent AI Automation Platform
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Code style: PEP8](https://img.shields.io/badge/code%20style-PEP8-informational.svg)](https://peps.python.org/pep-0008/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 > A production-grade distributed system that automates complex, multi-step intelligent workflows by decomposing them into discrete subtasks executed by specialized AI agents.
 
 ---
@@ -24,6 +32,8 @@
 - [Team](#team)
 - [Environment Variables](#environment-variables)
 - [Advanced Features](#advanced-features)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -652,6 +662,23 @@ See `.env.example` for the full list with descriptions.
 - **Document memory** — Upload PDFs, DOCX, CSV to personal knowledge base; auto-retrieved during task execution
 - **Voice input** — Web Speech API in frontend; optional Whisper API server-side transcription
 - **Agent visualization** — React Flow interactive execution graph with animated steps and clickable detail panels
+
+---
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for
+branch naming, commit conventions, PR expectations, and how code review works
+on this repo. All contributors are expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+Found a security issue? Please don't open a public issue — see
+[SECURITY.md](SECURITY.md) for how to report it privately.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE) — see the LICENSE
+file for the full text.
 
 ---
 
