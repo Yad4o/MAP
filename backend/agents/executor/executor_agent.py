@@ -27,10 +27,9 @@ from agents.executor.tools.web_search import WebSearchTool
 from agents.executor.tools.file_reader import FileReaderTool
 from agents.executor.tools.code_interpreter import CodeInterpreterTool
 
-# Import fallback engine
-from app.core.fallback_engine import fallback_engine
+# Import provider resolver
+from app.core.llm_provider import resolve_credentials, build_chat_model
 from app.config import settings
-from langchain_openai import ChatOpenAI
 
 
 
@@ -108,21 +107,15 @@ class ExecutorAgent(BaseAgent):
             if not tools:
                 tools = [WebSearchTool()]
 
-            # Get the correct API key and Base URL
-            api_key = settings.OPENAI_API_KEY
-            base_url = None
-            if settings.GROQ_API_KEY:
-                api_key = settings.GROQ_API_KEY
-                base_url = settings.GROQ_BASE_URL
-            elif settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("gsk_"):
-                api_key = settings.OPENAI_API_KEY
-                base_url = settings.GROQ_BASE_URL
+            # Resolve provider/key (user's own key first, else platform default)
+            user = payload.get("user")
+            provider = payload.get("provider")
+            creds = resolve_credentials(user=user, provider=provider)
 
-            # Use raw ChatOpenAI instead of FallbackChatModel to support bind_tools
-            llm = ChatOpenAI(
-                api_key=api_key,
-                base_url=base_url,
-                model=settings.DEFAULT_MODEL,
+            # ChatOpenAI/ChatAnthropic here (not fallback_engine) since only
+            # LangChain chat models support bind_tools, needed for the ReAct loop.
+            llm = build_chat_model(
+                creds,
                 temperature=settings.EXECUTOR_TEMPERATURE,
                 max_tokens=settings.MAX_TOKENS,
             )

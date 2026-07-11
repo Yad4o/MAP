@@ -470,6 +470,22 @@ React Flow graph rendered from `task_steps` data. Nodes are color-coded by agent
 | **Secrets** | Environment variables only — never committed to VCS |
 | **Container security** | All containers run as non-root (UID 1000) |
 | **Network isolation** | Internal services unexposed via Docker network policy |
+| **User-provided AI keys (BYOK)** | Encrypted at rest (Fernet, keyed by `ENCRYPTION_KEY`), never logged or returned after creation — only a masked preview |
+
+### Bring Your Own Key (BYOK)
+
+By default, every AI call uses the platform's own key (Groq). A user can
+instead add their own key for Claude, OpenAI, or Gemini via
+`PUT /api/v1/provider-keys`, and it's used for their calls from then on —
+falling back to the platform default if they remove it. See
+`app/core/llm_provider.py` for the resolution logic and
+`app/api/v1/provider_keys.py` for the endpoints.
+
+```
+PUT    /api/v1/provider-keys           { "provider": "anthropic", "api_key": "sk-ant-..." }
+GET    /api/v1/provider-keys           -> [{ "provider": "anthropic", "masked_key": "******ab12", ... }]
+DELETE /api/v1/provider-keys/{provider}
+```
 
 ---
 

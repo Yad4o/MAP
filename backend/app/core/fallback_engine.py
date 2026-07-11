@@ -1,104 +1,102 @@
 """
-fallback_engine.py
------------------
-Fallback LLM engine with circuit breaker pattern.
+core/fallback_engine.py
+────────────────────────
+Chat completion entry point used by the planner (and anything else that
+just wants a text response, no tool binding).
 
-Provides automatic fallback to the configured fallback model when the primary model
-fails or when the circuit breaker is open.
-
-Usage:
-    from backend.app.core.fallback_engine import fallback_engine
-    content, fallback_used, tokens_in, tokens_out = await fallback_engine.chat_completion(
-        messages=[{"role": "system", "content": "..."}, {"role": "user", "content": "..."}],
-        model="gpt-4o",
-        temperature=0.7,
-    )
+Provider/key selection is delegated to llm_provider.resolve_credentials —
+this file no longer hardcodes Groq lookup logic. Pass `user` to let a
+user's own key (Claude, OpenAI, etc.) be used instead of the platform
+default.
 """
 
 import asyncio
 import logging
-import time
 import uuid
-from typing import List, Dict, Any, Tuple
+from typing import Dict, List, Tuple
+
+from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
-from app.config import settings
+
+from app.core.llm_provider import resolve_credentials
+from app.db.models.user import User
 
 logger = logging.getLogger(__name__)
 
+
 class FallbackEngine:
-    """
-    Simplified LLM engine that directly calls the primary model (Groq).
-    Keeps the name FallbackEngine for backward compatibility with imports.
-    """
+    """Kept the name for backward compatibility with existing imports."""
 
-    def __init__(self):
-        """Initialize with lazy client creation."""
-        self._client = None
-        self._lock = asyncio.Lock()
-
-    @property
-    async def client(self) -> AsyncOpenAI:
-        """Lazy initialization of the Groq client."""
-        if self._client is None:
-            async with self._lock:
-                if self._client is None:
-                    api_key = settings.GROQ_API_KEY
-                    base_url = settings.GROQ_BASE_URL
-
-                    # If no explicit GROQ_API_KEY, fallback to OPENAI_API_KEY if it's a Groq key
-                    if not api_key and settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.startswith("gsk_"):
-                        api_key = settings.OPENAI_API_KEY
-
-                    if not api_key:
-                        raise RuntimeError(
-                            "GROQ_API_KEY is not set. Please set it in your environment or .env file. "
-                            "You can get one at https://console.groq.com/keys"
-                        )
-
-                    self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        return self._client
-    
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
-        model: str,
-        temperature: float,
-        max_tokens: int | None = None
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        user: User | None = None,
+        provider: str | None = None,
     ) -> Tuple[str, bool, int, int]:
         """
-        Perform chat completion directly using Groq API.
-        
-        Args:
-            messages: List of message dicts with 'role' and 'content'
-            model: Primary model to use
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate (optional)
-            
-        Returns:
-            Tuple of (response_content, fallback_used (always False), tokens_in, tokens_out)
+        Run a chat completion against the resolved provider.
+
+        Returns (content, fallback_used, tokens_in, tokens_out).
+        `fallback_used` is always False — kept in the signature so
+        existing callers don't need to change.
         """
         request_id = str(uuid.uuid4())[:8]
-        logger.info(f"[{request_id}] Calling model directly: {model}")
+        creds = resolve_credentials(user=user, provider=provider)
+        call_model = model or creds.model
+        logger.info(f"[{request_id}] {creds.provider} ({'byok' if creds.is_byok else 'platform'}) -> {call_model}")
 
         try:
-            client = await self.client
-            response = await asyncio.wait_for(
-                client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens
-                ),
-                timeout=60
-            )
-            usage = response.usage
-            tokens_in = usage.prompt_tokens if usage else 0
-            tokens_out = usage.completion_tokens if usage else 0
-            logger.info(f"[{request_id}] Model succeeded, tokens: {tokens_in}+{tokens_out}")
-            return response.choices[0].message.content, False, tokens_in, tokens_out
+            if creds.provider == "anthropic":
+                content, tokens_in, tokens_out = await self._call_anthropic(
+                    creds, call_model, messages, temperature, max_tokens
+                )
+            else:
+                content, tokens_in, tokens_out = await self._call_openai_compatible(
+                    creds, call_model, messages, temperature, max_tokens
+                )
+            logger.info(f"[{request_id}] succeeded, tokens: {tokens_in}+{tokens_out}")
+            return content, False, tokens_in, tokens_out
         except Exception as error:
-            logger.error(f"[{request_id}] Model call failed: {error}")
-            raise error
+            logger.error(f"[{request_id}] call failed: {error}")
+            raise
+
+    async def _call_openai_compatible(self, creds, model, messages, temperature, max_tokens) -> Tuple[str, int, int]:
+        client = AsyncOpenAI(api_key=creds.api_key, base_url=creds.base_url)
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=model, messages=messages, temperature=temperature, max_tokens=max_tokens
+            ),
+            timeout=60,
+        )
+        usage = response.usage
+        return (
+            response.choices[0].message.content,
+            usage.prompt_tokens if usage else 0,
+            usage.completion_tokens if usage else 0,
+        )
+
+    async def _call_anthropic(self, creds, model, messages, temperature, max_tokens) -> Tuple[str, int, int]:
+        # Anthropic takes the system prompt separately, not as a message.
+        system = "\n".join(m["content"] for m in messages if m["role"] == "system")
+        turns = [m for m in messages if m["role"] != "system"]
+
+        client = AsyncAnthropic(api_key=creds.api_key)
+        response = await asyncio.wait_for(
+            client.messages.create(
+                model=model,
+                system=system or None,
+                messages=turns,
+                temperature=temperature,
+                max_tokens=max_tokens or 4000,
+            ),
+            timeout=60,
+        )
+        content = "".join(block.text for block in response.content if block.type == "text")
+        return content, response.usage.input_tokens, response.usage.output_tokens
+
 
 # Module-level singleton
 fallback_engine = FallbackEngine()
