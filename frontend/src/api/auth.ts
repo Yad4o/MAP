@@ -47,6 +47,10 @@ export const authApi = {
     await apiClient.post("/auth/reset-password", { email });
   },
 
+  confirmResetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post("/auth/reset-password/confirm", { token, new_password: newPassword });
+  },
+
   refreshToken: async (refreshToken: string): Promise<TokenPair> => {
     const res = await apiClient.post("/auth/refresh", {}, {
       headers: { Authorization: `Bearer ${refreshToken}` },
