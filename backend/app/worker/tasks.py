@@ -69,9 +69,14 @@ async def _run_agent_task(task_id: str):
                 
             await repo.update_status(tid, TaskStatus(final_status))
 
-            task = await repo.get_by_id(tid)
-            if task is not None:
-                await _notify_task_result(db, tid, task, final_status, result.get("error"))
+            # Best-effort notification — must never affect task outcome,
+            # even if the repo/session is mocked or the fetch fails.
+            try:
+                task = await repo.get_by_id(tid)
+                if task is not None:
+                    await _notify_task_result(db, tid, task, final_status, result.get("error"))
+            except Exception as notify_exc:
+                logger.warning(f"Task {task_id}: notification step failed: {notify_exc}")
 
             return result
             
@@ -80,9 +85,12 @@ async def _run_agent_task(task_id: str):
             await repo.set_error(tid, {"error": str(e)})
             await repo.update_status(tid, TaskStatus.FAILED)
 
-            task = await repo.get_by_id(tid)
-            if task is not None:
-                await _notify_task_result(db, tid, task, "FAILED", str(e))
+            try:
+                task = await repo.get_by_id(tid)
+                if task is not None:
+                    await _notify_task_result(db, tid, task, "FAILED", str(e))
+            except Exception as notify_exc:
+                logger.warning(f"Task {task_id}: notification step failed: {notify_exc}")
 
             raise e
 
