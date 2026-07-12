@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = Field(default="")
     CORS_ALLOWED_ORIGINS: str = Field(default="http://localhost:3000")
 
+    # ── Email (Resend) ────────────────────────────────────────
+    RESEND_API_KEY: str = Field(default="")
+    RESEND_FROM_EMAIL: str = Field(default="noreply@multiagents.me")
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""
