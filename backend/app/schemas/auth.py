@@ -34,6 +34,11 @@ class ResetPasswordRequest(BaseModel):
     email: EmailStr
 
 
+class ConfirmResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class UpdateProfileRequest(BaseModel):
     username: str | None = Field(default=None, min_length=3, max_length=80)
 
