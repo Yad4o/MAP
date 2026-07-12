@@ -1,15 +1,19 @@
 import { http, HttpResponse, delay } from 'msw';
 import { MemorySearchResult } from '../../types';
 
+const API_BASE = import.meta.env?.VITE_API_BASE_URL ??
+  (import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
+  'http://localhost:8000/api/v1';
+
 export const memoryHandlers = [
   // GET /api/v1/agents/memory/stats
-  http.get('/api/v1/agents/memory/stats', async () => {
+  http.get(`${API_BASE}/agents/memory/stats`, async () => {
     await delay(300);
     return HttpResponse.json({ count: 1242 });
   }),
 
   // GET /api/v1/agents/memory/search
-  http.get('/api/v1/agents/memory/search', async ({ request }) => {
+  http.get(`${API_BASE}/agents/memory/search`, async ({ request }) => {
     await delay(500);
     const url = new URL(request.url);
     const q = url.searchParams.get('q') || '';
@@ -37,7 +41,7 @@ export const memoryHandlers = [
   }),
 
   // DELETE /api/v1/agents/memory
-  http.delete('/api/v1/agents/memory', async () => {
+  http.delete(`${API_BASE}/agents/memory`, async () => {
     await delay(800);
     return new HttpResponse(null, { status: 204 });
   }),

@@ -1,9 +1,13 @@
 import { http, HttpResponse, delay } from 'msw';
 import { AdminMetrics, AdminUser } from '../../types';
 
+const API_BASE = import.meta.env?.VITE_API_BASE_URL ??
+  (import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
+  'http://localhost:8000/api/v1';
+
 export const adminHandlers = [
   // GET /api/v1/admin/metrics
-  http.get('/api/v1/admin/metrics', async () => {
+  http.get(`${API_BASE}/admin/metrics`, async () => {
     await delay(500);
     const metrics: AdminMetrics = {
       total_tasks_today: 142,
@@ -15,7 +19,7 @@ export const adminHandlers = [
   }),
 
   // GET /api/v1/admin/users
-  http.get('/api/v1/admin/users', async () => {
+  http.get(`${API_BASE}/admin/users`, async () => {
     await delay(500);
     const users: AdminUser[] = [
       {
@@ -68,7 +72,7 @@ export const adminHandlers = [
   }),
 
   // PATCH /api/v1/admin/users/:id
-  http.patch('/api/v1/admin/users/:id', async ({ params, request }) => {
+  http.patch(`${API_BASE}/admin/users/:id`, async ({ params, request }) => {
     await delay(300);
     const body = await request.json() as Partial<AdminUser>;
     return HttpResponse.json({ message: `User ${params.id} updated successfully`, ...body });

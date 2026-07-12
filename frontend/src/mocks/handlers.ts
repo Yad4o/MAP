@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { UserResponse, TokenPair } from '../types'
 import { taskHandlers } from './handlers/tasks'
+import { providerKeyHandlers } from './handlers/providerKeys'
 
 // Use the same base URL as the API client
 const API_BASE = import.meta.env.VITE_API_BASE_URL ??
@@ -79,5 +80,6 @@ export const handlers = [
   }),
 
   // Add more handlers as needed for your API endpoints
-  ...taskHandlers
+  ...taskHandlers,
+  ...providerKeyHandlers,
 ]
