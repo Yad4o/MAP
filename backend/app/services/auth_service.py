@@ -11,13 +11,14 @@ Routes should never call repositories directly.
 """
 
 import logging
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.constants import REDIS_REVOKED_TOKEN_KEY_PREFIX
+from app.core.constants import REDIS_REVOKED_TOKEN_KEY_PREFIX, REDIS_PASSWORD_RESET_KEY_PREFIX
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials, UserNotFound
 from app.core.security import (
     create_access_token,
@@ -30,6 +31,8 @@ from app.db.repositories.user_repo import SessionRepository
 from app.db.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair, UserResponse, UpdateProfileRequest
 from app.core.redis import get_redis
+from app.services.email_service import EmailService
+from app.services.email_templates import welcome_email, password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,18 @@ class AuthService:
             username=data.username,
             password_hash=password_hash,
         )
+
+        # Best-effort welcome email — a delivery failure here must never
+        # block account creation.
+        try:
+            await EmailService().send(
+                to=user.email,
+                subject="Welcome to MAP",
+                html=welcome_email(user.username),
+            )
+        except Exception as exc:
+            logger.warning("Failed to send welcome email to %s: %s", user.email, exc)
+
         return UserResponse.model_validate(user)
 
     async def login(self, email: str, password: str) -> TokenPair:
@@ -190,3 +205,48 @@ class AuthService:
             raise UserNotFound(str(user_id))
 
         return UserResponse.model_validate(user)
+
+    async def request_password_reset(self, email: str) -> None:
+        """
+        Generate a short-lived reset token and email it to the user.
+
+        Always succeeds from the caller's perspective (no user-existence
+        leak) — if the email isn't registered, this is a silent no-op.
+        """
+        user = await self.user_repo.get_by_email(email.lower().strip())
+        if user is None:
+            logger.info("Password reset requested for unknown email: %s", email)
+            return
+
+        raw_token = secrets.token_urlsafe(32)
+        redis = await get_redis()
+        key = f"{REDIS_PASSWORD_RESET_KEY_PREFIX}:{raw_token}"
+        await redis.setex(key, 60 * 30, str(user.id))  # 30 minute expiry
+
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+
+        try:
+            await EmailService().send(
+                to=user.email,
+                subject="Reset your MAP password",
+                html=password_reset_email(reset_link),
+            )
+        except Exception as exc:
+            logger.warning("Failed to send password reset email to %s: %s", user.email, exc)
+
+    async def confirm_password_reset(self, token: str, new_password: str) -> None:
+        """Validate a reset token and set the new password."""
+        redis = await get_redis()
+        key = f"{REDIS_PASSWORD_RESET_KEY_PREFIX}:{token}"
+        user_id_raw = await redis.get(key)
+        if user_id_raw is None:
+            raise InvalidCredentials()
+
+        user_id = uuid.UUID(user_id_raw.decode() if isinstance(user_id_raw, bytes) else user_id_raw)
+        new_hash = hash_password(new_password)
+        user = await self.user_repo.update(user_id, password_hash=new_hash)
+        if user is None:
+            raise UserNotFound(str(user_id))
+
+        await redis.delete(key)
+        logger.info("Password reset completed for user %s", user_id)
