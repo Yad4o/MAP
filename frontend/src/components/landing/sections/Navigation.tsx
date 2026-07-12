@@ -2,9 +2,10 @@ import { useCallback } from 'react';
 
 interface NavigationProps {
   onGetStarted: () => void;
+  onLogin: () => void;
 }
 
-export default function Navigation({ onGetStarted }: NavigationProps) {
+export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
   const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -87,6 +88,29 @@ export default function Navigation({ onGetStarted }: NavigationProps) {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={onLogin}
+            style={{
+              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+              fontSize: 14,
+              fontWeight: 400,
+              color: 'rgba(245, 243, 238, 0.6)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              transition: 'color 0.3s ease',
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = '#F5F3EE')
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.6)')
+            }
+          >
+            Log in
+          </button>
 
           <button
             onClick={onGetStarted}

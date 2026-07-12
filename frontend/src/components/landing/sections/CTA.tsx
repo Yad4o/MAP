@@ -1,8 +1,9 @@
 interface CTAProps {
   onGetStarted: () => void;
+  onLogin: () => void;
 }
 
-export default function CTA({ onGetStarted }: CTAProps) {
+export default function CTA({ onGetStarted, onLogin }: CTAProps) {
   return (
     <section
       id="cta"
@@ -87,7 +88,28 @@ export default function CTA({ onGetStarted }: CTAProps) {
           Get Started
         </button>
 
-        <div data-animate-child style={{ marginTop: 20 }}>
+        <div data-animate-child style={{ marginTop: 20, display: 'flex', gap: 24, justifyContent: 'center' }}>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onLogin();
+            }}
+            style={{
+              fontSize: 14,
+              color: 'rgba(245, 243, 238, 0.4)',
+              textDecoration: 'none',
+              transition: 'color 0.3s',
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = '#F5F3EE')
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.4)')
+            }
+          >
+            Already have an account? Log in
+          </a>
           <a
             href="#"
             onClick={(e) => e.preventDefault()}

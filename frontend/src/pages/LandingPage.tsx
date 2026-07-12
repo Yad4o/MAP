@@ -17,17 +17,18 @@ export default function LandingPage() {
   useScrollAnimation();
   const navigate = useNavigate();
   const goToRegister = () => navigate('/register');
+  const goToLogin = () => navigate('/login');
 
   return (
     <div className="kimi-landing">
-      <Navigation onGetStarted={goToRegister} />
+      <Navigation onGetStarted={goToRegister} onLogin={goToLogin} />
       <Hero />
       <Features />
       <Pipeline />
       <Fallback />
       <Architecture />
       <UseCases />
-      <CTA onGetStarted={goToRegister} />
+      <CTA onGetStarted={goToRegister} onLogin={goToLogin} />
       <Footer />
     </div>
   );
