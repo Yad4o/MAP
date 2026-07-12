@@ -1,5 +1,7 @@
 # MAP — Multi-Agent AI Automation Platform
 
+[![CI](https://github.com/yad4o/MAP/actions/workflows/ci.yml/badge.svg)](https://github.com/yad4o/MAP/actions/workflows/ci.yml)
+[![Backend Tests](https://img.shields.io/badge/backend%20tests-239%20passing-brightgreen)](backend/tests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
