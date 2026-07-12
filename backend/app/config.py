@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     # ── Email (Resend) ────────────────────────────────────────
     RESEND_API_KEY: str = Field(default="")
     RESEND_FROM_EMAIL: str = Field(default="noreply@multiagents.me")
+    FRONTEND_URL: str = Field(default="http://localhost:5173")
 
     @property
     def cors_origins_list(self) -> list[str]:
