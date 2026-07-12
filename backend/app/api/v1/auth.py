@@ -16,6 +16,7 @@ from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
 from app.dependencies import get_current_user, get_token_payload
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ConfirmResetPasswordRequest,
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
@@ -114,5 +115,24 @@ async def change_password(
 
 
 @router.post("/reset-password", status_code=202, response_model=MessageResponse)
-async def reset_password(body: ResetPasswordRequest):
-    raise NotImplementedError("Phase 1 — implement this")
+async def reset_password(
+    body: ResetPasswordRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    """Request a password reset email. Always returns a generic message
+    (never reveals whether the email is registered)."""
+    await service.request_password_reset(body.email)
+    return MessageResponse(message="If that email is registered, a reset link has been sent.")
+
+
+@router.post("/reset-password/confirm", status_code=200, response_model=MessageResponse)
+async def confirm_reset_password(
+    body: ConfirmResetPasswordRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    """Complete a password reset using the token emailed to the user."""
+    try:
+        await service.confirm_password_reset(body.token, body.new_password)
+    except InvalidCredentials:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    return MessageResponse(message="Password has been reset successfully.")
