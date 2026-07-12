@@ -1,9 +1,13 @@
 import { http, HttpResponse, delay } from 'msw';
 import { LogEntry } from '../../types';
 
+const API_BASE = import.meta.env?.VITE_API_BASE_URL ??
+  (import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
+  'http://localhost:8000/api/v1';
+
 export const logHandlers = [
   // GET /api/v1/logs
-  http.get('/api/v1/logs', async ({ request }) => {
+  http.get(`${API_BASE}/logs`, async ({ request }) => {
     await delay(300);
     const url = new URL(request.url);
     const level = url.searchParams.get('level');

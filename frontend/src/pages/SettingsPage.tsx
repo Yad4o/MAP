@@ -33,22 +33,28 @@ import {
   ChevronRight,
   Brain,
   Pencil,
+  Cpu,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   UpdateProfileRequest,
   ChangePasswordRequest,
   UserResponse,
   NewApiKeyResponse,
+  AiProvider,
 } from "../types";
+import { providerKeysApi } from "../api/providerKeys";
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<"profile" | "keys" | "memory" | "plan">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "keys" | "providers" | "memory" | "plan">("profile");
   const { user } = useAuthStore();
 
   const tabs = [
     { id: "profile", label: "Profile", icon: UserIcon },
     { id: "plan", label: "Plan", icon: CreditCard },
     { id: "keys", label: "API Keys", icon: Key },
+    { id: "providers", label: "AI Providers", icon: Cpu },
     { id: "memory", label: "Agent Memory", icon: Database },
   ] as const;
 
@@ -89,6 +95,7 @@ export default function SettingsPage() {
         {activeTab === "profile" && <ProfileTab user={user} />}
         {activeTab === "plan" && <PlanTab user={user} />}
         {activeTab === "keys" && <ApiKeysTab />}
+        {activeTab === "providers" && <ProviderKeysTab />}
         {activeTab === "memory" && <MemoryTab />}
       </div>
     </div>
@@ -946,6 +953,195 @@ function ApiKeysTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ── AI Providers Tab (BYOK) ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PROVIDER_INFO: Record<AiProvider, { label: string; hint: string; placeholder: string; platformDefault: boolean }> = {
+  groq: { label: "Groq", hint: "Used by default for every task unless you add your own key.", placeholder: "gsk_...", platformDefault: true },
+  openai: { label: "OpenAI", hint: "Falls back to the platform key if you don't add your own.", placeholder: "sk-...", platformDefault: true },
+  anthropic: { label: "Claude (Anthropic)", hint: "No platform key — add your own to use Claude.", placeholder: "sk-ant-...", platformDefault: false },
+  gemini: { label: "Gemini", hint: "Falls back to the platform key if you don't add your own.", placeholder: "AIza...", platformDefault: true },
+};
+
+function ProviderKeysTab() {
+  const queryClient = useQueryClient();
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider>("anthropic");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [removingProvider, setRemovingProvider] = useState<string | null>(null);
+
+  const { data: keys, isLoading } = useQuery({
+    queryKey: ["provider-keys"],
+    queryFn: providerKeysApi.getKeys,
+  });
+
+  const setKeyMutation = useMutation({
+    mutationFn: providerKeysApi.setKey,
+    onSuccess: () => {
+      setApiKeyInput("");
+      queryClient.invalidateQueries({ queryKey: ["provider-keys"] });
+      toast.success(`${PROVIDER_INFO[selectedProvider].label} key saved.`);
+    },
+    onError: () => toast.error("Failed to save key. Check it's valid and try again."),
+  });
+
+  const deleteKeyMutation = useMutation({
+    mutationFn: providerKeysApi.deleteKey,
+    onSuccess: () => {
+      setRemovingProvider(null);
+      queryClient.invalidateQueries({ queryKey: ["provider-keys"] });
+      toast.success("Key removed.");
+    },
+    onError: () => {
+      setRemovingProvider(null);
+      toast.error("Failed to remove key.");
+    },
+  });
+
+  const configured = new Map((keys ?? []).map((k) => [k.provider, k]));
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="glass-card p-6 flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <Cpu size={18} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-white">AI Providers</h2>
+          <p className="text-slate-500 text-xs mt-0.5">
+            Bring your own key to use Claude, OpenAI, or Gemini for your tasks instead of the platform default.
+          </p>
+        </div>
+      </div>
+
+      {/* Add / Replace a key */}
+      <div className="glass-card p-6 space-y-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Add a Key</p>
+        <div className="grid sm:grid-cols-[180px_1fr_auto] gap-3 items-start">
+          <select
+            value={selectedProvider}
+            onChange={(e) => { setSelectedProvider(e.target.value as AiProvider); setApiKeyInput(""); }}
+            className="bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+          >
+            {(Object.keys(PROVIDER_INFO) as AiProvider[]).map((p) => (
+              <option key={p} value={p} className="bg-[#0a0a0a]">
+                {PROVIDER_INFO[p].label}
+              </option>
+            ))}
+          </select>
+
+          <div className="relative">
+            <input
+              type={showKey ? "text" : "password"}
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder={PROVIDER_INFO[selectedProvider].placeholder}
+              autoComplete="off"
+              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white font-mono outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all placeholder:text-slate-600"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey((s) => !s)}
+              aria-label={showKey ? "Hide key" : "Show key"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+            >
+              {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+
+          <button
+            onClick={() => setKeyMutation.mutate({ provider: selectedProvider, api_key: apiKeyInput.trim() })}
+            disabled={apiKeyInput.trim().length < 8 || setKeyMutation.isPending}
+            className="btn-primary py-2.5 px-5 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {setKeyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
+            Save
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-500">{PROVIDER_INFO[selectedProvider].hint}</p>
+        <div className="flex items-start gap-2 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-300 text-xs">
+          <Lock size={13} className="shrink-0 mt-0.5" />
+          Your key is encrypted before it's stored and never shown again after saving — only a masked preview.
+        </div>
+      </div>
+
+      {/* Configured providers */}
+      <div className="glass-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-white/[0.02] text-slate-500 text-[10px] font-black uppercase tracking-[0.15em] border-b border-white/5">
+                <th className="px-6 py-4">Provider</th>
+                <th className="px-6 py-4">Key</th>
+                <th className="px-6 py-4">Added</th>
+                <th className="px-6 py-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center">
+                    <Loader2 className="animate-spin mx-auto text-indigo-400 mb-2" size={24} />
+                    <p className="text-slate-500 text-sm">Loading providers…</p>
+                  </td>
+                </tr>
+              ) : configured.size === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-600 text-sm">
+                    No personal keys added — every task uses the platform default (Groq).
+                  </td>
+                </tr>
+              ) : (
+                (Object.keys(PROVIDER_INFO) as AiProvider[])
+                  .filter((p) => configured.has(p))
+                  .map((provider) => {
+                    const entry = configured.get(provider)!;
+                    return (
+                      <tr key={provider} className="hover:bg-white/[0.015] transition-colors group">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-white">{PROVIDER_INFO[provider].label}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <code className="text-indigo-400 px-2 py-0.5 bg-indigo-400/10 rounded text-xs font-mono">
+                            {entry.masked_key}
+                          </code>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 font-mono text-[10px]">
+                          {new Date(entry.added_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Remove your ${PROVIDER_INFO[provider].label} key? Tasks will fall back to the platform default.`)) {
+                                setRemovingProvider(provider);
+                                deleteKeyMutation.mutate(provider);
+                              }
+                            }}
+                            disabled={deleteKeyMutation.isPending}
+                            aria-label={`Remove ${PROVIDER_INFO[provider].label} key`}
+                            className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                          >
+                            {removingProvider === provider ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={15} />
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

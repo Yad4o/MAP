@@ -1,9 +1,13 @@
 import { http, HttpResponse, delay } from 'msw';
 import { ApiKeyResponse, NewApiKeyResponse } from '../../types';
 
+const API_BASE = import.meta.env?.VITE_API_BASE_URL ??
+  (import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
+  'http://localhost:8000/api/v1';
+
 export const apiKeyHandlers = [
   // GET /api/v1/api-keys
-  http.get('/api/v1/api-keys', async () => {
+  http.get(`${API_BASE}/api-keys`, async () => {
     await delay(300);
     const keys: ApiKeyResponse[] = [
       {
@@ -37,7 +41,7 @@ export const apiKeyHandlers = [
   }),
 
   // POST /api/v1/api-keys
-  http.post('/api/v1/api-keys', async ({ request }) => {
+  http.post(`${API_BASE}/api-keys`, async ({ request }) => {
     await delay(500);
     const body = await request.json() as import('../../types').CreateApiKeyRequest;
     const newKey: NewApiKeyResponse = {
@@ -53,7 +57,7 @@ export const apiKeyHandlers = [
   }),
 
   // DELETE /api/v1/api-keys/:id
-  http.delete('/api/v1/api-keys/:id', async () => {
+  http.delete(`${API_BASE}/api-keys/:id`, async () => {
     await delay(300);
     return new HttpResponse(null, { status: 204 });
   }),

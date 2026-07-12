@@ -182,6 +182,21 @@ export interface NewApiKeyResponse extends ApiKeyResponse {
   full_key: string;
 }
 
+// ── AI Provider Keys (BYOK) ──────────────────────────────────
+
+export type AiProvider = "groq" | "openai" | "anthropic" | "gemini";
+
+export interface ProviderKeyResponse {
+  provider: AiProvider;
+  masked_key: string;
+  added_at: string;
+}
+
+export interface SetProviderKeyRequest {
+  provider: AiProvider;
+  api_key: string;
+}
+
 // ── WebSocket Events ──────────────────────────────────────────
 
 // ── Admin ──────────────────────────────────────────────────
