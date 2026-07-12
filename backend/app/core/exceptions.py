@@ -48,3 +48,11 @@ class TaskStateTransitionError(Exception):
         super().__init__(f"Invalid task state transition: {current_status} -> {new_status}")
         self.current_status = current_status
         self.new_status = new_status
+
+
+class EmailSendError(Exception):
+    """Raised when a transactional email fails to send via Resend."""
+
+    def __init__(self, detail: str):
+        self.detail = detail
+        super().__init__(f"Failed to send email: {detail}")
