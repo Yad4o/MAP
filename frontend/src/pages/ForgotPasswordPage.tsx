@@ -15,7 +15,7 @@ import { ArrowLeft, Loader2, MailCheck } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
-import { AuthOrnament } from '../components/auth/AuthOrnament';
+import { AuthVisualPanel } from '../components/auth/AuthVisualPanel';
 import { AuthLiveField } from '../components/auth/AuthLiveField';
 
 const schema = z.object({
@@ -58,20 +58,24 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
-      <DotGrid />
-      <AuthLiveField />
-      <AuthOrnament side="left" />
-      <AuthOrnament side="right" />
-
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
-        }}
+    <div className="flex min-h-screen bg-[#0a0a0a]">
+      <AuthVisualPanel
+        variant="login"
+        tagline="Plan, execute, and validate work across a team of specialized agents — memory kept, nothing repeated."
       />
 
-      <div className="relative w-full max-w-sm text-center">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
+        <DotGrid />
+        <AuthLiveField />
+
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
+          }}
+        />
+
+        <div className="relative w-full max-w-sm text-center">
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="relative flex h-16 w-16 items-center justify-center">
             <span className="absolute inset-0 rounded-2xl border border-indigo-400/20 animate-ping [animation-duration:2.4s]" />
@@ -132,6 +136,7 @@ export default function ForgotPasswordPage() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to sign in
         </Link>
+        </div>
       </div>
     </div>
   );

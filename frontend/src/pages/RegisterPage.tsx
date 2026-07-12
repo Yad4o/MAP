@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
-import { AuthOrnament } from '../components/auth/AuthOrnament';
+import { AuthVisualPanel } from '../components/auth/AuthVisualPanel';
 import { AuthLiveField } from '../components/auth/AuthLiveField';
 
 const schema = z
@@ -81,21 +81,25 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 overflow-hidden">
-      <DotGrid />
-      <AuthLiveField />
-      <AuthOrnament side="left" />
-      <AuthOrnament side="right" />
-
-      {/* Soft glow behind card */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
-        }}
+    <div className="flex min-h-screen bg-[#0a0a0a]">
+      <AuthVisualPanel
+        variant="register"
+        tagline="Spin up an account and hand off your first multi-step task to a team of AI agents in minutes."
       />
 
-      <div className="relative w-full max-w-sm py-8">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
+        <DotGrid />
+        <AuthLiveField />
+
+        {/* Soft glow behind card */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
+          }}
+        />
+
+        <div className="relative w-full max-w-sm py-8">
         {/* Brand mark */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="relative flex h-16 w-16 items-center justify-center">
@@ -196,6 +200,7 @@ export default function RegisterPage() {
           Already have an account?{'  '}
           <Link to="/login" className="text-white hover:underline underline-offset-2">Sign in</Link>
         </p>
+        </div>
       </div>
     </div>
   );
