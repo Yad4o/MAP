@@ -13,10 +13,34 @@ import uuid
 from app.worker.celery_app import celery_app
 from app.db.base import AsyncSessionLocal
 from app.db.repositories.task_repo import TaskRepository
+from app.db.repositories.user_repo import UserRepository
 from app.schemas.task import TaskStatus
 from app.worker.agent_runner import AgentRunner
+from app.services.email_service import EmailService
+from app.services.email_templates import task_completed_email, task_failed_email
 
 logger = logging.getLogger(__name__)
+
+
+async def _notify_task_result(db, tid: uuid.UUID, task, final_status: str, error: str | None = None) -> None:
+    """Best-effort email notification on task completion/failure.
+    Never raises — a notification failure must not affect task state."""
+    try:
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(task.user_id)
+        if user is None:
+            return
+
+        if final_status == "FAILED":
+            html = task_failed_email(task.title, str(tid), error or "Unknown error")
+            subject = "Your MAP task failed"
+        else:
+            html = task_completed_email(task.title, str(tid))
+            subject = "Your MAP task completed"
+
+        await EmailService().send(to=user.email, subject=subject, html=html)
+    except Exception as exc:
+        logger.warning(f"Task {tid}: failed to send notification email: {exc}")
 
 
 async def _run_agent_task(task_id: str):
@@ -44,12 +68,22 @@ async def _run_agent_task(task_id: str):
                 await repo.set_result(tid, result)
                 
             await repo.update_status(tid, TaskStatus(final_status))
+
+            task = await repo.get_by_id(tid)
+            if task is not None:
+                await _notify_task_result(db, tid, task, final_status, result.get("error"))
+
             return result
             
         except Exception as e:
             logger.error(f"Task {task_id}: error -> {str(e)}")
             await repo.set_error(tid, {"error": str(e)})
             await repo.update_status(tid, TaskStatus.FAILED)
+
+            task = await repo.get_by_id(tid)
+            if task is not None:
+                await _notify_task_result(db, tid, task, "FAILED", str(e))
+
             raise e
 
 
