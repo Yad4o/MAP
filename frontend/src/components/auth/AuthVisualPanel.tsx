@@ -21,7 +21,7 @@ export function AuthVisualPanel({
         src={`/auth/auth-visual-${variant}.webp`}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover scale-[1.05]"
       />
 
       {/* Blend the image into the page edges so it never looks like a pasted-in box */}
