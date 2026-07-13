@@ -262,9 +262,28 @@ export default function Pipeline() {
             </div>
           </div>
 
-          {/* Right: dual waves */}
-          <div data-animate-child style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <DualWaves />
+          {/* Right: agent pipeline artwork */}
+          <div
+            data-animate-child
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <img
+              src="/images/img-pipeline.jpg"
+              alt="Planner, Executor, Analyzer, Memory agent pipeline"
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                objectFit: 'contain',
+                opacity: 0.93,
+                animation: 'pipelineFloat 6s ease-in-out infinite',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            />
           </div>
         </div>
 
@@ -317,6 +336,13 @@ export default function Pipeline() {
           ))}
         </div>
       </div>
+
+      <style>{`
+        @keyframes pipelineFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-14px); }
+        }
+      `}</style>
     </section>
   );
 }
