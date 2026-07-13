@@ -115,7 +115,27 @@ export default function Architecture() {
           </div>
 
           {/* Right: diagram */}
-          <div data-animate-child>
+          <div
+            data-animate-child
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
+            {/* Soft ambient glow behind the illustration */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: '8%',
+                background:
+                  'radial-gradient(ellipse at center, rgba(212, 165, 116, 0.18) 0%, transparent 70%)',
+                filter: 'blur(40px)',
+                zIndex: 0,
+              }}
+            />
             <img
               src="/images/img-diagram.jpg"
               alt="System architecture diagram"
@@ -124,6 +144,10 @@ export default function Architecture() {
                 borderRadius: 12,
                 border: '1px solid rgba(245, 243, 238, 0.08)',
                 display: 'block',
+                position: 'relative',
+                zIndex: 1,
+                boxShadow:
+                  '0 30px 80px -20px rgba(0, 0, 0, 0.6), 0 0 60px -10px rgba(212, 165, 116, 0.15)',
               }}
             />
           </div>
