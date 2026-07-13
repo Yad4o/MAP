@@ -176,22 +176,38 @@ export default function Hero() {
         }}
       />
 
-      {/* Hero image bottom-right */}
-      <img
-        src="/images/img-hero.jpg"
-        alt="Server infrastructure"
+      {/* Hero background artwork — full-bleed, slight overflow for a premium feel */}
+      <div
+        aria-hidden="true"
         style={{
           position: 'absolute',
-          right: 60,
-          bottom: 80,
-          width: 420,
-          borderRadius: 8,
-          opacity: 0.85,
-          mixBlendMode: 'screen',
+          inset: '-2%',
           zIndex: 1,
+          overflow: 'hidden',
           pointerEvents: 'none',
         }}
-      />
+      >
+        <img
+          src="/images/img-hero.jpg"
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            userSelect: 'none',
+          }}
+        />
+        {/* Subtle dark overlay so text stays readable */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.32)',
+          }}
+        />
+      </div>
 
       {/* Hero content */}
       <div
