@@ -13,27 +13,6 @@ import {
 } from 'lucide-react';
 import { FormattedOutput } from './CodeBlock';
 
-/**
- * TaskResultView.tsx
- *
- * Renders the AgentController pipeline result (status, plan, step_results,
- * validation, summary) as readable UI instead of a raw JSON dump.
- *
- * Shape produced by agents/controller/agent_controller.py::run_pipeline():
- * {
- *   status: "COMPLETED" | "FAILED",
- *   plan: { task_type, steps: [...], estimated_total_duration_s, notes },
- *   step_results: [ { step_id?, description?, status?, output?, error?,
- *                      tool_calls_used?, latency_ms?, tokens_used?, trace? } ],
- *   validation: { passed, confidence, step_scores, failed_steps, critique, summary },
- *   summary: string,
- *   steps_completed: number
- * }
- *
- * Anything not matching this shape falls back to a raw JSON viewer so no
- * data is ever hidden — it's just not the default presentation.
- */
-
 interface PlanStep {
   step_id?: string;
   description?: string;
@@ -110,7 +89,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
 
   if (!result) {
     return (
-      <div className="p-8 text-center text-slate-500 text-sm">
+      <div className="p-8 text-center text-muted text-sm">
         No result data available for this task.
       </div>
     );
@@ -129,8 +108,8 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
   // Unknown shape — fall back to a labeled raw viewer rather than guessing.
   if (!isRecognizedShape(result)) {
     return (
-      <div className="p-4 bg-black/30 font-mono text-xs overflow-x-auto max-h-[500px]">
-        <pre className="text-slate-300">{JSON.stringify(result, null, 2)}</pre>
+      <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[500px]">
+        <pre className="text-on-dark">{JSON.stringify(result, null, 2)}</pre>
       </div>
     );
   }
@@ -149,34 +128,34 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
   };
 
   return (
-    <div className="divide-y divide-white/5">
+    <div className="divide-y divide-hairline-on-dark">
       {/* Toolbar */}
       <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-muted-strong">
           <ListChecks className="w-3.5 h-3.5" />
           {steps_completed ?? step_results.length} step{(steps_completed ?? step_results.length) === 1 ? '' : 's'} completed
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowRawJson((v) => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-400"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
           >
             <Code2 className="w-3.5 h-3.5" />
             {showRawJson ? 'Hide raw JSON' : 'View raw JSON'}
           </button>
           <button
             onClick={copyJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/5 hover:bg-white/10 text-slate-400"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
           >
-            {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Clipboard className="w-3.5 h-3.5" />}
+            {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-trading-up" /> : <Clipboard className="w-3.5 h-3.5" />}
             {copied ? 'Copied!' : 'Copy JSON'}
           </button>
         </div>
       </div>
 
       {showRawJson && (
-        <div className="p-4 bg-black/30 font-mono text-xs overflow-x-auto max-h-[400px]">
-          <pre className="text-slate-300">{JSON.stringify(result, null, 2)}</pre>
+        <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[400px]">
+          <pre className="text-on-dark">{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}
 
@@ -184,12 +163,12 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
       {summary && (
         <div className="p-5">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-violet-400" />
+            <div className="w-8 h-8 rounded-sm bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+              <Sparkles className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Summary</p>
-              <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{summary}</p>
+              <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider mb-1">Summary</p>
+              <p className="text-sm text-on-dark leading-relaxed whitespace-pre-wrap">{summary}</p>
             </div>
           </div>
         </div>
@@ -200,24 +179,24 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
         <div className="p-5">
           <div className="flex items-center gap-3 mb-3">
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                validation.passed ? 'bg-green-500/10' : 'bg-amber-500/10'
+              className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border ${
+                validation.passed ? 'bg-trading-up/10 border-trading-up/20' : 'bg-primary/10 border-primary/20'
               }`}
             >
               {validation.passed ? (
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <CheckCircle2 className="w-4 h-4 text-trading-up" />
               ) : (
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <AlertTriangle className="w-4 h-4 text-primary" />
               )}
             </div>
             <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Validation</p>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Validation</p>
+              <p className="text-sm font-semibold text-on-dark">
                 {validation.passed ? 'Passed' : 'Needs attention'}
               </p>
             </div>
             {confidencePct != null && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 text-xs text-muted">
                 <Gauge className="w-3.5 h-3.5" />
                 {confidencePct}% confidence
               </div>
@@ -225,7 +204,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
           </div>
 
           {validation.critique && (
-            <p className="text-sm text-slate-400 leading-relaxed pl-11">{validation.critique}</p>
+            <p className="text-sm text-muted leading-relaxed pl-11">{validation.critique}</p>
           )}
 
           {validation.failed_steps && validation.failed_steps.length > 0 && (
@@ -233,7 +212,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
               {validation.failed_steps.map((id) => (
                 <span
                   key={id}
-                  className="px-2 py-0.5 rounded-md bg-red-400/10 text-red-400 text-[10px] font-mono border border-red-400/20"
+                  className="px-2 py-0.5 rounded-sm bg-trading-down/10 text-trading-down text-[10px] font-mono border border-trading-down/20"
                 >
                   {id}
                 </span>
@@ -246,8 +225,8 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
       {/* Plan overview */}
       {plan?.notes && (
         <div className="p-5">
-          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Plan Notes</p>
-          <p className="text-sm text-slate-400 leading-relaxed">{plan.notes}</p>
+          <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider mb-1">Plan Notes</p>
+          <p className="text-sm text-muted leading-relaxed">{plan.notes}</p>
         </div>
       )}
 
@@ -255,9 +234,9 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
       {step_results.length > 0 && (
         <div>
           <div className="p-5 pb-2">
-            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Step Results</p>
+            <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Step Results</p>
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-hairline-on-dark">
             {step_results.map((step, idx) => {
               const status = getStepStatus(step);
               const isExpanded = expandedSteps[idx];
@@ -266,18 +245,18 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
               return (
                 <div key={step.step_id ?? idx}>
                   <div
-                    className="px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:bg-white/[0.02]"
+                    className="px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:bg-surface-elevated-dark/50"
                     onClick={() => toggleStep(idx)}
                   >
                     {status === 'completed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-trading-up shrink-0" />
                     ) : status === 'failed' ? (
-                      <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <XCircle className="w-4 h-4 text-trading-down shrink-0" />
                     ) : (
-                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-200 truncate">
+                      <p className="text-sm text-on-dark truncate">
                         {step.description || planStep?.description || step.step_id || `Step ${idx + 1}`}
                       </p>
                       {step.tool_calls_used && step.tool_calls_used.length > 0 && (
@@ -285,7 +264,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
                           {step.tool_calls_used.map((tool) => (
                             <span
                               key={tool}
-                              className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-slate-500 border border-white/10"
+                              className="px-1.5 py-0.5 rounded-sm bg-canvas-dark text-[10px] text-muted-strong border border-hairline-on-dark"
                             >
                               {tool}
                             </span>
@@ -294,43 +273,43 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
                       )}
                     </div>
                     {step.latency_ms != null && (
-                      <span className="text-[10px] text-slate-500 shrink-0">{step.latency_ms}ms</span>
+                      <span className="text-[10px] text-muted-strong shrink-0">{step.latency_ms}ms</span>
                     )}
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-slate-600 shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-muted shrink-0" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-muted shrink-0" />
                     )}
                   </div>
 
                   {isExpanded && (
                     <div className="px-5 pb-4 pl-12 space-y-3">
                       {step.error && (
-                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                          <p className="text-[10px] uppercase font-bold text-red-400/80 mb-1">Error</p>
-                          <p className="text-xs text-red-200 font-mono whitespace-pre-wrap">{step.error}</p>
+                        <div className="p-3 rounded-md bg-trading-down/10 border border-trading-down/20">
+                          <p className="text-[10px] uppercase font-bold text-trading-down mb-1">Error</p>
+                          <p className="text-xs text-trading-down/80 font-mono whitespace-pre-wrap">{step.error}</p>
                         </div>
                       )}
                       {step.output && (
-                        <div className="p-3 rounded-lg bg-black/30 border border-white/5">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Output</p>
+                        <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
+                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Output</p>
                           <FormattedOutput text={step.output} />
                         </div>
                       )}
                       {step.summary && step.summary !== step.output && (
-                        <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Agent Summary</p>
-                          <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{step.summary}</p>
+                        <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Agent Summary</p>
+                          <p className="text-xs text-on-dark whitespace-pre-wrap leading-relaxed">{step.summary}</p>
                         </div>
                       )}
                       {step.trace && step.trace.length > 0 && (
-                        <div className="p-3 rounded-lg bg-black/20 border border-white/5">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Trace</p>
+                        <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
+                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Trace</p>
                           <div className="space-y-1">
                             {step.trace
                               .filter((line) => line.trim().length > 0)
                               .map((line, i) => (
-                                <p key={i} className="text-[11px] text-slate-500 font-mono">
+                                <p key={i} className="text-[11px] text-muted font-mono">
                                   {line}
                                 </p>
                               ))}
@@ -338,7 +317,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
                         </div>
                       )}
                       {step.tokens_used && (
-                        <div className="flex gap-4 text-[10px] text-slate-500">
+                        <div className="flex gap-4 text-[10px] text-muted">
                           {step.tokens_used.in != null && <span>Tokens in: {step.tokens_used.in}</span>}
                           {step.tokens_used.out != null && <span>Tokens out: {step.tokens_used.out}</span>}
                         </div>
