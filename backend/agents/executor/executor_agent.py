@@ -28,8 +28,34 @@ from agents.executor.tools.file_reader import FileReaderTool
 from agents.executor.tools.code_interpreter import CodeInterpreterTool
 
 # Import provider resolver
-from app.core.llm_provider import resolve_credentials, build_chat_model
+from app.core.llm_provider import resolve_credentials_with_fallback, build_chat_model
 from app.config import settings
+
+# Provider-specific rate-limit exception types. Both openai and anthropic
+# SDKs raise a RateLimitError subclass on HTTP 429; we check both so a
+# rate limit is never silently mistaken for a generic failure.
+_RATE_LIMIT_EXC_TYPES: tuple[type[Exception], ...] = ()
+try:
+    from openai import RateLimitError as _OpenAIRateLimitError
+    _RATE_LIMIT_EXC_TYPES += (_OpenAIRateLimitError,)
+except ImportError:
+    pass
+try:
+    from anthropic import RateLimitError as _AnthropicRateLimitError
+    _RATE_LIMIT_EXC_TYPES += (_AnthropicRateLimitError,)
+except ImportError:
+    pass
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """True if `exc` (or anything it wraps) is a provider rate-limit error."""
+    if _RATE_LIMIT_EXC_TYPES and isinstance(exc, _RATE_LIMIT_EXC_TYPES):
+        return True
+    # LangChain sometimes wraps the original SDK exception; fall back to a
+    # message/status check so we still catch it even if the type doesn't
+    # match (e.g. a differently-versioned SDK).
+    msg = str(exc).lower()
+    return "rate limit" in msg or "429" in msg or "ratelimit" in msg
 
 
 
@@ -107,21 +133,12 @@ class ExecutorAgent(BaseAgent):
             if not tools:
                 tools = [WebSearchTool()]
 
-            # Resolve provider/key (user's own key first, else platform default)
+            # Resolve provider/key (user's own key first, else platform default),
+            # plus one fallback provider (e.g. Groq -> OpenAI) to try if the
+            # primary hits a rate limit.
             user = payload.get("user")
             provider = payload.get("provider")
-            creds = resolve_credentials(user=user, provider=provider)
-
-            # ChatOpenAI/ChatAnthropic here (not fallback_engine) since only
-            # LangChain chat models support bind_tools, needed for the ReAct loop.
-            llm = build_chat_model(
-                creds,
-                temperature=settings.EXECUTOR_TEMPERATURE,
-                max_tokens=settings.MAX_TOKENS,
-            )
-
-            # Create ReAct agent
-            agent = create_react_agent(llm, tools)
+            creds_candidates = resolve_credentials_with_fallback(user=user, provider=provider)
 
             # Build prompt with context
             context_text = ""
@@ -132,9 +149,44 @@ class ExecutorAgent(BaseAgent):
 
 Please use the available tools to complete this step. Provide a clear result when finished."""
 
-            # Run the agent
+            # Try primary provider, then fallback(s), on rate limit specifically.
+            # Any non-rate-limit error is re-raised immediately (not retried
+            # against a different provider, since it's likely not provider-specific).
+            last_rate_limit_exc: Exception | None = None
+            result = None
             start_time = time.time()
-            result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+            for i, creds in enumerate(creds_candidates):
+                # ChatOpenAI/ChatAnthropic here (not fallback_engine) since only
+                # LangChain chat models support bind_tools, needed for the ReAct loop.
+                llm = build_chat_model(
+                    creds,
+                    temperature=settings.EXECUTOR_TEMPERATURE,
+                    max_tokens=settings.MAX_TOKENS,
+                )
+                agent = create_react_agent(llm, tools)
+                try:
+                    result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+                    break
+                except Exception as exc:
+                    if not _is_rate_limit_error(exc):
+                        raise
+                    last_rate_limit_exc = exc
+                    logger.warning(
+                        f"[executor] Rate limit on provider={creds.provider} "
+                        f"(candidate {i + 1}/{len(creds_candidates)}); "
+                        f"{'trying fallback' if i + 1 < len(creds_candidates) else 'no fallback left'}."
+                    )
+                    continue
+
+            if result is None:
+                # Every candidate provider was rate-limited. Re-raise (rather
+                # than swallowing into build_error) so this propagates up
+                # through AgentController/_run_agent_task and Celery's
+                # process_task actually retries the task per its
+                # max_retries/default_retry_delay config, instead of the
+                # task silently landing on FAILED after one shot.
+                raise last_rate_limit_exc
+
             end_time = time.time()
 
             # Extract the final response and token usage
@@ -243,4 +295,12 @@ Please use the available tools to complete this step. Provide a clear result whe
                     "traceback": traceback.format_exc()
                 }
             )
+            if _is_rate_limit_error(e):
+                # Don't swallow this into a FAILED result: build_error()
+                # returns normally, which _run_agent_task/AgentController
+                # treat as a completed (if failed) run rather than an
+                # exception, so Celery's own retry logic never fires.
+                # Re-raising here lets process_task's max_retries /
+                # default_retry_delay actually kick in.
+                raise
             return self.build_error(f"Error executing step: {type(e).__name__}: {str(e)}")
