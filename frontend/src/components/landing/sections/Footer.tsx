@@ -21,10 +21,10 @@ export default function Footer() {
           <div>
             <div
               style={{
-                fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+                fontFamily: "'BinanceNova', system-ui, sans-serif",
                 fontSize: 20,
                 fontWeight: 400,
-                color: '#F5F3EE',
+                color: '#EAECEF',
               }}
             >
               Map
@@ -32,7 +32,7 @@ export default function Footer() {
             <div
               style={{
                 fontSize: 13,
-                color: 'rgba(245, 243, 238, 0.3)',
+                color: 'rgba(234, 236, 239, 0.3)',
                 marginTop: 8,
               }}
             >
@@ -53,16 +53,16 @@ export default function Footer() {
                 }}
                 style={{
                   fontSize: 14,
-                  color: 'rgba(245, 243, 238, 0.4)',
+                  color: 'rgba(234, 236, 239, 0.4)',
                   textDecoration: 'none',
                   lineHeight: 2.2,
                   transition: 'color 0.3s',
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = '#F5F3EE')
+                  (e.currentTarget.style.color = '#EAECEF')
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.4)')
+                  (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.4)')
                 }
               >
                 {link}
@@ -79,16 +79,16 @@ export default function Footer() {
                 onClick={(e) => e.preventDefault()}
                 style={{
                   fontSize: 14,
-                  color: 'rgba(245, 243, 238, 0.4)',
+                  color: 'rgba(234, 236, 239, 0.4)',
                   textDecoration: 'none',
                   lineHeight: 2.2,
                   transition: 'color 0.3s',
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = '#F5F3EE')
+                  (e.currentTarget.style.color = '#EAECEF')
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.4)')
+                  (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.4)')
                 }
               >
                 {link}
@@ -102,16 +102,16 @@ export default function Footer() {
           style={{
             marginTop: 60,
             paddingTop: 24,
-            borderTop: '1px solid rgba(245, 243, 238, 0.06)',
+            borderTop: '1px solid rgba(234, 236, 239, 0.06)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <span style={{ fontSize: 12, color: 'rgba(245, 243, 238, 0.25)' }}>
+          <span style={{ fontSize: 12, color: 'rgba(234, 236, 239, 0.25)' }}>
             2025 Map. All rights reserved.
           </span>
-          <span style={{ fontSize: 12, color: 'rgba(245, 243, 238, 0.25)' }}>
+          <span style={{ fontSize: 12, color: 'rgba(234, 236, 239, 0.25)' }}>
             Built with FastAPI, React, and Redis.
           </span>
         </div>

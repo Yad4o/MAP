@@ -9,7 +9,7 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
       id="cta"
       style={{
         width: '100%',
-        background: '#0C1222',
+        background: '#0b0e11',
         padding: '160px 40px',
         textAlign: 'center',
         position: 'relative',
@@ -24,7 +24,7 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
             fontWeight: 400,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: '#D4A574',
+            color: '#FCD535',
           }}
         >
           START BUILDING
@@ -33,11 +33,11 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
         <h2
           data-animate-child
           style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+            fontFamily: "'BinanceNova', system-ui, sans-serif",
             fontSize: 'clamp(40px, 5vw, 64px)',
             fontWeight: 400,
             letterSpacing: '-2.56px',
-            color: '#F5F3EE',
+            color: '#EAECEF',
             marginTop: 20,
             lineHeight: 1.05,
           }}
@@ -48,9 +48,9 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
         <p
           data-animate-child
           style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+            fontFamily: "'BinanceNova', system-ui, sans-serif",
             fontSize: 18,
-            color: 'rgba(245, 243, 238, 0.55)',
+            color: 'rgba(234, 236, 239, 0.55)',
             maxWidth: 560,
             margin: '28px auto 0',
             lineHeight: 1.7,
@@ -65,9 +65,9 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
           data-animate-child
           onClick={onGetStarted}
           style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-            background: '#D4A574',
-            color: '#0C1222',
+            fontFamily: "'BinanceNova', system-ui, sans-serif",
+            background: '#FCD535',
+            color: '#0b0e11',
             borderRadius: 100,
             padding: '16px 44px',
             fontSize: 17,
@@ -79,10 +79,10 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
             transition: 'background 0.3s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F5F3EE';
+            e.currentTarget.style.background = '#EAECEF';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#D4A574';
+            e.currentTarget.style.background = '#FCD535';
           }}
         >
           Get Started
@@ -97,15 +97,15 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
             }}
             style={{
               fontSize: 14,
-              color: 'rgba(245, 243, 238, 0.4)',
+              color: 'rgba(234, 236, 239, 0.4)',
               textDecoration: 'none',
               transition: 'color 0.3s',
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.color = '#F5F3EE')
+              (e.currentTarget.style.color = '#EAECEF')
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.4)')
+              (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.4)')
             }
           >
             Already have an account? Log in
@@ -115,15 +115,15 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
             onClick={(e) => e.preventDefault()}
             style={{
               fontSize: 14,
-              color: 'rgba(245, 243, 238, 0.4)',
+              color: 'rgba(234, 236, 239, 0.4)',
               textDecoration: 'none',
               transition: 'color 0.3s',
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.color = '#F5F3EE')
+              (e.currentTarget.style.color = '#EAECEF')
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.4)')
+              (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.4)')
             }
           >
             View on GitHub

@@ -21,10 +21,10 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
         left: 0,
         right: 0,
         zIndex: 100,
-        background: 'rgba(12, 18, 34, 0.85)',
+        background: 'rgba(11, 14, 17, 0.85)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(245, 243, 238, 0.06)',
+        borderBottom: '1px solid rgba(234, 236, 239, 0.06)',
       }}
     >
       <div
@@ -41,11 +41,11 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+            fontFamily: "'BinanceNova', system-ui, sans-serif",
             fontSize: 20,
             fontWeight: 400,
             letterSpacing: '-0.5px',
-            color: '#F5F3EE',
+            color: '#EAECEF',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -67,10 +67,10 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
                 onClick={() => scrollTo(item.id)}
                 className="nav-link"
                 style={{
-                  fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+                  fontFamily: "'BinanceNova', system-ui, sans-serif",
                   fontSize: 14,
                   fontWeight: 400,
-                  color: 'rgba(245, 243, 238, 0.6)',
+                  color: 'rgba(234, 236, 239, 0.6)',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
@@ -78,10 +78,10 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
                   padding: 0,
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = '#F5F3EE')
+                  (e.currentTarget.style.color = '#EAECEF')
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.6)')
+                  (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.6)')
                 }
               >
                 {item.label}
@@ -92,10 +92,10 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
           <button
             onClick={onLogin}
             style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+              fontFamily: "'BinanceNova', system-ui, sans-serif",
               fontSize: 14,
               fontWeight: 400,
-              color: 'rgba(245, 243, 238, 0.6)',
+              color: 'rgba(234, 236, 239, 0.6)',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -103,10 +103,10 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
               transition: 'color 0.3s ease',
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.color = '#F5F3EE')
+              (e.currentTarget.style.color = '#EAECEF')
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.6)')
+              (e.currentTarget.style.color = 'rgba(234, 236, 239, 0.6)')
             }
           >
             Log in
@@ -115,23 +115,23 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
           <button
             onClick={onGetStarted}
             style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              border: '1px solid rgba(245, 243, 238, 0.3)',
+              fontFamily: "'BinanceNova', system-ui, sans-serif",
+              border: '1px solid rgba(234, 236, 239, 0.3)',
               borderRadius: 100,
               padding: '8px 24px',
               fontSize: 14,
-              color: '#F5F3EE',
+              color: '#EAECEF',
               background: 'transparent',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#F5F3EE';
-              e.currentTarget.style.color = '#0C1222';
+              e.currentTarget.style.background = '#EAECEF';
+              e.currentTarget.style.color = '#0b0e11';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#F5F3EE';
+              e.currentTarget.style.color = '#EAECEF';
             }}
           >
             Get Started

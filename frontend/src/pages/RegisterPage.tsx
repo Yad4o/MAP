@@ -8,7 +8,6 @@ import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
 import { AuthVisualPanel } from '../components/auth/AuthVisualPanel';
-import { AuthLiveField } from '../components/auth/AuthLiveField';
 
 const schema = z
   .object({
@@ -24,22 +23,10 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
-function DotGrid() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 opacity-[0.035]"
-      style={{
-        backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
-      }}
-    />
-  );
-}
-
 function PasswordStrength({ value }: { value: string }) {
   const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(value)).length;
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-  const colors = ['', 'bg-red-500', 'bg-yellow-500', 'bg-blue-400', 'bg-emerald-400'];
+  const colors = ['', 'bg-trading-down', 'bg-primary', 'bg-info', 'bg-trading-up'];
   if (!value) return null;
   return (
     <div className="mt-2 flex items-center gap-2">
@@ -47,11 +34,11 @@ function PasswordStrength({ value }: { value: string }) {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className={`h-0.5 flex-1 rounded-full transition-colors ${i <= score ? colors[score] : 'bg-[#1E1E1E]'}`}
+            className={`h-1 flex-1 rounded-full transition-colors ${i <= score ? colors[score] : 'bg-surface-elevated-dark'}`}
           />
         ))}
       </div>
-      <span className="text-xs text-[#555]">{labels[score]}</span>
+      <span className="text-xs text-muted-strong font-medium">{labels[score]}</span>
     </div>
   );
 }
@@ -81,127 +68,122 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
+    <div className="flex min-h-screen bg-canvas-light theme-light">
       <AuthVisualPanel
         variant="register"
         tagline="Spin up an account and hand off your first multi-step task to a team of AI agents in minutes."
       />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
-        <DotGrid />
-        <AuthLiveField />
-
-        {/* Soft glow behind card */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%)',
-          }}
-        />
-
-        <div className="relative w-full max-w-sm py-8">
-        {/* Brand mark */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="relative flex h-16 w-16 items-center justify-center">
-            <span className="absolute inset-0 rounded-2xl border border-indigo-400/20 animate-ping [animation-duration:2.4s]" />
-            <img
-              src="/map-logo.png"
-              alt="MAP"
-              className="h-14 w-14 rounded-2xl object-contain drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]"
-            />
-          </div>
-          <h1 className="text-xl font-semibold text-white">Create your account</h1>
-          <p className="text-xs text-[#555]">Multi-Agent AI Automation Platform</p>
-          <div className="flex items-center gap-1.5 text-[10px] text-[#4f4f4f]">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
-            System live
-          </div>
-        </div>
-
-        {serverError && (
-          <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-5 text-sm text-red-300">
-            {serverError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          <div>
-            <input
-              {...register('username')}
-              type="text"
-              autoComplete="username"
-              placeholder="Username"
-              aria-invalid={!!errors.username}
-              className={`w-full rounded-lg bg-white/5 border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-white/30 ${errors.username ? 'border-red-500/50' : 'border-white/10'}`}
-            />
-            {errors.username && <p className="text-xs text-red-400 mt-1.5">{errors.username.message}</p>}
+        <div className="relative w-full max-w-[380px] py-8">
+          {/* Brand mark */}
+          <div className="mb-7 flex flex-col items-center gap-3">
+            <div className="relative flex h-14 w-14 items-center justify-center">
+              <img
+                src="/map-logo.png"
+                alt="MAP"
+                className="h-12 w-12 rounded-full object-contain bg-primary p-1"
+              />
+            </div>
+            <div className="text-center">
+              <h1 className="text-title-lg text-ink">
+                Create your account
+              </h1>
+              <p className="mt-1.5 text-sm text-muted">Multi-Agent AI Automation Platform</p>
+            </div>
           </div>
 
-          <div>
-            <input
-              {...register('email')}
-              type="email"
-              autoComplete="email"
-              placeholder="Email address"
-              aria-invalid={!!errors.email}
-              className={`w-full rounded-lg bg-white/5 border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-white/30 ${errors.email ? 'border-red-500/50' : 'border-white/10'}`}
-            />
-            {errors.email && <p className="text-xs text-red-400 mt-1.5">{errors.email.message}</p>}
+          <div className="surface-card light p-8 shadow-sm">
+            {serverError && (
+              <div role="alert" className="bg-red-50 border border-red-200 rounded-md px-4 py-3 mb-5 text-sm text-red-600">
+                {serverError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+              <div>
+                <label htmlFor="username" className="mb-1.5 block text-xs font-semibold text-muted-strong">
+                  Username
+                </label>
+                <input
+                  {...register('username')}
+                  id="username"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Username"
+                  aria-invalid={!!errors.username}
+                  className={`form-input light ${errors.username ? 'border-red-500' : ''}`}
+                />
+                {errors.username && <p className="text-xs text-red-500 mt-1.5">{errors.username.message}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-muted-strong">
+                  Email address
+                </label>
+                <input
+                  {...register('email')}
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Email address"
+                  aria-invalid={!!errors.email}
+                  className={`form-input light ${errors.email ? 'border-red-500' : ''}`}
+                />
+                {errors.email && <p className="text-xs text-red-500 mt-1.5">{errors.email.message}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-muted-strong">
+                  Password
+                </label>
+                <input
+                  {...register('password')}
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Password"
+                  aria-invalid={!!errors.password}
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                  className={`form-input light ${errors.password ? 'border-red-500' : ''}`}
+                />
+                <PasswordStrength value={passwordValue} />
+                {errors.password && <p className="text-xs text-red-500 mt-1.5">{errors.password.message}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-xs font-semibold text-muted-strong">
+                  Confirm Password
+                </label>
+                <input
+                  {...register('confirmPassword')}
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Confirm password"
+                  aria-invalid={!!errors.confirmPassword}
+                  className={`form-input light ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                />
+                {errors.confirmPassword && <p className="text-xs text-red-500 mt-1.5">{errors.confirmPassword.message}</p>}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-primary w-full mt-2"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Account'}
+              </button>
+            </form>
           </div>
 
-          <div>
-            <input
-              {...register('password')}
-              type="password"
-              autoComplete="new-password"
-              placeholder="Password"
-              aria-invalid={!!errors.password}
-              onChange={(e) => setPasswordValue(e.target.value)}
-              className={`w-full rounded-lg bg-white/5 border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-white/30 ${errors.password ? 'border-red-500/50' : 'border-white/10'}`}
-            />
-            <PasswordStrength value={passwordValue} />
-            {errors.password && <p className="text-xs text-red-400 mt-1.5">{errors.password.message}</p>}
-          </div>
-
-          <div>
-            <input
-              {...register('confirmPassword')}
-              type="password"
-              autoComplete="new-password"
-              placeholder="Confirm password"
-              aria-invalid={!!errors.confirmPassword}
-              className={`w-full rounded-lg bg-white/5 border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-white/30 ${errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'}`}
-            />
-            {errors.confirmPassword && <p className="text-xs text-red-400 mt-1.5">{errors.confirmPassword.message}</p>}
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-lg bg-white text-black text-sm font-medium py-2.5 flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create account'}
-          </button>
-        </form>
-
-        {/* Micro trust badges */}
-        <div className="mt-5 flex items-center justify-center gap-4 text-[10px] text-[#444]">
-          <span>Local-first</span>
-          <span className="h-3 w-px bg-[#1E1E1E]" />
-          <span>No card required</span>
-          <span className="h-3 w-px bg-[#1E1E1E]" />
-          <span>Open platform</span>
-        </div>
-
-        <p className="text-center mt-6 text-sm text-slate-500">
-          Already have an account?{'  '}
-          <Link to="/login" className="text-white hover:underline underline-offset-2">Sign in</Link>
-        </p>
+          <p className="text-center mt-6 text-sm text-muted">
+            Already have an account?{'  '}
+            <Link to="/login" className="text-primary font-medium hover:underline underline-offset-2">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
   );
 }
+

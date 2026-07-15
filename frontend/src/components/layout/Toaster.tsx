@@ -22,17 +22,17 @@ export default function Toaster() {
               initial={{ opacity: 0, x: 100, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-              className={`pointer-events-auto flex items-center gap-3 min-w-[300px] max-w-md p-4 rounded-2xl border shadow-2xl backdrop-blur-xl ${colors.bg} ${colors.border}`}
+              className={`pointer-events-auto flex items-center gap-3 min-w-[300px] max-w-md p-4 rounded-md border border-hairline-on-dark shadow-sm bg-surface-elevated-dark ${colors.border}`}
             >
               <div className={`${colors.icon} shrink-0`}>
                 <Icon size={20} />
               </div>
-              <p className="flex-1 text-sm font-semibold text-white tracking-tight">
+              <p className="flex-1 text-sm font-semibold text-on-dark tracking-tight">
                 {toast.message}
               </p>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-slate-500 hover:text-white transition-colors p-1"
+                className="text-muted hover:text-on-dark transition-colors p-1"
               >
                 <X size={16} />
               </button>
@@ -56,12 +56,13 @@ function getIcon(type: ToastType) {
 function getColors(type: ToastType) {
   switch (type) {
     case 'success':
-      return { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: 'text-emerald-400' };
+      return { border: 'border-l-4 border-l-[theme(colors.trading.up)]', icon: 'text-trading-up' };
     case 'error':
-      return { bg: 'bg-red-500/10', border: 'border-red-500/20', icon: 'text-red-400' };
+      return { border: 'border-l-4 border-l-[theme(colors.trading.down)]', icon: 'text-trading-down' };
     case 'warning':
-      return { bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: 'text-amber-400' };
+      return { border: 'border-l-4 border-l-[theme(colors.primary.DEFAULT)]', icon: 'text-primary' };
     case 'info':
-      return { bg: 'bg-violet-500/10', border: 'border-violet-500/20', icon: 'text-violet-400' };
+      return { border: 'border-l-4 border-l-[theme(colors.info.DEFAULT)]', icon: 'text-info' };
   }
 }
+

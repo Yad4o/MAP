@@ -6,82 +6,80 @@ export default {
   theme: {
     extend: {
       colors: {
-        /* ── Celestial Intelligence Surfaces ── */
-        surface: {
-          DEFAULT:  '#140727',
-          dim:      '#140727',
-          low:      '#190b30',
-          mid:      '#201139',
-          high:     '#271641',
-          highest:  '#2e1c4b',
-          bright:   '#352254',
-          variant:  '#2e1c4b',
-        },
-        /* ── Primary Violet ── */
+        /* Brand & Accent */
         primary: {
-          DEFAULT: '#ba9eff',
-          dim:     '#8455ef',
-          cta:     '#8B5CF6',
-          dark:    '#4C1D95',
+          DEFAULT: '#FCD535',
+          active: '#f0b90b',
+          disabled: '#3a3a1f',
         },
-        /* ── Secondary Purple ── */
-        secondary: {
-          DEFAULT:   '#c285fb',
-          container: '#622599',
+        accent: {
+          turquoise: '#2dbdb6',
         },
-        /* ── Tertiary Cyan ── */
-        tertiary: {
-          DEFAULT: '#8ce7ff',
-          dim:     '#40ceed',
+        /* Surface Dark Mode */
+        canvas: {
+          dark: '#0b0e11',
+          light: '#ffffff',
         },
-        /* ── On Colors ── */
-        'on-bg':      '#eee0ff',
-        'on-surface': '#eee0ff',
-        'on-variant': '#b5a4cd',
-        outline:      '#7e6f95',
-        'outline-var':'#4f4165',
+        surface: {
+          'card-dark': '#1e2329',
+          'elevated-dark': '#2b3139',
+          'soft-light': '#fafafa',
+          'strong-light': '#f5f5f5',
+        },
+        /* Hairlines & Borders */
+        hairline: {
+          'on-light': '#eaecef',
+          'on-dark': '#2b3139',
+        },
+        border: {
+          strong: '#cdd1d6',
+        },
+        /* Text */
+        ink: '#181a20',
+        body: {
+          DEFAULT: '#eaecef',
+          'on-light': '#181a20',
+        },
+        muted: {
+          DEFAULT: '#707a8a',
+          strong: '#929aa5',
+        },
+        'on-primary': '#181a20',
+        'on-dark': '#ffffff',
+        /* Trading Semantics */
+        trading: {
+          up: '#0ecb81',
+          down: '#f6465d',
+        },
+        /* Info */
+        info: {
+          DEFAULT: '#3b82f6',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        plex: ['"JetBrains Mono"', '"IBM Plex Sans"', 'monospace'],
       },
       borderRadius: {
-        '2xl': '1rem',
-        '3xl': '1.5rem',
+        xs: '2px',
+        sm: '4px',
+        md: '6px',
+        lg: '8px',
+        xl: '12px',
+        pill: '9999px',
       },
-      backgroundImage: {
-        'grad-primary': 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 55%, #4C1D95 100%)',
-        'grad-title':   'linear-gradient(135deg, #C4B5FD 0%, #8B5CF6 100%)',
-        'grad-surface': 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+      spacing: {
+        xxs: '4px',
+        xs: '8px',
+        sm: '12px',
+        md: '16px',
+        lg: '24px',
+        xl: '32px',
+        xxl: '48px',
+        section: '80px',
       },
       boxShadow: {
-        'glow-primary': '0 0 20px rgba(139,92,246,0.55), 0 0 45px rgba(139,92,246,0.25)',
-        'glow-intense': '0 0 30px rgba(139,92,246,0.8), 0 0 60px rgba(139,92,246,0.4)',
-        'glow-cyan':    '0 0 20px rgba(140,231,255,0.4)',
-        'glass':        'inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 60px -15px rgba(0,0,0,0.6)',
-      },
-      animation: {
-        'fade-in-up': 'fade-in-up 0.55s cubic-bezier(0.22,1,0.36,1) both',
-        'fade-in':    'fade-in 0.45s ease both',
-        'scale-in':   'scale-in 0.45s cubic-bezier(0.22,1,0.36,1) both',
-        'orb-pulse':  'orb-pulse 2.5s ease-in-out infinite',
-      },
-      keyframes: {
-        'fade-in-up': {
-          from: { opacity: '0', transform: 'translateY(24px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
-        },
-        'fade-in': {
-          from: { opacity: '0' },
-          to:   { opacity: '1' },
-        },
-        'scale-in': {
-          from: { opacity: '0', transform: 'scale(0.94)' },
-          to:   { opacity: '1', transform: 'scale(1)' },
-        },
-        'orb-pulse': {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%':      { opacity: '0.6', transform: 'scale(0.8)' },
-        },
+        'focus-ring': '0 0 0 2px rgba(59, 130, 246, 0.5)',
       },
     },
   },

@@ -62,7 +62,7 @@ export default function Fallback() {
       ref={sectionRef}
       style={{
         width: '100%',
-        background: '#F5F3EE',
+        background: '#EAECEF',
         padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
@@ -116,7 +116,7 @@ export default function Fallback() {
               fontWeight: 400,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
-              color: '#D4A574',
+              color: '#FCD535',
             }}
           >
             RESILIENCE
@@ -125,11 +125,11 @@ export default function Fallback() {
           <h2
             data-animate-child
             style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+              fontFamily: "'BinanceNova', system-ui, sans-serif",
               fontSize: 'clamp(32px, 4vw, 48px)',
               fontWeight: 400,
               letterSpacing: '-1.92px',
-              color: '#0C1222',
+              color: '#0b0e11',
               marginTop: 16,
               lineHeight: 1.1,
             }}
@@ -140,9 +140,9 @@ export default function Fallback() {
           <p
             data-animate-child
             style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+              fontFamily: "'BinanceNova', system-ui, sans-serif",
               fontSize: 16,
-              color: 'rgba(12, 18, 34, 0.55)',
+              color: 'rgba(11, 14, 17, 0.55)',
               maxWidth: 560,
               marginTop: 24,
               lineHeight: 1.7,
@@ -162,9 +162,9 @@ export default function Fallback() {
                 ?.scrollIntoView({ behavior: 'smooth' });
             }}
             style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              border: '1px solid #0C1222',
-              color: '#0C1222',
+              fontFamily: "'BinanceNova', system-ui, sans-serif",
+              border: '1px solid #0b0e11',
+              color: '#0b0e11',
               borderRadius: 100,
               padding: '12px 32px',
               fontSize: 15,
@@ -174,12 +174,12 @@ export default function Fallback() {
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#0C1222';
-              e.currentTarget.style.color = '#F5F3EE';
+              e.currentTarget.style.background = '#0b0e11';
+              e.currentTarget.style.color = '#EAECEF';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#0C1222';
+              e.currentTarget.style.color = '#0b0e11';
             }}
           >
             View Fallback Docs
@@ -202,7 +202,7 @@ export default function Fallback() {
             objectFit: 'cover',
             borderRadius: '50%',
             filter: 'url(#liquid-distort)',
-            boxShadow: '0 20px 80px rgba(12, 18, 34, 0.15)',
+            boxShadow: '0 20px 80px rgba(11, 14, 17, 0.15)',
           }}
         />
       </div>
