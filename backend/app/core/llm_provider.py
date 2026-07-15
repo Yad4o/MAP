@@ -128,8 +128,21 @@ def _platform_default() -> ProviderCredentials:
     raise RuntimeError("No AI provider is configured — set GROQ_API_KEY/OPENAI_API_KEY or add a personal key.")
 
 
-def build_chat_model(creds: ProviderCredentials, temperature: float, max_tokens: int | None = None):
-    """Build the LangChain chat model for these credentials."""
+def build_chat_model(
+    creds: ProviderCredentials,
+    temperature: float,
+    max_tokens: int | None = None,
+    max_retries: int = 3,
+    request_timeout: float = 60.0,
+):
+    """Build the LangChain chat model for these credentials.
+
+    max_retries/request_timeout are passed straight into the LangChain
+    client so transient 429s/timeouts are retried with backoff *before*
+    ever reaching our own agent-level error handling. Without this the
+    client fails on the first hiccup and the caller has no way to tell
+    a rate limit apart from a real error.
+    """
     kind = PROVIDERS[creds.provider]["kind"]
 
     if kind == "anthropic":
@@ -140,6 +153,8 @@ def build_chat_model(creds: ProviderCredentials, temperature: float, max_tokens:
             model=creds.model,
             temperature=temperature,
             max_tokens=max_tokens or settings.MAX_TOKENS,
+            max_retries=max_retries,
+            timeout=request_timeout,
         )
 
     from langchain_openai import ChatOpenAI
@@ -150,4 +165,33 @@ def build_chat_model(creds: ProviderCredentials, temperature: float, max_tokens:
         model=creds.model,
         temperature=temperature,
         max_tokens=max_tokens,
+        max_retries=max_retries,
+        timeout=request_timeout,
     )
+
+
+def resolve_credentials_with_fallback(
+    user: User | None = None, provider: str | None = None
+) -> list[ProviderCredentials]:
+    """
+    Return an ordered list of credentials to try: the requested/primary
+    provider first, then a platform fallback provider if one is available
+    and distinct from the primary.
+
+    Used so a 429 on Groq (tight free-tier limits) can fall through to
+    OpenAI instead of failing the whole task outright.
+    """
+    primary = resolve_credentials(user=user, provider=provider)
+    candidates = [primary]
+
+    fallback_order = ["groq", "openai"]
+    for fb_provider in fallback_order:
+        if fb_provider == primary.provider:
+            continue
+        try:
+            candidates.append(_platform_credentials(fb_provider))
+        except RuntimeError:
+            continue
+        break  # only ever add one fallback
+
+    return candidates
