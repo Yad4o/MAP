@@ -6,17 +6,16 @@
    ===================================================== */
 
 .kimi-landing {
-  font-family: 'BinanceNova', -apple-system, sans-serif;
+  font-family: 'PP Neue Montreal', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  background-color: var(--color-canvas-dark);
 }
 
 .kimi-landing .display-heading {
   font-size: clamp(40px, 5vw, 64px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  color: var(--color-on-dark);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #F5F3EE;
 }
