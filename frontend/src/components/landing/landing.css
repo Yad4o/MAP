@@ -77,12 +77,12 @@
 
 .hero-v2__mark {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 112px;
+  height: 112px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
   animation: heroMarkIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -99,7 +99,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 24px rgba(52, 211, 153, 0.25));
 }
 
 .hero-v2__wordmark {
@@ -109,29 +109,6 @@
   letter-spacing: 0.32em;
   color: rgba(245, 243, 238, 0.85);
   margin-bottom: 28px;
-}
-
-.hero-v2__eyebrow {
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #34d399;
-  margin-bottom: 14px;
-}
-
-.hero-v2__headline {
-  font-family: 'PP Neue Montreal', system-ui, sans-serif;
-  font-size: clamp(32px, 7vw, 44px);
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-  color: #f5f3ee;
-  margin: 0;
-}
-
-.hero-v2__headline span {
-  display: block;
 }
 
 .hero-v2__headline-accent {
