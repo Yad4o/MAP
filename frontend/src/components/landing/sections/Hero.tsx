@@ -31,6 +31,10 @@ export default function Hero() {
 
         <span className="hero-v2__wordmark">MAP</span>
 
+        <span className="hero-v2__tagline">
+          MULTIAGENT <span className="hero-v2__tagline-accent">AI</span> PLATFORM
+        </span>
+
         <p className="hero-v2__subtext">
           Route complex work through specialized AI agents, each with its own
           role, tools, and protocol.
