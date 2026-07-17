@@ -31,13 +31,6 @@ export default function Hero() {
 
         <span className="hero-v2__wordmark">MAP</span>
 
-        <span className="hero-v2__eyebrow">MULTI-AGENT ORCHESTRATION</span>
-
-        <h1 className="hero-v2__headline">
-          <span>Intelligence,</span>
-          <span className="hero-v2__headline-accent">Decomposed.</span>
-        </h1>
-
         <p className="hero-v2__subtext">
           Route complex work through specialized AI agents, each with its own
           role, tools, and protocol.
