@@ -19,7 +19,7 @@ export default function Hero() {
       <div className="hero-v2__content">
         <div className="hero-v2__mark">
           <div className="hero-v2__mark-glow" aria-hidden="true" />
-          <img src="/map-logo.png" alt="" aria-hidden="true" className="hero-v2__mark-img" />
+          <img src="/map-icon.png" alt="" aria-hidden="true" className="hero-v2__mark-img" />
         </div>
 
         <span className="hero-v2__wordmark">MAP</span>
