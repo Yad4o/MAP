@@ -1,9 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+/* ──────────────────────────────────────────────────────────────────────────
+   Wise Design System — MAP Platform
+   Fonts: Manrope (display/hero weight 800-900) + Inter (body weight 400-600)
+   ────────────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -11,268 +16,455 @@
 
   html {
     scroll-behavior: smooth;
+    font-feature-settings: "calt";
   }
 
+  /* ── App shell body: sage canvas ── */
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: theme('colors.canvas.dark');
-    color: theme('colors.body.DEFAULT');
+    background-color: #e8ebe6;
+    color: #0e0f0c;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 
-  /* Transactional / Light mode body overide via class */
-  body.theme-light {
-    background-color: theme('colors.canvas.light');
-    color: theme('colors.body.on-light');
+  /* Auth pages keep the dark canvas via explicit bg override in their own roots */
+  body.theme-dark {
+    background-color: #0b0e11;
+    color: #eaecef;
   }
 
   ::selection {
-    background: theme('colors.primary.DEFAULT');
-    color: theme('colors.ink');
+    background: #9fe870;
+    color: #0e0f0c;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: theme('colors.surface.elevated-dark');
+    background: #c5edab;
     border-radius: 9999px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: theme('colors.muted.DEFAULT');
-  }
+  ::-webkit-scrollbar-thumb:hover { background: #9fe870; }
 
-  /* Headings map to weight 600 or 700 */
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    color: theme('colors.on-dark');
-  }
-  .theme-light h1, .theme-light h2, .theme-light h3, .theme-light h4, .theme-light h5, .theme-light h6 {
-    color: theme('colors.ink');
+    font-family: 'Manrope', 'Inter', sans-serif;
+    font-weight: 900;
+    color: #0e0f0c;
+    line-height: 1.1;
   }
 }
 
+/* ── Wise Component Classes ───────────────────────────────────────────────── */
 @layer components {
-  /* Surface Cards */
-  .surface-card {
-    background-color: theme('colors.surface.card-dark');
-    border-radius: theme('borderRadius.xl');
-  }
-  .theme-light .surface-card, .surface-card.light {
-    background-color: theme('colors.canvas.light');
-    border: 1px solid theme('colors.hairline.on-light');
-  }
 
-  .surface-elevated {
-    background-color: theme('colors.surface.elevated-dark');
-    border-radius: theme('borderRadius.lg');
-  }
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
 
-  /* Buttons */
-  .btn-primary {
+  /* Primary — lime-green CTA pill */
+  .btn-wise-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
     padding: 12px 24px;
-    height: 40px;
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 14px;
-    color: theme('colors.on-primary');
-    background: theme('colors.primary.DEFAULT');
+    font-size: 16px;
+    line-height: 24px;
+    color: #0e0f0c;
+    background: #9fe870;
     border: none;
-    border-radius: theme('borderRadius.md');
+    border-radius: 24px;
     cursor: pointer;
-    transition: background-color 150ms ease;
+    transition: background-color 150ms ease, transform 100ms ease;
     white-space: nowrap;
+    text-decoration: none;
   }
-
-  .btn-primary:hover:not(:disabled) {
-    background: theme('colors.primary.active');
+  .btn-wise-primary:hover:not(:disabled) {
+    background: #cdffad;
   }
-
-  .btn-primary:disabled {
-    background: theme('colors.primary.disabled');
-    color: theme('colors.muted.DEFAULT');
+  .btn-wise-primary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn-wise-primary:disabled {
+    background: #c8e8b5;
+    color: #868685;
     cursor: not-allowed;
   }
 
-  .btn-primary-pill {
-    @apply btn-primary;
-    border-radius: theme('borderRadius.pill');
-    padding: 14px 32px;
-  }
-
-  .btn-secondary-on-dark {
+  /* Secondary — sage-tinted */
+  .btn-wise-secondary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
     padding: 12px 24px;
-    height: 40px;
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 14px;
-    color: theme('colors.on-dark');
-    background: theme('colors.surface.card-dark');
+    font-size: 16px;
+    line-height: 24px;
+    color: #0e0f0c;
+    background: #e8ebe6;
     border: none;
-    border-radius: theme('borderRadius.md');
+    border-radius: 24px;
     cursor: pointer;
     transition: background-color 150ms ease;
+    white-space: nowrap;
+    text-decoration: none;
   }
-  
-  .btn-secondary-on-dark:hover:not(:disabled) {
-    background: theme('colors.surface.elevated-dark');
+  .btn-wise-secondary:hover:not(:disabled) {
+    background: #d4d9d1;
   }
 
-  .btn-secondary-on-light {
+  /* Tertiary — white with ink border */
+  .btn-wise-tertiary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 12px 24px;
-    height: 40px;
+    gap: 8px;
+    padding: 11px 24px;
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 14px;
-    color: theme('colors.ink');
-    background: theme('colors.canvas.light');
-    border: 1px solid theme('colors.hairline.on-light');
-    border-radius: theme('borderRadius.md');
+    font-size: 16px;
+    line-height: 24px;
+    color: #0e0f0c;
+    background: #ffffff;
+    border: 1px solid #0e0f0c;
+    border-radius: 24px;
     cursor: pointer;
     transition: background-color 150ms ease;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .btn-wise-tertiary:hover:not(:disabled) {
+    background: #f5f8f3;
   }
 
-  .btn-secondary-on-light:hover:not(:disabled) {
-    background: theme('colors.surface.soft-light');
-  }
-
-  .btn-tertiary-text {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: theme('colors.primary.DEFAULT');
-    background: transparent;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
+  /* Legacy alias — many pages use btn-primary, keep pointing to wise primary */
+  .btn-primary {
+    @apply btn-wise-primary;
+    border-radius: 24px;
+    padding: 11px 22px;
     font-size: 14px;
   }
 
-  .btn-tertiary-text:hover {
-    color: theme('colors.primary.active');
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+
+  /* Default white card on sage canvas */
+  .wise-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px;
   }
 
-  .btn-trading-up {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    color: theme('colors.on-dark');
-    background: theme('colors.trading.up');
-    border-radius: theme('borderRadius.sm');
-    cursor: pointer;
+  /* Sage-tinted feature card */
+  .wise-card-sage {
+    background: #e8ebe6;
+    border-radius: 24px;
+    padding: 24px;
   }
 
-  .btn-trading-down {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    color: theme('colors.on-dark');
-    background: theme('colors.trading.down');
-    border-radius: theme('borderRadius.sm');
-    cursor: pointer;
+  /* Pale-green feature card */
+  .wise-card-green {
+    background: #e2f6d5;
+    border-radius: 24px;
+    padding: 24px;
   }
 
-  /* Forms */
-  .form-input {
+  /* Dark polarity card — ink bg + lime text */
+  .wise-card-dark {
+    background: #0e0f0c;
+    border-radius: 24px;
+    padding: 24px;
+    color: #9fe870;
+  }
+
+  /* Legacy surface-card alias — some pages use it */
+  .surface-card {
+    @apply wise-card;
+  }
+
+  /* Legacy glass-card alias — settings modals and any unmigrated components */
+  .glass-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid rgba(14,15,12,0.06);
+  }
+
+  /* ── Inputs ──────────────────────────────────────────────────────────── */
+
+  .wise-input {
     width: 100%;
     padding: 10px 16px;
-    height: 40px;
+    height: 44px;
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    color: theme('colors.on-dark');
-    background: theme('colors.surface.card-dark');
-    border: 1px solid theme('colors.hairline.on-dark');
-    border-radius: theme('borderRadius.lg');
+    font-size: 16px;
+    color: #0e0f0c;
+    background: #ffffff;
+    border: 1px solid #0e0f0c;
+    border-radius: 12px;
     outline: none;
     transition: box-shadow 150ms ease;
   }
+  .wise-input:focus {
+    box-shadow: 0 0 0 3px rgba(159, 232, 112, 0.35);
+  }
+  .wise-input::placeholder { color: #868685; }
 
-  .theme-light .form-input, .form-input.light {
-    color: theme('colors.ink');
-    background: theme('colors.canvas.light');
-    border: 1px solid theme('colors.hairline.on-light');
+  /* Legacy form-input alias */
+  .form-input {
+    @apply wise-input;
   }
 
-  .form-input:focus {
-    box-shadow: theme('boxShadow.focus-ring');
-  }
+  /* ── Badges ──────────────────────────────────────────────────────────── */
 
-  /* Badge Replacements */
-  .badge {
+  .badge-wise-positive {
     display: inline-flex;
     align-items: center;
-    padding: 4px 8px;
-    font-size: 12px;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
     font-weight: 600;
-    border-radius: theme('borderRadius.sm');
-    background: theme('colors.surface.elevated-dark');
-    color: theme('colors.body.DEFAULT');
-  }
-  .theme-light .badge {
-    background: theme('colors.surface.strong-light');
-    color: theme('colors.ink');
+    line-height: 20px;
+    background: #e2f6d5;
+    color: #054d28;
+    border-radius: 9999px;
   }
 
-  .badge-primary { background: rgba(252, 213, 53, 0.15); color: theme('colors.primary.DEFAULT'); }
-  .badge-success { background: rgba(14, 203, 129, 0.15); color: theme('colors.trading.up'); }
-  .badge-warning { background: rgba(252, 213, 53, 0.15); color: theme('colors.primary.DEFAULT'); }
-  .badge-error { background: rgba(246, 70, 93, 0.15); color: theme('colors.trading.down'); }
+  .badge-wise-negative {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #320707;
+    color: #ffffff;
+    border-radius: 9999px;
+  }
 
-  /* Number Display Typography */
+  .badge-wise-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #fff5c2;
+    color: #4a3b1c;
+    border-radius: 9999px;
+  }
+
+  .badge-wise-neutral {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #e8ebe6;
+    color: #454745;
+    border-radius: 9999px;
+  }
+
+  /* ── Typography scale utilities ──────────────────────────────────────── */
+
+  .text-display-hero {
+    font-family: 'Manrope', sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    line-height: 54.4px;
+    letter-spacing: 0;
+    color: #0e0f0c;
+  }
+
+  .text-display-md {
+    font-family: 'Manrope', sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    line-height: 34px;
+    letter-spacing: 0;
+    color: #0e0f0c;
+  }
+
+  .text-display-sm {
+    font-family: 'Manrope', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 38.4px;
+    letter-spacing: -0.96px;
+    color: #0e0f0c;
+  }
+
+  .text-display-xs {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 31.2px;
+    letter-spacing: -0.48px;
+    color: #0e0f0c;
+  }
+
+  /* Alias used in existing code */
+  .text-hero-display {
+    @apply text-display-hero;
+  }
+
+  .text-title-lg {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 30px;
+    color: #0e0f0c;
+  }
+
+  .text-title-md {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 26px;
+    color: #0e0f0c;
+  }
+
+  .text-title-sm {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    color: #0e0f0c;
+  }
+
+  /* Number display */
   .text-number-display {
-    font-family: theme('fontFamily.plex');
+    font-family: 'JetBrains Mono', monospace;
     font-size: 40px;
     font-weight: 700;
     line-height: 1.1;
     letter-spacing: -0.3px;
   }
   .text-number-md {
-    font-family: theme('fontFamily.plex');
+    font-family: 'JetBrains Mono', monospace;
     font-size: 16px;
     font-weight: 500;
     line-height: 1.4;
   }
   .text-number-sm {
-    font-family: theme('fontFamily.plex');
+    font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
   }
 
-  /* Typography Scales */
-  .text-hero-display { font-size: 64px; font-weight: 700; line-height: 1.1; letter-spacing: -1px; }
-  .text-display-lg { font-size: 48px; font-weight: 700; line-height: 1.1; letter-spacing: -0.5px; }
-  .text-display-md { font-size: 40px; font-weight: 600; line-height: 1.15; letter-spacing: -0.3px; }
-  .text-display-sm { font-size: 32px; font-weight: 600; line-height: 1.2; }
-  .text-title-lg { font-size: 24px; font-weight: 600; line-height: 1.3; }
-  .text-title-md { font-size: 20px; font-weight: 600; line-height: 1.35; }
-  .text-title-sm { font-size: 16px; font-weight: 600; line-height: 1.4; }
-}
+  /* ── Wise Nav Shell ──────────────────────────────────────────────────── */
 
-/* Animations reset - removing all glow/hover scale transforms */
-.animate-fade-in-up, .animate-fade-in, .animate-scale-in {
-  /* Resetting these to avoid jarring scale changes during load if used previously */
-  animation: none;
+  .wise-sidebar {
+    background: #ffffff;
+    border-right: 1px solid rgba(14,15,12,0.12);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .wise-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #454745;
+    text-decoration: none;
+    transition: background-color 150ms ease, color 150ms ease;
+    position: relative;
+  }
+  .wise-nav-link:hover {
+    background: #e8ebe6;
+    color: #0e0f0c;
+  }
+  .wise-nav-link.active {
+    background: #e2f6d5;
+    color: #0e0f0c;
+  }
+  .wise-nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: #9fe870;
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* ── Utility  ─────────────────────────────────────────────────────────── */
+
+  /* Legacy aliases to keep AppShell + auth pages from breaking */
+  .surface-elevated {
+    background: #ffffff;
+    border-radius: 16px;
+  }
+
+  .btn-secondary-on-dark {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 11px 22px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
+    color: #0e0f0c; background: #e8ebe6; border: none;
+    border-radius: 24px; cursor: pointer; transition: background 150ms;
+  }
+  .btn-secondary-on-dark:hover { background: #d4d9d1; }
+
+  .btn-secondary-on-light {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 11px 22px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
+    color: #0e0f0c; background: #ffffff; border: 1px solid #0e0f0c;
+    border-radius: 24px; cursor: pointer; transition: background 150ms;
+  }
+  .btn-secondary-on-light:hover { background: #f5f8f3; }
+
+  .btn-tertiary-text {
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #0e0f0c; background: transparent; border: none;
+    font-weight: 600; cursor: pointer; font-size: 14px;
+    text-decoration: underline; transition: color 150ms;
+  }
+  .btn-tertiary-text:hover { color: #454745; }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 4px 10px; font-size: 12px; font-weight: 600;
+    border-radius: 8px; background: #e8ebe6; color: #454745;
+  }
+
+  /* ── Micro-animations ─────────────────────────────────────────────────── */
+
+  @keyframes wise-fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-wise-fade-up {
+    animation: wise-fade-up 0.35s ease forwards;
+  }
+
+  @keyframes loading-bar {
+    0%   { left: -30%; }
+    100% { left: 100%; }
+  }
+
+  /* Reset stale animations */
+  .animate-fade-in-up, .animate-fade-in, .animate-scale-in {
+    animation: wise-fade-up 0.35s ease forwards;
+  }
 }

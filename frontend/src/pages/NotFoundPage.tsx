@@ -1,58 +1,73 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Home, ArrowLeft } from 'lucide-react';
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6 bg-[#020617]">
-      {/* Background Mesh */}
-      <div className="bg-mesh absolute inset-0 opacity-40" />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative z-10 text-center w-full max-w-lg"
-      >
-        <div className="glass-card p-12 border border-white/10 shadow-2xl shadow-violet-500/10 backdrop-blur-xl">
-          <motion.div
-            initial={{ y: 20 }}
-            animate={{ y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: '#e8ebe6' }}
+    >
+      <div className="text-center w-full max-w-md">
+
+        {/* 404 number */}
+        <div
+          className="text-[120px] font-black leading-none select-none mb-0"
+          style={{
+            fontFamily: 'Manrope, sans-serif',
+            fontWeight: 900,
+            color: '#9fe870',
+            letterSpacing: '-4px',
+          }}
+        >
+          404
+        </div>
+
+        {/* Card */}
+        <div className="wise-card" style={{ marginTop: '-8px' }}>
+          <h2
+            className="mb-3"
+            style={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 900,
+              fontSize: '24px',
+              color: '#0e0f0c',
+            }}
           >
-            <h1 className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-2 select-none tracking-tighter">
-              404
-            </h1>
-            <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">Location Not Found</h2>
-            <p className="text-slate-400 mb-10 leading-relaxed font-medium">
-              The coordinates you requested do not exist in the current grid. 
-              The resource may have been decommissioned or moved to a restricted sector.
-            </p>
-          </motion.div>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              to="/tasks" 
-              className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto px-8 group"
+            Page Not Found
+          </h2>
+          <p className="text-sm mb-8 leading-relaxed" style={{ color: '#454745' }}>
+            The page you're looking for doesn't exist or has been moved.
+            Head back to the dashboard to continue.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/tasks"
+              className="btn-wise-primary inline-flex items-center gap-2 w-full sm:w-auto justify-center"
+              style={{ fontSize: '14px', padding: '11px 22px' }}
             >
-              <Home size={18} className="group-hover:scale-110 transition-transform" />
+              <Home size={16} />
               Return Home
             </Link>
-            <button 
+            <button
               onClick={() => window.history.back()}
-              className="px-8 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-white/10 transition-all w-full sm:w-auto flex items-center justify-center gap-2 group"
+              className="btn-wise-tertiary inline-flex items-center gap-2 w-full sm:w-auto justify-center"
+              style={{ fontSize: '14px', padding: '10px 22px' }}
             >
-              <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+              <ArrowLeft size={16} />
               Go Back
             </button>
           </div>
         </div>
-        
-        <p className="mt-8 text-xs text-slate-600 font-mono tracking-widest uppercase">
-          Authorization required for deeper probe
+
+        <p
+          className="mt-6 text-[11px] font-mono tracking-widest uppercase"
+          style={{ color: '#868685' }}
+        >
+          MAP Platform · Page missing
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -59,17 +59,27 @@ export default function SettingsPage() {
   ] as const;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto space-y-6 animate-wise-fade-up">
       {/* Page Title */}
-      <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
-        <p className="text-slate-400 mt-2">
+      <div className="wise-card">
+        <h1
+          style={{
+            fontFamily: 'Manrope, sans-serif', fontWeight: 900,
+            fontSize: '28px', lineHeight: '1.2', color: '#0e0f0c',
+          }}
+        >
+          Settings
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#454745' }}>
           Manage your account, plan, security, and AI memory preferences.
         </p>
       </div>
 
       {/* Primary Navigation Tabs */}
-      <div className="flex flex-wrap bg-white/[0.03] backdrop-blur-md p-1.5 rounded-2xl border border-white/8 w-fit gap-1 shadow-xl">
+      <div
+        className="flex flex-wrap p-1.5 rounded-2xl w-fit gap-1"
+        style={{ background: '#e8ebe6' }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -77,13 +87,13 @@ export default function SettingsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-200 ${
-                isActive
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
-                  : "text-slate-500 hover:text-slate-200 hover:bg-white/5"
-              }`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150"
+              style={{
+                background: isActive ? '#9fe870' : 'transparent',
+                color:      isActive ? '#0e0f0c' : '#454745',
+              }}
             >
-              <Icon size={14} />
+              <Icon size={13} />
               {tab.label}
             </button>
           );
@@ -156,24 +166,33 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
   const ac = AVATAR_COLORS[avatarColor];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       {/* Info Card */}
       <div className="space-y-4 lg:sticky lg:top-8">
-        <div className="glass-card p-6">
+        <div className="wise-card">
           <div className="flex flex-col items-center text-center space-y-4">
-            {/* Avatar with color picker */}
-            <div className={`w-20 h-20 rounded-3xl bg-gradient-to-br ${ac.from} ${ac.to} flex items-center justify-center text-3xl font-bold text-white shadow-xl ring-4 ring-white/5`}>
+            {/* Avatar */}
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black"
+              style={{ background: '#9fe870', color: '#0e0f0c', fontFamily: 'Manrope,sans-serif' }}
+            >
               {user.username.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{user.username}</h2>
-              <p className="text-slate-500 text-xs font-mono">{user.email}</p>
+              <h2 className="text-base font-semibold" style={{ color: '#0e0f0c' }}>{user.username}</h2>
+              <p className="text-xs font-mono mt-0.5" style={{ color: '#868685' }}>{user.email}</p>
             </div>
-            <div className="flex gap-1.5 flex-wrap justify-center">
-              <span className="px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-400">
+            <div className="flex gap-2 flex-wrap justify-center">
+              <span
+                className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
+                style={{ background: '#e2f6d5', color: '#054d28' }}
+              >
                 {user.tier} Plan
               </span>
-              <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <span
+                className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
+                style={{ background: '#e8ebe6', color: '#454745' }}
+              >
                 {user.role}
               </span>
             </div>
@@ -181,8 +200,8 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
         </div>
 
         {/* Avatar color picker */}
-        <div className="glass-card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Avatar Color</p>
+        <div className="wise-card">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#868685' }}>Avatar Color</p>
           <div className="flex gap-2 flex-wrap">
             {AVATAR_COLORS.map((c, i) => (
               <button
@@ -190,7 +209,7 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
                 onClick={() => setAvatarColor(i)}
                 title={c.label}
                 className={`w-7 h-7 rounded-full bg-gradient-to-br ${c.from} ${c.to} transition-all ${
-                  avatarColor === i ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110" : "opacity-60 hover:opacity-100"
+                  avatarColor === i ? "ring-2 ring-[#9fe870] ring-offset-2 ring-offset-white scale-110" : "opacity-60 hover:opacity-100"
                 }`}
               />
             ))}
@@ -200,28 +219,33 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
         {/* Sign out */}
         <button
           onClick={handleLogout}
-          className="w-full glass-card p-4 flex items-center gap-3 text-slate-400 hover:text-red-400 hover:border-red-500/20 transition-all duration-200"
+          className="w-full wise-card flex items-center gap-3 p-4 transition-colors duration-150"
+          style={{ color: '#868685' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fde8e9'; (e.currentTarget as HTMLButtonElement).style.color = '#d03238'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ffffff'; (e.currentTarget as HTMLButtonElement).style.color = '#868685'; }}
         >
-          <LogOut size={16} />
-          <span className="text-sm font-medium">Sign Out</span>
+          <LogOut size={15} />
+          <span className="text-sm font-semibold">Sign Out</span>
         </button>
       </div>
 
       {/* Forms Area */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-5">
         {/* Username Update */}
-        <section className="glass-card p-6">
+        <section className="wise-card">
           <div className="flex items-center gap-3 mb-5">
-            <UserIcon size={18} className="text-indigo-400" />
-            <h3 className="text-base font-bold text-white">General Information</h3>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+              <UserIcon size={15} style={{ color: '#2ead4b' }} />
+            </div>
+            <h3 className="text-sm font-semibold" style={{ color: '#0e0f0c' }}>General Information</h3>
           </div>
           <form
             onSubmit={profileForm.handleSubmit((data) => updateProfileMutation.mutate(data))}
-            className="space-y-5"
+            className="space-y-4"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
                   Username
                 </label>
                 <input
@@ -229,27 +253,28 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
                     required: "Username is required",
                     minLength: 3,
                   })}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 outline-none transition-all"
+                  className="wise-input"
                 />
                 {profileForm.formState.errors.username && (
-                  <p className="text-red-400 text-xs">{profileForm.formState.errors.username.message}</p>
+                  <p className="text-xs" style={{ color: '#d03238' }}>{profileForm.formState.errors.username.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
                   Email (read-only)
                 </label>
                 <input
                   value={user.email}
                   disabled
-                  className="w-full bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 text-slate-600 text-sm cursor-not-allowed"
+                  className="wise-input opacity-60 cursor-not-allowed"
                 />
               </div>
             </div>
             <button
               type="submit"
               disabled={updateProfileMutation.isPending}
-              className="btn-primary flex items-center gap-2 text-sm py-2.5 px-5"
+              className="btn-wise-primary flex items-center gap-2"
+              style={{ fontSize: '14px', padding: '10px 20px' }}
             >
               {updateProfileMutation.isPending ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -262,28 +287,30 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
         </section>
 
         {/* Password Update */}
-        <section className="glass-card p-6">
+        <section className="wise-card">
           <div className="flex items-center gap-3 mb-5">
-            <Lock size={18} className="text-indigo-400" />
-            <h3 className="text-base font-bold text-white">Security & Password</h3>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+              <Lock size={15} style={{ color: '#2ead4b' }} />
+            </div>
+            <h3 className="text-sm font-semibold" style={{ color: '#0e0f0c' }}>Security & Password</h3>
           </div>
           <form
             onSubmit={passwordForm.handleSubmit((data) => changePasswordMutation.mutate(data))}
-            className="space-y-5"
+            className="space-y-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 col-span-full">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
                   Current Password
                 </label>
                 <input
                   type="password"
                   {...passwordForm.register("current_password", { required: "Required" })}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-indigo-500/40 outline-none transition-all"
+                  className="wise-input"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
                   New Password
                 </label>
                 <input
@@ -292,11 +319,11 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
                     required: "Required",
                     minLength: 8,
                   })}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-indigo-500/40 outline-none transition-all"
+                  className="wise-input"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
                   Confirm New Password
                 </label>
                 <input
@@ -307,10 +334,10 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
                       val === passwordForm.getValues("new_password") ||
                       "Passwords don't match",
                   })}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-indigo-500/40 outline-none transition-all"
+                  className="wise-input"
                 />
                 {passwordForm.formState.errors.confirm && (
-                  <p className="text-red-400 text-xs">
+                  <p className="text-xs" style={{ color: '#d03238' }}>
                     {passwordForm.formState.errors.confirm.message}
                   </p>
                 )}
@@ -319,7 +346,8 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
             <button
               type="submit"
               disabled={changePasswordMutation.isPending}
-              className="btn-primary flex items-center gap-2 text-sm py-2.5 px-5"
+              className="btn-wise-primary flex items-center gap-2"
+              style={{ fontSize: '14px', padding: '10px 20px' }}
             >
               {changePasswordMutation.isPending ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -332,10 +360,12 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
         </section>
 
         {/* Account info */}
-        <section className="glass-card p-6">
+        <section className="wise-card">
           <div className="flex items-center gap-3 mb-4">
-            <Activity size={18} className="text-indigo-400" />
-            <h3 className="text-base font-bold text-white">Account Info</h3>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+              <Activity size={15} style={{ color: '#2ead4b' }} />
+            </div>
+            <h3 className="text-sm font-semibold" style={{ color: '#0e0f0c' }}>Account Info</h3>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -344,9 +374,9 @@ function ProfileTab({ user }: { user: UserResponse | null }) {
               { label: "Plan", value: user.tier },
               { label: "Email Verified", value: user.email_verified ? "Yes" : "No" },
             ].map((item) => (
-              <div key={item.label} className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">{item.label}</p>
-                <p className="text-sm text-white font-mono">{item.value}</p>
+              <div key={item.label} className="rounded-xl p-3" style={{ background: '#e8ebe6' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#868685' }}>{item.label}</p>
+                <p className="text-sm font-mono font-semibold" style={{ color: '#0e0f0c' }}>{item.value}</p>
               </div>
             ))}
           </div>
@@ -433,30 +463,30 @@ function PlanTab({ user }: { user: UserResponse | null }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Current plan banner */}
-      <div className="glass-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="wise-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <CreditCard size={20} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+            <CreditCard size={18} style={{ color: '#2ead4b' }} />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Current Plan</p>
-            <p className="text-xl font-bold text-white capitalize">{currentTier}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#868685' }}>Current Plan</p>
+            <p className="text-xl font-black capitalize" style={{ fontFamily: 'Manrope,sans-serif', color: '#0e0f0c' }}>{currentTier}</p>
           </div>
         </div>
         {currentTier === "free" && (
-          <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 font-semibold">
+          <span className="text-xs rounded-full px-3 py-1.5 font-semibold" style={{ background: '#e8ebe6', color: '#454745' }}>
             Upgrade to unlock more
           </span>
         )}
         {currentTier === "pro" && (
-          <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 font-semibold">
+          <span className="text-xs rounded-full px-3 py-1.5 font-semibold" style={{ background: '#e2f6d5', color: '#054d28' }}>
             ✓ Pro features active
           </span>
         )}
         {currentTier === "enterprise" && (
-          <span className="text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 font-semibold">
+          <span className="text-xs rounded-full px-3 py-1.5 font-semibold" style={{ background: '#e2f6d5', color: '#054d28' }}>
             ✓ Enterprise active
           </span>
         )}
@@ -469,36 +499,42 @@ function PlanTab({ user }: { user: UserResponse | null }) {
           return (
             <div
               key={plan.id}
-              className={`glass-card p-6 flex flex-col relative transition-all duration-200 ${
-                plan.highlight
-                  ? "border-indigo-500/30 shadow-lg shadow-indigo-500/10"
-                  : ""
-              } ${isCurrent ? "ring-1 ring-indigo-500/20" : ""}`}
+              className="wise-card flex flex-col relative transition-shadow duration-200"
+              style={{
+                border: plan.highlight ? '2px solid #9fe870' : '1px solid rgba(14,15,12,0.06)',
+                boxShadow: isCurrent ? '0 0 0 2px #9fe870' : 'none',
+              }}
             >
               {plan.highlight && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
+                  <span
+                    className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1"
+                    style={{ background: '#9fe870', color: '#0e0f0c' }}
+                  >
                     <Sparkles size={10} /> Most Popular
                   </span>
                 </div>
               )}
               {isCurrent && (
                 <div className="absolute top-3 right-3">
-                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">Active</span>
+                  <span
+                    className="text-[10px] font-bold rounded-full px-2 py-0.5"
+                    style={{ background: '#e2f6d5', color: '#054d28' }}
+                  >Active</span>
                 </div>
               )}
               <div className="mb-4">
-                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                <p className="text-slate-500 text-xs mt-0.5">{plan.tagline}</p>
+                <h3 className="text-base font-black" style={{ fontFamily: 'Manrope,sans-serif', color: '#0e0f0c' }}>{plan.name}</h3>
+                <p className="text-xs mt-0.5" style={{ color: '#454745' }}>{plan.tagline}</p>
               </div>
               <div className="mb-5">
-                <span className="text-3xl font-black text-white">{plan.price}</span>
-                <span className="text-slate-500 text-xs ml-1.5">{plan.period}</span>
+                <span className="text-3xl font-black" style={{ fontFamily: 'JetBrains Mono,monospace', color: '#0e0f0c' }}>{plan.price}</span>
+                <span className="text-xs ml-1.5" style={{ color: '#868685' }}>{plan.period}</span>
               </div>
               <ul className="space-y-2 mb-6 flex-1">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
-                    <CheckCircle2 size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: '#454745' }}>
+                    <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" style={{ color: '#2ead4b' }} />
                     {f}
                   </li>
                 ))}
@@ -511,15 +547,14 @@ function PlanTab({ user }: { user: UserResponse | null }) {
                     setShowPayModal(true);
                   }
                 }}
-                className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  isCurrent
-                    ? "bg-white/5 text-slate-500 cursor-default"
-                    : plan.highlight
-                    ? "bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/30"
-                    : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
-                }`}
+                className="w-full py-2.5 rounded-[24px] text-sm font-bold transition-all"
+                style={{
+                  background: isCurrent ? '#e8ebe6' : plan.highlight ? '#9fe870' : '#0e0f0c',
+                  color: isCurrent ? '#868685' : plan.highlight ? '#0e0f0c' : '#ffffff',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                }}
               >
-                {isCurrent ? "✓ Current Plan" : plan.cta}
+                {isCurrent ? '✓ Current Plan' : plan.cta}
               </button>
             </div>
           );
@@ -527,9 +562,9 @@ function PlanTab({ user }: { user: UserResponse | null }) {
       </div>
 
       {/* Feature comparison note */}
-      <div className="glass-card p-5 flex items-start gap-3">
-        <Zap size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-slate-400">
+      <div className="wise-card flex items-start gap-3">
+        <Zap size={16} className="mt-0.5 flex-shrink-0" style={{ color: '#9fe870' }} />
+        <p className="text-sm" style={{ color: '#454745' }}>
           All plans include end-to-end encryption, audit logs, and 99.9% uptime SLA. Billing is monthly with no contracts — cancel anytime.
         </p>
       </div>
@@ -752,98 +787,103 @@ function ApiKeysTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="glass-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="wise-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Key size={18} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#fff5c2' }}>
+            <Key size={18} style={{ color: '#4a3b1c' }} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">API Keys</h2>
-            <p className="text-slate-500 text-xs mt-0.5">Authenticate automated workflows and external systems</p>
+            <h2 className="text-base font-semibold" style={{ color: '#0e0f0c' }}>API Keys</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#454745' }}>Authenticate automated workflows and external systems</p>
           </div>
         </div>
         <button
           onClick={() => { setNewKey(null); setShowModal(true); }}
-          className="btn-primary flex items-center gap-2 text-sm py-2.5 px-5"
+          className="btn-wise-primary flex items-center gap-2"
+          style={{ fontSize: '14px', padding: '10px 18px' }}
         >
-          <Plus size={16} />
+          <Plus size={15} />
           Create Key
         </button>
       </div>
 
       {/* Keys List */}
-      <div className="glass-card overflow-hidden">
+      <div className="wise-card overflow-hidden" style={{ padding: 0 }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-white/[0.02] text-slate-500 text-[10px] font-black uppercase tracking-[0.15em] border-b border-white/5">
-                <th className="px-6 py-4">Label</th>
-                <th className="px-6 py-4">Prefix</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Last Used</th>
-                <th className="px-6 py-4 text-right">Action</th>
+              <tr style={{ background: '#fafcf9', borderBottom: '1px solid #e8ebe6' }}>
+                {['Label', 'Prefix', 'Status', 'Last Used', ''].map((h, i) => (
+                  <th key={i} className={`px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest ${i === 4 ? 'text-right' : ''}`} style={{ color: '#868685' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <Loader2 className="animate-spin mx-auto text-indigo-400 mb-2" size={24} />
-                    <p className="text-slate-500 text-sm">Loading keys…</p>
+                  <td colSpan={5} className="px-5 py-12 text-center">
+                    <Loader2 className="animate-spin mx-auto mb-2" size={22} style={{ color: '#9fe870' }} />
+                    <p className="text-sm" style={{ color: '#868685' }}>Loading keys…</p>
                   </td>
                 </tr>
               ) : !keys || keys.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-600 text-sm">
+                  <td colSpan={5} className="px-5 py-12 text-center text-sm" style={{ color: '#868685' }}>
                     No API keys yet. Create one to authenticate external integrations.
                   </td>
                 </tr>
               ) : (
                 keys.map((key) => (
-                  <tr key={key.id} className="hover:bg-white/[0.015] transition-colors group">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-white">{key.name}</p>
-                      <p className="text-[10px] text-slate-600 font-mono mt-0.5">
+                  <tr key={key.id} className="group transition-colors" style={{ borderBottom: '1px solid #f0f2ef' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafcf9')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-semibold" style={{ color: '#0e0f0c' }}>{key.name}</p>
+                      <p className="text-[10px] font-mono mt-0.5" style={{ color: '#868685' }}>
                         {new Date(key.created_at).toLocaleDateString()}
                       </p>
                     </td>
-                    <td className="px-6 py-4">
-                      <code className="text-indigo-400 px-2 py-0.5 bg-indigo-400/10 rounded text-xs font-mono">
+                    <td className="px-5 py-4">
+                      <code className="px-2 py-0.5 rounded-md text-xs font-mono" style={{ background: '#e2f6d5', color: '#054d28' }}>
                         {key.key_prefix}…
                       </code>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                          key.is_active
-                            ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
-                            : "bg-red-400/10 text-red-400 border-red-400/20"
-                        }`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                        style={{
+                          background: key.is_active ? '#e2f6d5' : '#fde8e9',
+                          color:      key.is_active ? '#054d28' : '#a7000d',
+                        }}
                       >
-                        <span className={`w-1 h-1 rounded-full ${key.is_active ? "bg-emerald-400" : "bg-red-400"}`} />
-                        {key.is_active ? "Active" : "Revoked"}
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: key.is_active ? '#2ead4b' : '#d03238' }} />
+                        {key.is_active ? 'Active' : 'Revoked'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-mono text-[10px]">
-                      {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}
+                    <td className="px-5 py-4 font-mono text-[11px]" style={{ color: '#868685' }}>
+                      {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-5 py-4 text-right">
                       <button
                         onClick={() => {
-                          if (window.confirm("Revoke this key? Any system using it will lose access immediately.")) {
+                          if (window.confirm('Revoke this key? Any system using it will lose access immediately.')) {
                             setRevokingId(key.id);
                             revokeMutation.mutate(key.id);
                           }
                         }}
                         disabled={!key.is_active || revokeMutation.isPending}
-                        className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                        style={{ color: '#868685' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fde8e9'; (e.currentTarget as HTMLButtonElement).style.color = '#d03238'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#868685'; }}
                       >
                         {revokingId === key.id ? (
-                          <Loader2 size={15} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" />
                         ) : (
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         )}
                       </button>
                     </td>
@@ -1006,31 +1046,32 @@ function ProviderKeysTab() {
   const configured = new Map((keys ?? []).map((k) => [k.provider, k]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="glass-card p-6 flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-          <Cpu size={18} />
+      <div className="wise-card flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+          <Cpu size={18} style={{ color: '#2ead4b' }} />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white">AI Providers</h2>
-          <p className="text-slate-500 text-xs mt-0.5">
+          <h2 className="text-base font-semibold" style={{ color: '#0e0f0c' }}>AI Providers</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#454745' }}>
             Bring your own key to use Claude, OpenAI, or Gemini for your tasks instead of the platform default.
           </p>
         </div>
       </div>
 
       {/* Add / Replace a key */}
-      <div className="glass-card p-6 space-y-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Add a Key</p>
+      <div className="wise-card space-y-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>Add a Key</p>
         <div className="grid sm:grid-cols-[180px_1fr_auto] gap-3 items-start">
           <select
             value={selectedProvider}
             onChange={(e) => { setSelectedProvider(e.target.value as AiProvider); setApiKeyInput(""); }}
-            className="bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+            className="wise-input"
+            style={{ fontSize: '14px' }}
           >
             {(Object.keys(PROVIDER_INFO) as AiProvider[]).map((p) => (
-              <option key={p} value={p} className="bg-[#0a0a0a]">
+              <option key={p} value={p}>
                 {PROVIDER_INFO[p].label}
               </option>
             ))}
@@ -1043,13 +1084,15 @@ function ProviderKeysTab() {
               onChange={(e) => setApiKeyInput(e.target.value)}
               placeholder={PROVIDER_INFO[selectedProvider].placeholder}
               autoComplete="off"
-              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white font-mono outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all placeholder:text-slate-600"
+              className="wise-input pr-10 font-mono"
+              style={{ fontSize: '14px' }}
             />
             <button
               type="button"
               onClick={() => setShowKey((s) => !s)}
               aria-label={showKey ? "Hide key" : "Show key"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+              style={{ color: '#868685' }}
             >
               {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
@@ -1058,42 +1101,45 @@ function ProviderKeysTab() {
           <button
             onClick={() => setKeyMutation.mutate({ provider: selectedProvider, api_key: apiKeyInput.trim() })}
             disabled={apiKeyInput.trim().length < 8 || setKeyMutation.isPending}
-            className="btn-primary py-2.5 px-5 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="btn-wise-primary flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ fontSize: '14px', padding: '10px 18px' }}
           >
             {setKeyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
             Save
           </button>
         </div>
-        <p className="text-[11px] text-slate-500">{PROVIDER_INFO[selectedProvider].hint}</p>
-        <div className="flex items-start gap-2 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-300 text-xs">
+        <p className="text-[11px]" style={{ color: '#868685' }}>{PROVIDER_INFO[selectedProvider].hint}</p>
+        <div
+          className="flex items-start gap-2 p-3 rounded-xl text-xs"
+          style={{ background: '#e2f6d5', color: '#054d28' }}
+        >
           <Lock size={13} className="shrink-0 mt-0.5" />
           Your key is encrypted before it's stored and never shown again after saving — only a masked preview.
         </div>
       </div>
 
       {/* Configured providers */}
-      <div className="glass-card overflow-hidden">
+      <div className="wise-card overflow-hidden" style={{ padding: 0 }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-white/[0.02] text-slate-500 text-[10px] font-black uppercase tracking-[0.15em] border-b border-white/5">
-                <th className="px-6 py-4">Provider</th>
-                <th className="px-6 py-4">Key</th>
-                <th className="px-6 py-4">Added</th>
-                <th className="px-6 py-4 text-right">Action</th>
+              <tr style={{ background: '#fafcf9', borderBottom: '1px solid #e8ebe6' }}>
+                {['Provider', 'Key', 'Added', ''].map((h, i) => (
+                  <th key={i} className={`px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest ${i === 3 ? 'text-right' : ''}`} style={{ color: '#868685' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
-                    <Loader2 className="animate-spin mx-auto text-indigo-400 mb-2" size={24} />
-                    <p className="text-slate-500 text-sm">Loading providers…</p>
+                  <td colSpan={4} className="px-5 py-12 text-center">
+                    <Loader2 className="animate-spin mx-auto mb-2" size={22} style={{ color: '#9fe870' }} />
+                    <p className="text-sm" style={{ color: '#868685' }}>Loading providers…</p>
                   </td>
                 </tr>
               ) : configured.size === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-600 text-sm">
+                  <td colSpan={4} className="px-5 py-12 text-center text-sm" style={{ color: '#868685' }}>
                     No personal keys added — every task uses the platform default (Groq).
                   </td>
                 </tr>
@@ -1103,19 +1149,22 @@ function ProviderKeysTab() {
                   .map((provider) => {
                     const entry = configured.get(provider)!;
                     return (
-                      <tr key={provider} className="hover:bg-white/[0.015] transition-colors group">
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-semibold text-white">{PROVIDER_INFO[provider].label}</p>
+                      <tr key={provider} className="group transition-colors" style={{ borderBottom: '1px solid #f0f2ef' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#fafcf9')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-semibold" style={{ color: '#0e0f0c' }}>{PROVIDER_INFO[provider].label}</p>
                         </td>
-                        <td className="px-6 py-4">
-                          <code className="text-indigo-400 px-2 py-0.5 bg-indigo-400/10 rounded text-xs font-mono">
+                        <td className="px-5 py-4">
+                          <code className="px-2 py-0.5 rounded-md text-xs font-mono" style={{ background: '#e2f6d5', color: '#054d28' }}>
                             {entry.masked_key}
                           </code>
                         </td>
-                        <td className="px-6 py-4 text-slate-600 font-mono text-[10px]">
+                        <td className="px-5 py-4 font-mono text-[11px]" style={{ color: '#868685' }}>
                           {new Date(entry.added_at).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-5 py-4 text-right">
                           <button
                             onClick={() => {
                               if (window.confirm(`Remove your ${PROVIDER_INFO[provider].label} key? Tasks will fall back to the platform default.`)) {
@@ -1125,12 +1174,15 @@ function ProviderKeysTab() {
                             }}
                             disabled={deleteKeyMutation.isPending}
                             aria-label={`Remove ${PROVIDER_INFO[provider].label} key`}
-                            className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                            style={{ color: '#868685' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fde8e9'; (e.currentTarget as HTMLButtonElement).style.color = '#d03238'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#868685'; }}
                           >
                             {removingProvider === provider ? (
-                              <Loader2 size={15} className="animate-spin" />
+                              <Loader2 size={14} className="animate-spin" />
                             ) : (
-                              <Trash2 size={15} />
+                              <Trash2 size={14} />
                             )}
                           </button>
                         </td>
@@ -1183,34 +1235,38 @@ function MemoryTab() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="glass-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="wise-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Brain size={18} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#e2f6d5' }}>
+            <Brain size={18} style={{ color: '#2ead4b' }} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Agent Memory</h2>
-            <p className="text-slate-500 text-xs mt-0.5">
-              <span className="text-white font-semibold">{stats?.count?.toLocaleString() ?? "…"}</span> memory vectors stored
+            <h2 className="text-base font-semibold" style={{ color: '#0e0f0c' }}>Agent Memory</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#454745' }}>
+              <span className="font-bold" style={{ color: '#0e0f0c' }}>{stats?.count?.toLocaleString() ?? '…'}</span> memory vectors stored
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddModal(true)}
-            className="btn-primary flex items-center gap-2 text-sm py-2 px-4"
+            className="btn-wise-primary flex items-center gap-2"
+            style={{ fontSize: '14px', padding: '9px 16px' }}
           >
             <Plus size={14} />
             Add Memory
           </button>
           <button
             onClick={() => {
-              if (window.confirm("Wipe all agent memory? This cannot be undone."))
+              if (window.confirm('Wipe all agent memory? This cannot be undone.'))
                 deleteAllMutation.mutate();
             }}
-            className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+            className="px-4 py-2 rounded-[24px] text-xs font-bold uppercase tracking-widest transition-all"
+            style={{ background: '#fde8e9', color: '#a7000d' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#d03238'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fde8e9'; (e.currentTarget as HTMLButtonElement).style.color = '#a7000d'; }}
           >
             Wipe All
           </button>
@@ -1218,17 +1274,18 @@ function MemoryTab() {
       </div>
 
       {/* Search */}
-      <div className="glass-card p-5 space-y-4">
+      <div className="wise-card space-y-4">
         <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#868685' }} />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search memory vectors…"
-            className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-11 pr-10 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all placeholder:text-slate-600"
+            className="wise-input"
+            style={{ paddingLeft: '40px', paddingRight: '36px' }}
           />
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            {isFetching && <RefreshCw size={14} className="animate-spin text-indigo-400" />}
+            {isFetching && <RefreshCw size={13} className="animate-spin" style={{ color: '#9fe870' }} />}
           </div>
         </div>
 
