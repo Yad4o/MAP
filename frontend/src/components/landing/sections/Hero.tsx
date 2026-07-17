@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { BASE_URL } from '../../../api/client';
 
 /**
  * Hero — simplified, centered "entry point" layout.
@@ -7,6 +8,12 @@ import { useNavigate } from 'react-router-dom';
  */
 export default function Hero() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('oauth_error');
+
+  const startOAuth = (provider: 'google' | 'github') => {
+    window.location.href = `${BASE_URL}/auth/oauth/${provider}/login`;
+  };
 
   return (
     <section id="hero" className="hero-v2">
@@ -36,11 +43,19 @@ export default function Hero() {
           role, tools, and protocol.
         </p>
 
+        {oauthError && (
+          <p className="hero-v2__oauth-error" role="alert">
+            {oauthError === 'access_denied'
+              ? 'Sign-in was cancelled.'
+              : "Couldn't sign you in — please try again."}
+          </p>
+        )}
+
         <div className="hero-v2__actions">
           <button
             type="button"
             className="hero-v2__btn hero-v2__btn--google"
-            onClick={() => navigate('/register')}
+            onClick={() => startOAuth('google')}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.62Z" />
@@ -54,7 +69,7 @@ export default function Hero() {
           <button
             type="button"
             className="hero-v2__btn hero-v2__btn--ghost"
-            onClick={() => navigate('/register')}
+            onClick={() => startOAuth('github')}
           >
             <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.49c-2.01.44-2.43-.97-2.43-.97-.33-.83-.8-1.05-.8-1.05-.66-.45.05-.44.05-.44.72.05 1.1.74 1.1.74.64 1.1 1.68.78 2.09.6.07-.46.25-.78.46-.96-1.61-.18-3.3-.8-3.3-3.59 0-.79.28-1.44.74-1.94-.07-.19-.32-.94.07-1.95 0 0 .61-.19 1.98.74a6.9 6.9 0 0 1 3.6 0c1.37-.93 1.98-.74 1.98-.74.39 1.01.14 1.76.07 1.95.46.5.74 1.15.74 1.94 0 2.8-1.7 3.41-3.32 3.59.26.22.49.66.49 1.33l-.01 1.98c0 .21.14.45.55.38A8 8 0 0 0 8 0Z" />

@@ -33,6 +33,7 @@ from app.schemas.auth import RegisterRequest, TokenPair, UserResponse, UpdatePro
 from app.core.redis import get_redis
 from app.services.email_service import EmailService
 from app.services.email_templates import welcome_email, password_reset_email
+from app.services.oauth_service import OAuthProfile
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,28 @@ class AuthService:
 
         return UserResponse.model_validate(user)
 
+    async def _issue_token_pair(self, user) -> TokenPair:
+        """Create a session + JWT pair for an already-resolved user.
+        Shared by password login and OAuth login."""
+        session_repo = SessionRepository(self.db)
+        session_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        raw_refresh_token, refresh_token_hash = generate_refresh_token()
+        access_token, jti, access_expires_at = create_access_token(user.id, user.role)
+        await session_repo.create(
+            user_id=user.id,
+            refresh_token_hash=refresh_token_hash,
+            access_jti=jti,
+            expires_at=session_expires,
+        )
+        await self.user_repo.update_last_login(user.id)
+
+        return TokenPair(
+            access_token=access_token,
+            refresh_token=raw_refresh_token,
+            token_type="bearer",
+            expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
     async def login(self, email: str, password: str) -> TokenPair:
         """
         1. Fetch user by email
@@ -84,29 +107,72 @@ class AuthService:
             logger.warning("Login attempt with non-existent email: %s", email)
             raise InvalidCredentials()
 
-        if not verify_password(password, user.password_hash):
+        if not user.password_hash or not verify_password(password, user.password_hash):
             logger.warning("Failed login attempt for user %s", user.id)
             raise InvalidCredentials()
 
-        session_repo = SessionRepository(self.db)
-        session_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
-        raw_refresh_token, refresh_token_hash = generate_refresh_token()
-        access_token, jti, access_expires_at = create_access_token(user.id, user.role)
-        session = await session_repo.create(
-            user_id=user.id,
-            refresh_token_hash=refresh_token_hash,
-            access_jti=jti,
-            expires_at=session_expires,
-        )
-        await self.user_repo.update_last_login(user.id)
         logger.info("User %s logged in successfully", user.id)
+        return await self._issue_token_pair(user)
 
-        return TokenPair(
-            access_token=access_token,
-            refresh_token=raw_refresh_token,
-            token_type="bearer",
-            expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        )
+    async def login_with_oauth_profile(self, profile: OAuthProfile) -> TokenPair:
+        """
+        Find-or-create a user for a verified OAuth profile, then issue the
+        same JWT access/refresh pair a password login would get.
+
+        - If an account with this provider+provider_user_id already exists,
+          log it in.
+        - Else if an account with this email already exists (e.g. they
+          originally signed up with a password), link this provider to it.
+        - Else create a brand-new account with no password set.
+        """
+        user = await self.user_repo.get_by_oauth(profile.provider, profile.provider_user_id)
+
+        if user is None:
+            user = await self.user_repo.get_by_email(profile.email)
+
+        if user is None:
+            username = await self._unique_username_from(profile.name, profile.email)
+            user = await self.user_repo.create(
+                email=profile.email,
+                username=username,
+                password_hash=None,
+                oauth_provider=profile.provider,
+                oauth_id=profile.provider_user_id,
+                avatar_url=profile.avatar_url,
+            )
+            try:
+                await EmailService().send(
+                    to=user.email,
+                    subject="Welcome to MAP",
+                    html=welcome_email(user.username),
+                )
+            except Exception as exc:
+                logger.warning("Failed to send welcome email to %s: %s", user.email, exc)
+        elif user.oauth_provider is None:
+            # Existing password account signing in with OAuth for the first
+            # time — link the provider instead of creating a duplicate user.
+            user = await self.user_repo.update(
+                user.id,
+                oauth_provider=profile.provider,
+                oauth_id=profile.provider_user_id,
+                avatar_url=profile.avatar_url or user.avatar_url,
+            )
+
+        logger.info("User %s logged in via %s OAuth", user.id, profile.provider)
+        return await self._issue_token_pair(user)
+
+    async def _unique_username_from(self, name: str, email: str) -> str:
+        """Slugify a display name/email into a username, appending a short
+        suffix if it collides with an existing one."""
+        import re
+
+        base = re.sub(r"[^a-zA-Z0-9_]+", "", (name or email.split("@")[0])).lower()[:60] or "user"
+        candidate = base
+        suffix = 0
+        while await self.user_repo.get_by_username(candidate) is not None:
+            suffix += 1
+            candidate = f"{base}{suffix}"
+        return candidate
 
     async def refresh(self, refresh_token: str) -> TokenPair:
         """

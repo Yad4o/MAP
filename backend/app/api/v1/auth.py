@@ -9,10 +9,15 @@ Phase 1 (Member building API routes): Fill in the implementations
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import secrets
 
 from app.api.deps import get_auth_service
-from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
+from app.config import settings
+from app.core.constants import REDIS_OAUTH_STATE_KEY_PREFIX
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials, OAuthError
+from app.core.redis import get_redis
 from app.dependencies import get_current_user, get_token_payload
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -26,6 +31,7 @@ from app.schemas.auth import (
 )
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
+from app.services import oauth_service
 
 router = APIRouter()
 
@@ -136,3 +142,75 @@ async def confirm_reset_password(
     except InvalidCredentials:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     return MessageResponse(message="Password has been reset successfully.")
+
+
+@router.get("/oauth/{provider}/login")
+async def oauth_login(provider: str):
+    """Start the OAuth flow: redirect the browser to Google/GitHub's
+    consent screen. Meant to be hit as a full page navigation
+    (window.location.href = ...), not an XHR/fetch call."""
+    if provider not in oauth_service.SUPPORTED_PROVIDERS:
+        raise HTTPException(status_code=404, detail="Unknown OAuth provider")
+
+    state = secrets.token_urlsafe(24)
+    redis = await get_redis()
+    await redis.setex(f"{REDIS_OAUTH_STATE_KEY_PREFIX}:{state}", 600, provider)  # 10 min to complete login
+
+    try:
+        url = oauth_service.build_authorize_url(provider, state)
+    except OAuthError as exc:
+        # Provider not configured — send the user back to the frontend with
+        # an error instead of a bare 500.
+        return RedirectResponse(
+            f"{settings.FRONTEND_URL}/?oauth_error={exc.detail}"
+        )
+
+    return RedirectResponse(url)
+
+
+@router.get("/oauth/{provider}/callback")
+async def oauth_callback(
+    provider: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    service: AuthService = Depends(get_auth_service),
+):
+    """Provider redirects here after the user approves/denies access.
+    On success, redirects to the frontend with a one-time token pair in
+    the query string; the frontend's /oauth/callback route picks these up
+    and immediately clears them from the URL/history."""
+    if provider not in oauth_service.SUPPORTED_PROVIDERS:
+        raise HTTPException(status_code=404, detail="Unknown OAuth provider")
+
+    def _fail(message: str) -> RedirectResponse:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/?oauth_error={message}")
+
+    if error:
+        return _fail("access_denied")
+    if not code or not state:
+        return _fail("missing_code")
+
+    redis = await get_redis()
+    state_key = f"{REDIS_OAUTH_STATE_KEY_PREFIX}:{state}"
+    stored_provider_raw = await redis.get(state_key)
+    if stored_provider_raw is None:
+        return _fail("invalid_state")
+    stored_provider = (
+        stored_provider_raw.decode() if isinstance(stored_provider_raw, bytes) else stored_provider_raw
+    )
+    if stored_provider != provider:
+        return _fail("invalid_state")
+    await redis.delete(state_key)
+
+    try:
+        profile = await oauth_service.exchange_code(provider, code)
+        tokens = await service.login_with_oauth_profile(profile)
+    except OAuthError as exc:
+        return _fail(exc.detail)
+
+    return RedirectResponse(
+        f"{settings.FRONTEND_URL}/oauth/callback"
+        f"?access_token={tokens.access_token}"
+        f"&refresh_token={tokens.refresh_token}"
+    )

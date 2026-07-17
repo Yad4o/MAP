@@ -17,7 +17,7 @@ if (envBaseUrl) {
   }
 }
 
-const BASE_URL =
+export const BASE_URL =
   envBaseUrl ??
   (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : null) ??
   'http://localhost:8000/api/v1';

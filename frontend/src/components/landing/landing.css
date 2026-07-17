@@ -147,6 +147,18 @@
   margin: 16px 0 36px;
 }
 
+.hero-v2__oauth-error {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 13px;
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin: -16px 0 20px;
+  width: 100%;
+}
+
 .hero-v2__actions {
   width: 100%;
   display: flex;

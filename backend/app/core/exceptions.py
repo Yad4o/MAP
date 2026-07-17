@@ -27,6 +27,15 @@ class InvalidCredentials(Exception):
         super().__init__("Invalid email or password")
 
 
+class OAuthError(Exception):
+    """Raised when an OAuth login/callback fails (bad state, provider error,
+    no verified email on the provider account, etc.)."""
+
+    def __init__(self, detail: str):
+        self.detail = detail
+        super().__init__(detail)
+
+
 class TaskNotFoundError(Exception):
     """Raised when a task is not found."""
     

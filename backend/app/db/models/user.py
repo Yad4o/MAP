@@ -29,7 +29,13 @@ class User(Base):
     # ── Identity ──────────────────────────────────────────────
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     username: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    # Nullable because OAuth-only accounts (Google/GitHub) never set a password.
+    password_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
+
+    # ── OAuth ─────────────────────────────────────────────────
+    oauth_provider: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    oauth_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # ── Role & Access ─────────────────────────────────────────
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="USER")

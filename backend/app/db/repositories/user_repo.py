@@ -23,17 +23,38 @@ class UserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, email: str, username: str, password_hash: str):
+    async def create(
+        self,
+        email: str,
+        username: str,
+        password_hash: str | None = None,
+        oauth_provider: str | None = None,
+        oauth_id: str | None = None,
+        avatar_url: str | None = None,
+    ):
         """Create a new user. Returns the created User instance."""
         new_user = User(
             email=email,
             username=username,
-            password_hash=password_hash
+            password_hash=password_hash,
+            oauth_provider=oauth_provider,
+            oauth_id=oauth_id,
+            avatar_url=avatar_url,
         )
         self.db.add(new_user)
         await self.db.flush()
         await self.db.refresh(new_user)
         return new_user
+
+    async def get_by_oauth(self, provider: str, oauth_id: str):
+        """Fetch user by OAuth provider + provider-side id. Returns None if not found."""
+        result = await self.db.execute(
+            select(User).where(
+                User.oauth_provider == provider,
+                User.oauth_id == oauth_id,
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_id(self, user_id: uuid.UUID):
         """Fetch user by UUID. Returns None if not found."""
@@ -43,6 +64,11 @@ class UserRepository:
     async def get_by_email(self, email: str):
         """Fetch user by email. Returns None if not found."""
         result = await self.db.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
+
+    async def get_by_username(self, username: str):
+        """Fetch user by username. Returns None if not found."""
+        result = await self.db.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
 
 

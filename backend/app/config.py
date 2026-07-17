@@ -78,6 +78,15 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = Field(default="noreply@multiagents.me")
     FRONTEND_URL: str = Field(default="http://localhost:5173")
 
+    # ── OAuth (Google / GitHub) ───────────────────────────────
+    # BACKEND_URL is used to build the redirect_uri sent to each provider —
+    # must exactly match what's registered in the Google/GitHub app console.
+    BACKEND_URL: str = Field(default="http://localhost:8000")
+    GOOGLE_CLIENT_ID: str = Field(default="")
+    GOOGLE_CLIENT_SECRET: str = Field(default="")
+    GITHUB_CLIENT_ID: str = Field(default="")
+    GITHUB_CLIENT_SECRET: str = Field(default="")
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""
