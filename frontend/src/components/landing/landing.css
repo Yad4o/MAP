@@ -19,3 +19,252 @@
   line-height: 1.05;
   color: #F5F3EE;
 }
+
+/* =====================================================
+   Hero v2 — centered entry-point layout
+   ===================================================== */
+
+.hero-v2 {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05070c;
+}
+
+.hero-v2__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-v2__glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(900px, 140vw);
+  height: min(900px, 140vw);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.14) 0%, rgba(52, 211, 153, 0.05) 35%, rgba(5, 7, 12, 0) 65%);
+  filter: blur(10px);
+}
+
+.hero-v2__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(245, 243, 238, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+}
+
+.hero-v2__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  padding: 96px 28px 64px;
+  margin: 0 auto;
+}
+
+.hero-v2__mark {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  animation: heroMarkIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-v2__mark-glow {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.35) 0%, rgba(52, 211, 153, 0) 70%);
+  filter: blur(14px);
+}
+
+.hero-v2__mark-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+
+.hero-v2__wordmark {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: rgba(245, 243, 238, 0.85);
+  margin-bottom: 28px;
+}
+
+.hero-v2__eyebrow {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #34d399;
+  margin-bottom: 14px;
+}
+
+.hero-v2__headline {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: clamp(32px, 7vw, 44px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: #f5f3ee;
+  margin: 0;
+}
+
+.hero-v2__headline span {
+  display: block;
+}
+
+.hero-v2__headline-accent {
+  color: #34d399;
+}
+
+.hero-v2__subtext {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(245, 243, 238, 0.55);
+  max-width: 340px;
+  margin: 16px 0 36px;
+}
+
+.hero-v2__actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero-v2__btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  border-radius: 100px;
+  padding: 13px 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+}
+
+.hero-v2__btn--google {
+  background: #f5f3ee;
+  color: #0c1222;
+}
+
+.hero-v2__btn--google:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.hero-v2__btn--ghost {
+  background: rgba(245, 243, 238, 0.05);
+  color: #f5f3ee;
+  border-color: rgba(245, 243, 238, 0.12);
+}
+
+.hero-v2__btn--ghost:hover {
+  background: rgba(245, 243, 238, 0.09);
+  border-color: rgba(245, 243, 238, 0.2);
+}
+
+.hero-v2__btn--outline {
+  background: transparent;
+  color: rgba(245, 243, 238, 0.85);
+  border-color: rgba(245, 243, 238, 0.18);
+}
+
+.hero-v2__btn--outline:hover {
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #f5f3ee;
+}
+
+.hero-v2__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0;
+}
+
+.hero-v2__divider span {
+  flex: 1;
+  height: 1px;
+  background: rgba(245, 243, 238, 0.12);
+}
+
+.hero-v2__divider em {
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(245, 243, 238, 0.35);
+}
+
+.hero-v2__signin {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 13px;
+  color: rgba(245, 243, 238, 0.5);
+}
+
+.hero-v2__signin span {
+  color: #34d399;
+}
+
+.hero-v2__signin:hover span {
+  text-decoration: underline;
+}
+
+@keyframes heroMarkIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-v2__content {
+    max-width: 460px;
+    padding: 120px 40px 96px;
+  }
+
+  .hero-v2__mark {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-v2__mark {
+    animation: none;
+  }
+}

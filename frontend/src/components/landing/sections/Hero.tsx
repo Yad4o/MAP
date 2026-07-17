@@ -1,352 +1,90 @@
-import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const GLYPHS =
-  'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*<>/\\|{}[]~^';
-
-interface Column {
-  posY: number;
-  speed: number;
-  length: number;
-  glyphSet: string[];
-  activeGlyph: number;
-}
-
+/**
+ * Hero — simplified, centered "entry point" layout.
+ * Signature element: the MAP mark with a single soft emerald bloom behind it.
+ * Everything else (copy, buttons, texture) stays quiet on purpose.
+ */
 export default function Hero() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const gridWidth = 30;
-    const gridHeight = 40;
-    const glyphSize = 20;
-    const gridGap = 2;
-    const speed = 0.5;
-    const rgb = [245 / 255, 243 / 255, 238 / 255];
-    const darkRgb = [0.03, 0.03, 0.03];
-
-    let animId: number;
-    let prevTime = 0;
-
-    const columns: Column[] = [];
-    for (let col = 0; col < gridWidth; col++) {
-      const glyphSet: string[] = [];
-      for (let g = 0; g < 5; g++) {
-        glyphSet.push(GLYPHS[Math.floor(Math.random() * GLYPHS.length)]);
-      }
-      columns.push({
-        posY: Math.random() * gridHeight - 10,
-        speed: 0.3 + Math.random() * 0.9,
-        length: 5 + Math.floor(Math.random() * 20),
-        glyphSet,
-        activeGlyph: 0,
-      });
-    }
-
-    function resize() {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    function tick(time: number) {
-      time *= 0.001;
-      const dt = time - prevTime;
-      prevTime = time;
-      const timeMs = time * 1000;
-
-      const w = canvas!.width;
-      const h = canvas!.height;
-
-      const cellW = glyphSize + gridGap;
-      const cellH = glyphSize + gridGap;
-      const totalWidth = gridWidth * cellW;
-      const totalHeight = gridHeight * cellH;
-      const startX = (w - totalWidth) / 2;
-      const startY = (h - totalHeight) / 2;
-
-      // Clear with deep navy
-      ctx!.fillStyle = '#0C1222';
-      ctx!.fillRect(0, 0, w, h);
-
-      ctx!.font = `${glyphSize}px 'Geist Mono', monospace`;
-      ctx!.textAlign = 'center';
-      ctx!.textBaseline = 'middle';
-
-      for (let col = 0; col < gridWidth; col++) {
-        const column = columns[col];
-        column.posY += column.speed * dt * speed;
-        if (column.posY >= gridHeight + column.length) {
-          column.posY = -column.length;
-          column.speed = 0.3 + Math.random() * 0.9;
-          column.length = 5 + Math.floor(Math.random() * 20);
-        }
-        const headCell = Math.floor(column.posY);
-        column.activeGlyph = Math.floor(timeMs / 100) % column.glyphSet.length;
-
-        const glyphOffset = (timeMs % 1000) / 1000;
-
-        for (let row = 0; row < gridHeight; row++) {
-          const x = startX + col * cellW + cellW / 2;
-          const y =
-            startY + (row - glyphOffset) * cellH + cellH / 2;
-
-          let inTrail = false;
-          if (headCell >= 0) {
-            for (let trail = 0; trail < column.length; trail++) {
-              if (row === (headCell - trail + gridHeight) % gridHeight) {
-                inTrail = true;
-                break;
-              }
-            }
-          }
-
-          if (inTrail) {
-            if (row === headCell) {
-              // Head - bright
-              ctx!.fillStyle = `rgba(${Math.round(rgb[0] * 255)}, ${Math.round(rgb[1] * 255)}, ${Math.round(rgb[2] * 255)}, 0.7)`;
-              ctx!.fillText(column.glyphSet[column.activeGlyph], x, y);
-            } else {
-              // Trail - dim
-              ctx!.fillStyle = `rgba(${Math.round(rgb[0] * 255)}, ${Math.round(rgb[1] * 255)}, ${Math.round(rgb[2] * 255)}, 0.08)`;
-              ctx!.fillText(column.glyphSet[0], x, y);
-            }
-          } else {
-            // Background - very dim dots
-            ctx!.fillStyle = `rgba(${Math.round(darkRgb[0] * 255)}, ${Math.round(darkRgb[1] * 255)}, ${Math.round(darkRgb[2] * 255)}, 0.15)`;
-            ctx!.fillText('.', x, y);
-          }
-        }
-      }
-
-      // Bloom/glow effect: draw semi-transparent overlay
-      ctx!.globalCompositeOperation = 'screen';
-      for (let col = 0; col < gridWidth; col++) {
-        const column = columns[col];
-        const headCell = Math.floor(column.posY);
-        if (headCell >= 0 && headCell < gridHeight) {
-          const x = startX + col * cellW + cellW / 2;
-          const y = startY + headCell * cellH + cellH / 2;
-          const gradient = ctx!.createRadialGradient(x, y, 0, x, y, cellH * 3);
-          gradient.addColorStop(0, 'rgba(245, 243, 238, 0.15)');
-          gradient.addColorStop(1, 'rgba(245, 243, 238, 0)');
-          ctx!.fillStyle = gradient;
-          ctx!.fillRect(x - cellH * 3, y - cellH * 3, cellH * 6, cellH * 6);
-        }
-      }
-      ctx!.globalCompositeOperation = 'source-over';
-
-      animId = requestAnimationFrame(tick);
-    }
-
-    animId = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
+  const navigate = useNavigate();
 
   return (
-    <section
-      id="hero"
-      className="hero"
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100vh',
-        overflow: 'hidden',
-      }}
-    >
-      <canvas
-        id="matrix-canvas"
-        ref={canvasRef}
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 0,
-        }}
-      />
-
-      {/* Hero background artwork — full-bleed, slight overflow for a premium feel */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: '-2%',
-          zIndex: 1,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}
-      >
-        <img
-          src="/images/img-hero.jpg"
-          alt=""
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            userSelect: 'none',
-          }}
-        />
-        {/* Subtle dark overlay so text stays readable */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.32)',
-          }}
-        />
+    <section id="hero" className="hero-v2">
+      {/* Ambient background: solid near-black + one soft green bloom + faint dot grid */}
+      <div className="hero-v2__bg" aria-hidden="true">
+        <div className="hero-v2__glow" />
+        <div className="hero-v2__grid" />
       </div>
 
-      {/* Hero content */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          height: '100%',
-          paddingLeft: 60,
-          paddingBottom: 80,
-          maxWidth: 700,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 400,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: '#D4A574',
-            marginBottom: 24,
-          }}
-        >
-          MULTI-AGENT ORCHESTRATION
-        </span>
+      <div className="hero-v2__content">
+        <div className="hero-v2__mark">
+          <div className="hero-v2__mark-glow" aria-hidden="true" />
+          <img src="/map-logo.png" alt="" aria-hidden="true" className="hero-v2__mark-img" />
+        </div>
 
-        <h1
-          className="display-heading"
-          style={{
-            textShadow: '0 2px 40px rgba(12, 18, 34, 0.8)',
-          }}
-        >
-          <span style={{ display: 'block' }}>Intelligence,</span>
-          <span style={{ display: 'block' }}>Decomposed.</span>
+        <span className="hero-v2__wordmark">MAP</span>
+
+        <span className="hero-v2__eyebrow">MULTI-AGENT ORCHESTRATION</span>
+
+        <h1 className="hero-v2__headline">
+          <span>Intelligence,</span>
+          <span className="hero-v2__headline-accent">Decomposed.</span>
         </h1>
 
-        <p
-          style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-            fontSize: 18,
-            fontWeight: 400,
-            color: 'rgba(245, 243, 238, 0.65)',
-            maxWidth: 520,
-            marginTop: 28,
-            lineHeight: 1.6,
-          }}
-        >
-          A production-grade distributed system that automates complex,
-          multi-step workflows by routing tasks through specialized AI agents —
-          each with defined roles, tool sets, and communication protocols.
+        <p className="hero-v2__subtext">
+          Route complex work through specialized AI agents, each with its own
+          role, tools, and protocol.
         </p>
 
-        <button
-          onClick={() => {
-            document
-              .getElementById('features')
-              ?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-            background: '#F5F3EE',
-            color: '#0C1222',
-            borderRadius: 100,
-            padding: '14px 36px',
-            fontSize: 16,
-            fontWeight: 400,
-            letterSpacing: '-0.3px',
-            marginTop: 40,
-            border: 'none',
-            cursor: 'pointer',
-            alignSelf: 'flex-start',
-            transition: 'all 0.3s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#D4A574';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#F5F3EE';
-          }}
-        >
-          Explore the Architecture
-        </button>
-      </div>
+        <div className="hero-v2__actions">
+          <button
+            type="button"
+            className="hero-v2__btn hero-v2__btn--google"
+            onClick={() => navigate('/register')}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.62Z" />
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.81.54-1.84.86-3.05.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18Z" />
+              <path fill="#FBBC05" d="M3.97 10.71a5.4 5.4 0 0 1 0-3.42V4.96H.96a9 9 0 0 0 0 8.08l3.01-2.33Z" />
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z" />
+            </svg>
+            Continue with Google
+          </button>
 
-      {/* Scroll indicator */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 32,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 11,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: 'rgba(245, 243, 238, 0.3)',
-          }}
-        >
-          Scroll
-        </span>
-        <div
-          style={{
-            width: 1,
-            height: 40,
-            background: 'rgba(245, 243, 238, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: 3,
-              height: 3,
-              borderRadius: '50%',
-              background: '#D4A574',
-              position: 'absolute',
-              left: -1,
-              animation: 'scrollDot 2s ease-out infinite',
-            }}
-          />
+          <button
+            type="button"
+            className="hero-v2__btn hero-v2__btn--ghost"
+            onClick={() => navigate('/register')}
+          >
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.49c-2.01.44-2.43-.97-2.43-.97-.33-.83-.8-1.05-.8-1.05-.66-.45.05-.44.05-.44.72.05 1.1.74 1.1.74.64 1.1 1.68.78 2.09.6.07-.46.25-.78.46-.96-1.61-.18-3.3-.8-3.3-3.59 0-.79.28-1.44.74-1.94-.07-.19-.32-.94.07-1.95 0 0 .61-.19 1.98.74a6.9 6.9 0 0 1 3.6 0c1.37-.93 1.98-.74 1.98-.74.39 1.01.14 1.76.07 1.95.46.5.74 1.15.74 1.94 0 2.8-1.7 3.41-3.32 3.59.26.22.49.66.49 1.33l-.01 1.98c0 .21.14.45.55.38A8 8 0 0 0 8 0Z" />
+            </svg>
+            Continue with GitHub
+          </button>
+
+          <div className="hero-v2__divider">
+            <span />
+            <em>OR</em>
+            <span />
+          </div>
+
+          <button
+            type="button"
+            className="hero-v2__btn hero-v2__btn--outline"
+            onClick={() => navigate('/register')}
+          >
+            Continue with Email
+          </button>
+
+          <button
+            type="button"
+            className="hero-v2__signin"
+            onClick={() => navigate('/login')}
+          >
+            Already have an account? <span>Sign in</span>
+          </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes scrollDot {
-          0% { top: 0; opacity: 1; }
-          100% { top: 20px; opacity: 0; }
-        }
-      `}</style>
     </section>
   );
 }

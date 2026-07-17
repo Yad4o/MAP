@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useLenis } from '../hooks/useLenis';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
-import Navigation from '../components/landing/sections/Navigation';
 import Hero from '../components/landing/sections/Hero';
 import Features from '../components/landing/sections/Features';
 import Pipeline from '../components/landing/sections/Pipeline';
@@ -21,7 +20,6 @@ export default function LandingPage() {
 
   return (
     <div className="kimi-landing">
-      <Navigation onGetStarted={goToRegister} onLogin={goToLogin} />
       <Hero />
       <Features />
       <Pipeline />
