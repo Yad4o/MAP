@@ -281,3 +281,178 @@
     animation: none;
   }
 }
+
+/* =====================================================
+   Auth pages (Login/Register) — reuse hero-v2 background
+   and button system, add form-field styles + solid button.
+   ===================================================== */
+
+.auth-v2 {
+  min-height: 100svh;
+  width: 100%;
+}
+
+.auth-v2__content {
+  padding-top: 64px;
+  padding-bottom: 48px;
+}
+
+.auth-v2__mark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(52, 211, 153, 0.25));
+  margin-bottom: 12px;
+}
+
+.auth-v2__wordmark-img {
+  width: 140px;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 18px;
+  filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.16));
+}
+
+.auth-v2__heading {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #f5f3ee;
+  margin: 0 0 28px;
+}
+
+.hero-v2__btn--primary {
+  background: #34d399;
+  color: #05070c;
+  font-weight: 600;
+}
+
+.hero-v2__btn--primary:hover:not(:disabled) {
+  background: #2dc78d;
+  transform: translateY(-1px);
+}
+
+.hero-v2__btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-v2__field {
+  width: 100%;
+  text-align: left;
+}
+
+.auth-v2__field + .auth-v2__field {
+  margin-top: 14px;
+}
+
+.auth-v2__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 12px;
+  color: rgba(245, 243, 238, 0.5);
+  margin-bottom: 6px;
+}
+
+.auth-v2__label a {
+  color: #34d399;
+  text-decoration: none;
+}
+
+.auth-v2__label a:hover {
+  text-decoration: underline;
+}
+
+.auth-v2__input {
+  width: 100%;
+  padding: 12px 16px;
+  height: 44px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 14px;
+  color: #f5f3ee;
+  background: rgba(245, 243, 238, 0.045);
+  border: 1px solid rgba(245, 243, 238, 0.12);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.auth-v2__input::placeholder {
+  color: rgba(245, 243, 238, 0.3);
+}
+
+.auth-v2__input:focus {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(245, 243, 238, 0.065);
+}
+
+.auth-v2__input--error {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+.auth-v2__error-text {
+  font-size: 12px;
+  color: #fca5a5;
+  margin-top: 6px;
+}
+
+.auth-v2__strength {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-v2__strength-track {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.auth-v2__strength-bar {
+  height: 3px;
+  flex: 1;
+  border-radius: 999px;
+  background: rgba(245, 243, 238, 0.12);
+}
+
+.auth-v2__strength-bar.is-filled {
+  background: var(--strength-color, #34d399);
+}
+
+.auth-v2__strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(245, 243, 238, 0.5);
+  white-space: nowrap;
+}
+
+.auth-v2__submit {
+  margin-top: 20px;
+}
+
+.auth-v2__footer {
+  margin-top: 24px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 13px;
+  color: rgba(245, 243, 238, 0.5);
+}
+
+.auth-v2__footer a {
+  color: #34d399;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-v2__footer a:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+  .auth-v2__content {
+    padding-top: 72px;
+  }
+}
