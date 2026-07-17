@@ -37,7 +37,7 @@ export function AuthVisualPanel({
 
       <div className="absolute left-0 right-0 top-0 p-10">
         <div className="flex items-center gap-2">
-          <img src="/map-logo.png" alt="MAP" className="h-7 w-7 rounded-lg object-contain" />
+          <img src="/map-icon.png" alt="MAP" className="h-7 w-7 object-contain" />
           <span className="text-sm font-semibold tracking-wide text-white/90">MAP</span>
         </div>
       </div>
