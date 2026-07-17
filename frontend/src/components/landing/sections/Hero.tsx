@@ -17,10 +17,11 @@ export default function Hero() {
 
   return (
     <section id="hero" className="hero-v2">
-      {/* Ambient background: solid near-black + one soft green bloom + faint dot grid */}
+      {/* Ambient background: solid near-black + one soft green bloom + faint dot grid + scattered symbol texture */}
       <div className="hero-v2__bg" aria-hidden="true">
         <div className="hero-v2__glow" />
         <div className="hero-v2__grid" />
+        <div className="hero-v2__symbols" />
       </div>
 
       <div className="hero-v2__content">
