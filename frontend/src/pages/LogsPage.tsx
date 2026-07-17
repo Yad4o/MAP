@@ -1,194 +1,290 @@
-// ALREADY EXISTS AS STUB — implementing content per task instructions
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { logsApi } from "../api/logs";
-import { Search, Terminal, Ban, RefreshCw, ChevronRight, Activity, Filter } from "lucide-react";
+import { Terminal, Ban, Activity, ChevronRight, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FilterBar } from "../components/FilterBar";
 
-/**
- * LogsPage displays a real-time stream of system events.
- * 
- * Requirements:
- * - Refresh every 5 seconds.
- * - Filtering by level (ALL, DEBUG, INFO, etc.).
- * - Search by event text.
- * - Auto-scroll to bottom functionality.
- */
+/* ── Level config ──────────────────────────────────────────────────────────── */
+const LEVEL_PILLS = [
+  { key: "ALL",      label: "All",      activeBg: '#9fe870', activeColor: '#0e0f0c' },
+  { key: "DEBUG",    label: "Debug",    activeBg: '#e8ebe6', activeColor: '#454745' },
+  { key: "INFO",     label: "Info",     activeBg: '#e2f6d5', activeColor: '#054d28' },
+  { key: "WARNING",  label: "Warning",  activeBg: '#fff5c2', activeColor: '#4a3b1c' },
+  { key: "ERROR",    label: "Error",    activeBg: '#fde8e9', activeColor: '#a7000d' },
+  { key: "CRITICAL", label: "Critical", activeBg: '#fde8e9', activeColor: '#a7000d' },
+];
+
+function getLevelStyle(level: string): { bg: string; color: string } {
+  switch (level) {
+    case 'CRITICAL':
+    case 'ERROR':   return { bg: '#fde8e9', color: '#a7000d' };
+    case 'WARNING': return { bg: '#fff5c2', color: '#4a3b1c' };
+    case 'DEBUG':   return { bg: '#e8ebe6', color: '#454745' };
+    default:        return { bg: '#e2f6d5', color: '#054d28' };
+  }
+}
+
+/* ── Dedup consecutive same-message logs within 5 s ─────────────────────── */
+interface LogEntry { id: string | number; timestamp: string; level: string; logger: string; event: string; task_id?: string; }
+interface GroupedLog { representative: LogEntry; count: number; timestamps: string[]; }
+
+function groupConsecutiveLogs(logs: LogEntry[]): GroupedLog[] {
+  const groups: GroupedLog[] = [];
+  for (const log of logs) {
+    const last = groups[groups.length - 1];
+    if (
+      last &&
+      last.representative.event === log.event &&
+      last.representative.level === log.level &&
+      Math.abs(new Date(log.timestamp).getTime() - new Date(last.representative.timestamp).getTime()) < 5000
+    ) {
+      last.count++;
+      last.timestamps.push(log.timestamp);
+    } else {
+      groups.push({ representative: log, count: 1, timestamps: [log.timestamp] });
+    }
+  }
+  return groups;
+}
+
 export default function LogsPage() {
   const [level, setLevel] = useState("ALL");
   const [search, setSearch] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string | number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: logs, isLoading, isFetching, isError } = useQuery({
     queryKey: ["logs", level, search],
-    queryFn: () => logsApi.getLogs({ level, search }),
+    queryFn: () => logsApi.getLogs({ level: level === "ALL" ? undefined : level, search }),
     refetchInterval: 5000,
-    // Don't treat a 404 as a hard error — backend may not have the table yet
     retry: 1,
   });
 
-  // Handle auto-scroll logic
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [logs, autoScroll]);
 
+  const grouped = useMemo(() => groupConsecutiveLogs((logs as LogEntry[]) ?? []), [logs]);
+
+  const toggleGroup = (id: string | number) =>
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] max-w-7xl mx-auto space-y-6">
-      {/* Header & Control Bar */}
-      <div className="glass-card p-4 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner">
-            <Terminal size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">System Logs</h1>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live Stream Active
-            </p>
-          </div>
-        </div>
+    <div
+      className="flex flex-col gap-4 animate-wise-fade-up"
+      style={{ height: 'calc(100vh - 7rem)' }}
+    >
 
-        <div className="flex flex-wrap items-center justify-center gap-4 w-full xl:w-auto">
-          {/* Search bar */}
-          <div className="relative flex-1 min-w-[240px] xl:w-80">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
-              type="text"
-              placeholder="Search event content..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all placeholder:text-slate-600"
-            />
-          </div>
+      {/* ── Control bar ── */}
+      <FilterBar
+        icon={<Terminal className="w-5 h-5" style={{ color: '#2ead4b' }} />}
+        title="System Logs"
+        subtitle={
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: '#2ead4b' }} />
+            Live Stream Active
+          </span> as unknown as string
+        }
+        searchValue={search}
+        searchPlaceholder="Search logs…"
+        onSearchChange={setSearch}
+        pills={LEVEL_PILLS}
+        activeFilter={level}
+        onFilterChange={setLevel}
+        isFetching={isFetching}
+        actions={
+          <button
+            onClick={() => setAutoScroll(!autoScroll)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-150 whitespace-nowrap"
+            style={{
+              background: autoScroll ? '#e2f6d5' : '#e8ebe6',
+              color:      autoScroll ? '#054d28' : '#454745',
+              border: `1px solid ${autoScroll ? '#2ead4b' : 'transparent'}`,
+            }}
+          >
+            <Activity size={13} className={autoScroll ? 'animate-bounce' : ''} />
+            {autoScroll ? 'Sticky' : 'Scroll off'}
+          </button>
+        }
+      />
 
-          {/* Level Filter Buttons */}
-          <div className="flex bg-white/[0.03] p-1.5 rounded-2xl border border-white/10 shadow-inner">
-            {["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].map((l) => (
-              <button
-                key={l}
-                onClick={() => setLevel(l)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
-                  level === l 
-                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/20' 
-                  : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setAutoScroll(!autoScroll)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest border transition-all duration-300 group ${
-                autoScroll 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/5 shadow-lg' 
-                : 'bg-white/5 text-slate-500 border-white/10 hover:border-white/20'
-              }`}
-            >
-              <Activity size={14} className={autoScroll ? 'animate-bounce' : ''} />
-              {autoScroll ? 'Sticky' : 'Smooth'}
-            </button>
-            
-            <div className={`p-2 rounded-xl bg-white/5 border border-white/5 transition-opacity duration-300 ${isFetching ? 'opacity-100' : 'opacity-0'}`}>
-              <RefreshCw size={14} className="animate-spin text-indigo-400" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Terminal Feed */}
-      <div className="glass-card flex-1 overflow-hidden flex flex-col border-white/10 shadow-2xl relative overflow-hidden">
-        {/* Terminal gradient overlay top */}
-        <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#0f172a] to-transparent z-10 pointer-events-none" />
-        
-        <div 
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-1 font-mono text-xs custom-scrollbar scroll-smooth"
+      {/* ── Log feed card ── */}
+      <div
+        className="wise-card flex-1 overflow-hidden flex flex-col"
+        style={{ padding: 0, minHeight: 0 }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+          style={{ borderBottom: '1px solid #e8ebe6', background: '#fafcf9' }}
         >
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#868685' }}>
+            Log Stream
+          </span>
+          <span
+            className="px-2.5 py-1 rounded-full text-[11px] font-bold"
+            style={{ background: '#e8ebe6', color: '#454745' }}
+          >
+            {grouped.length} of {logs?.length ?? 0} records
+          </span>
+        </div>
+
+        {/* Scrollable log feed */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-50">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full border-2 border-indigo-500/10 border-t-indigo-500 animate-spin" />
-                <Terminal className="absolute inset-0 m-auto text-indigo-500 opacity-50" size={18} />
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#e2f6d5' }}
+              >
+                <Terminal className="w-5 h-5 animate-pulse" style={{ color: '#2ead4b' }} />
               </div>
-              <p className="text-indigo-400 font-bold tracking-widest uppercase">Initializing Stream...</p>
+              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#868685' }}>
+                Initializing stream…
+              </p>
             </div>
-          ) : logs?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-30 text-slate-500">
-              <Ban size={48} className="rotate-12" />
-              <p className="text-sm font-semibold tracking-widest uppercase">No data units found</p>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <Ban className="w-10 h-10" style={{ color: '#d03238' }} />
+              <p className="text-sm font-semibold" style={{ color: '#d03238' }}>Stream error — retrying</p>
+            </div>
+          ) : grouped.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <Ban className="w-10 h-10" style={{ color: '#868685', opacity: 0.4 }} />
+              <p className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: '#868685' }}>
+                No log entries found
+              </p>
             </div>
           ) : (
-            logs?.map((log) => (
-              <div 
-                key={log.id} 
-                className="group flex items-start gap-4 p-2.5 hover:bg-white/[0.04] rounded-xl transition-all duration-200 border border-transparent hover:border-white/5"
-              >
-                <div className="text-slate-600 whitespace-nowrap shrink-0 font-bold tabular-nums">
-                  [{new Date(log.timestamp).toLocaleTimeString()}]
-                </div>
-                
-                <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter shrink-0 border shadow-sm ${getLevelStyle(log.level)}`}>
-                  {log.level}
-                </div>
-                
-                <div className="text-indigo-400/60 font-black shrink-0 hidden sm:block">
-                  {log.logger.split('.').pop()}
-                </div>
-                
-                <div className="text-slate-300 flex-1 leading-relaxed break-all sm:break-normal">
-                  {log.event}
-                </div>
-                
-                {log.task_id && (
-                  <Link 
-                    to={`/tasks/${log.task_id}`}
-                    className="flex items-center gap-1.5 text-indigo-400 hover:text-white transition-all bg-indigo-500/10 group-hover:bg-indigo-500 px-3 py-1 rounded-lg shrink-0 scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100"
+            grouped.map((group, rowIdx) => {
+              const log = group.representative;
+              const ls = getLevelStyle(log.level);
+              const isExpanded = expandedGroups.has(log.id);
+              const isOdd = rowIdx % 2 === 1;
+
+              return (
+                <div key={log.id}>
+                  {/* Main row */}
+                  <div
+                    className="group flex items-start gap-3 px-4 py-2.5 font-mono text-xs transition-colors"
+                    style={{
+                      borderBottom: '1px solid rgba(14,15,12,0.06)',
+                      background: isOdd ? 'rgba(232,235,230,0.35)' : 'transparent',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafcf9')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isOdd ? 'rgba(232,235,230,0.35)' : 'transparent')}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Inspect</span>
-                    <ChevronRight size={12} />
-                  </Link>
-                )}
-              </div>
-            ))
+                    {/* Timestamp */}
+                    <span
+                      className="whitespace-nowrap flex-shrink-0 tabular-nums text-[10px] pt-0.5"
+                      style={{ color: '#868685', minWidth: '70px' }}
+                    >
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+
+                    {/* Level badge */}
+                    <span
+                      className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide flex-shrink-0"
+                      style={{ background: ls.bg, color: ls.color, minWidth: '52px', textAlign: 'center' }}
+                    >
+                      {log.level}
+                    </span>
+
+                    {/* Logger */}
+                    <span
+                      className="font-semibold flex-shrink-0 hidden sm:block text-[10px] pt-0.5"
+                      style={{ color: '#9fe870', minWidth: '80px' }}
+                    >
+                      {log.logger?.split('.')?.pop()}
+                    </span>
+
+                    {/* Event message */}
+                    <span className="flex-1 leading-relaxed break-all sm:break-normal" style={{ color: '#454745' }}>
+                      {log.event}
+                    </span>
+
+                    {/* Duplicate count badge */}
+                    {group.count > 1 && (
+                      <button
+                        onClick={() => toggleGroup(log.id)}
+                        className="flex items-center gap-1 flex-shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black transition-colors"
+                        style={{ background: '#e8ebe6', color: '#454745' }}
+                        title={`${group.count} identical lines — click to ${isExpanded ? 'collapse' : 'expand'}`}
+                      >
+                        ×{group.count}
+                        {isExpanded
+                          ? <ChevronDown size={10} />
+                          : <ChevronRight size={10} />
+                        }
+                      </button>
+                    )}
+
+                    {/* Task link */}
+                    {log.task_id && (
+                      <Link
+                        to={`/tasks/${log.task_id}`}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0 transition-all opacity-0 group-hover:opacity-100"
+                        style={{ background: '#e2f6d5', color: '#054d28' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#9fe870'; (e.currentTarget as HTMLAnchorElement).style.color = '#0e0f0c'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#e2f6d5'; (e.currentTarget as HTMLAnchorElement).style.color = '#054d28'; }}
+                      >
+                        Inspect <ChevronRight size={10} />
+                      </Link>
+                    )}
+                  </div>
+
+                  {/* Expanded timestamps for duplicate group */}
+                  {group.count > 1 && isExpanded && group.timestamps.slice(1).map((ts, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 px-4 py-1.5 font-mono text-[10px]"
+                      style={{
+                        background: 'rgba(232,235,230,0.55)',
+                        borderBottom: '1px solid rgba(14,15,12,0.04)',
+                        borderLeft: '3px solid #e8ebe6',
+                      }}
+                    >
+                      <span className="whitespace-nowrap" style={{ color: '#868685', minWidth: '70px' }}>
+                        {new Date(ts).toLocaleTimeString()}
+                      </span>
+                      <span style={{ color: '#868685' }}>↳ duplicate</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
           )}
         </div>
-        
-        {/* Terminal gradient overlay bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#0f172a] to-transparent z-10 pointer-events-none" />
-      </div>
 
-      {/* Status Bar Footer */}
-      <div className="flex items-center justify-between text-[10px] font-bold text-slate-600 px-4 uppercase tracking-[0.2em]">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${isError ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-            <span className={isError ? 'text-red-400' : ''}>
-              {isError ? 'Stream Disconnected' : 'Connection Secure'}
+        {/* Status footer */}
+        <div
+          className="flex items-center justify-between px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest flex-shrink-0"
+          style={{ borderTop: '1px solid #e8ebe6', background: '#fafcf9', color: '#868685' }}
+        >
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  background: isError ? '#d03238' : '#2ead4b',
+                  animation: isError ? 'none' : 'pulse 2s infinite',
+                }}
+              />
+              {isError ? 'Stream disconnected' : 'Connection secure'}
             </span>
+            <span>Buffer: {logs?.length ?? 0} records</span>
           </div>
-          <div>Buffer Size: {logs?.length ?? 0} Epochs</div>
+          <span>MAP v2.0</span>
         </div>
-        <div>System Version 2.0.4-LTS</div>
       </div>
     </div>
   );
-}
-
-function getLevelStyle(level: string) {
-  switch (level) {
-    case 'CRITICAL':
-    case 'ERROR': return 'bg-red-500/20 text-red-400 border-red-500/20';
-    case 'WARNING': return 'bg-amber-500/20 text-amber-400 border-amber-500/20';
-    case 'DEBUG': return 'bg-slate-500/10 text-slate-500 border-white/5';
-    default: return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
-  }
 }

@@ -4,14 +4,13 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTaskDetail } from '../hooks/usePollTaskStatus';
 import { cancelTask, retryTask } from '../api/tasks';
 import { TaskStatus, StepStatus, TaskDetailResponse, StepType } from '../types/task';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  Play, 
-  RefreshCcw, 
-  Ban, 
-  ChevronDown, 
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  RefreshCcw,
+  Ban,
+  ChevronDown,
   ChevronRight,
   AlertCircle,
   Loader2,
@@ -20,11 +19,37 @@ import {
   FileJson,
   Cpu,
   History,
-  Timer
+  Timer,
+  ArrowLeft,
 } from 'lucide-react';
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
 import TaskResultView from '../components/task/TaskResultView';
+
+/* ── Wise semantic status helpers ──────────────────────────────────────── */
+const getStatusStyle = (status: TaskStatus) => {
+  switch (status) {
+    case TaskStatus.COMPLETED:
+      return { bg: '#e2f6d5', color: '#054d28', dot: '#2ead4b', icon: CheckCircle2, spinning: false };
+    case TaskStatus.FAILED:
+      return { bg: '#fde8e9', color: '#a7000d', dot: '#d03238', icon: XCircle, spinning: false };
+    case TaskStatus.CANCELLED:
+      return { bg: '#e8ebe6', color: '#454745', dot: '#868685', icon: Ban, spinning: false };
+    case TaskStatus.PROCESSING:
+    case TaskStatus.RETRYING:
+      return { bg: '#e2f6d5', color: '#054d28', dot: '#2ead4b', icon: Cpu, spinning: true };
+    default:
+      return { bg: '#fff5c2', color: '#4a3b1c', dot: '#ffd11a', icon: Clock, spinning: false };
+  }
+};
+
+const getStepStyle = (status: StepStatus) => {
+  switch (status) {
+    case StepStatus.COMPLETED: return { bg: '#e2f6d5', color: '#054d28', icon: CheckCircle2, spinning: false };
+    case StepStatus.FAILED:    return { bg: '#fde8e9', color: '#a7000d', icon: XCircle,     spinning: false };
+    default:                   return { bg: '#e2f6d5', color: '#054d28', icon: Cpu,          spinning: true  };
+  }
+};
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -40,9 +65,6 @@ export default function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
     },
-    onError: (err) => {
-      console.error('Failed to cancel task', err);
-    }
   });
 
   const retryMutation = useMutation({
@@ -51,12 +73,8 @@ export default function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
     },
-    onError: (err) => {
-      console.error('Failed to retry task', err);
-    }
   });
 
-  // Logic for elapsed time counter
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
     if (task && (task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING)) {
@@ -65,265 +83,380 @@ export default function TaskDetailPage() {
         setElapsedTime(Math.floor((Date.now() - start) / 1000));
       }, 1000);
     } else if (task?.started_at && task?.completed_at) {
-      setElapsedTime(Math.floor((new Date(task.completed_at).getTime() - new Date(task.started_at).getTime()) / 1000));
+      setElapsedTime(
+        Math.floor((new Date(task.completed_at).getTime() - new Date(task.started_at).getTime()) / 1000),
+      );
     }
     return () => clearInterval(interval);
   }, [task?.status, task?.started_at, task?.completed_at, task?.created_at]);
 
+  const formatTime = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
+
+  /* ── Loading ─────────────────────────────────────────────────────────── */
   if (isQueryLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-muted animate-pulse">Fetching task details...</p>
+          <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#9fe870' }} />
+          <p className="animate-pulse" style={{ color: '#454745' }}>Fetching task details…</p>
         </div>
       </div>
     );
   }
 
+  /* ── Error ───────────────────────────────────────────────────────────── */
   if (error || !task) {
     return (
-      <div className="surface-card p-12 text-center max-w-lg mx-auto mt-20">
-        <AlertCircle className="w-16 h-16 text-trading-down mx-auto mb-6 opacity-80" />
-        <h2 className="text-title-lg mb-3 text-on-dark">Task Unavailable</h2>
-        <p className="text-muted mb-8 text-sm">We couldn't retrieve the details for this task. It may have been deleted.</p>
-        <button onClick={() => navigate('/tasks')} className="btn-primary w-full max-w-xs">
+      <div className="wise-card p-12 text-center max-w-lg mx-auto mt-20">
+        <AlertCircle className="w-14 h-14 mx-auto mb-5" style={{ color: '#d03238' }} />
+        <h2 className="text-xl mb-3" style={{ fontFamily: 'Manrope,sans-serif', fontWeight: 900, color: '#0e0f0c' }}>
+          Task Unavailable
+        </h2>
+        <p className="text-sm mb-8" style={{ color: '#454745' }}>
+          We couldn't retrieve the details for this task. It may have been deleted.
+        </p>
+        <button onClick={() => navigate('/tasks')} className="btn-wise-primary w-full max-w-xs">
           Return to Dashboard
         </button>
       </div>
     );
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
+  const sStyle = getStatusStyle(task.status);
+  const StatusIcon = sStyle.icon;
 
-  const getStatusConfig = (status: TaskStatus) => {
-    switch (status) {
-      case TaskStatus.COMPLETED:
-        return { color: 'text-trading-up', bg: 'bg-trading-up/10', border: 'border-trading-up/20', icon: CheckCircle2 };
-      case TaskStatus.FAILED:
-        return { color: 'text-trading-down', bg: 'bg-trading-down/10', border: 'border-trading-down/20', icon: XCircle };
-      case TaskStatus.CANCELLED:
-        return { color: 'text-muted', bg: 'bg-surface-elevated-dark', border: 'border-hairline-on-dark', icon: Ban };
-      case TaskStatus.PROCESSING:
-      case TaskStatus.RETRYING:
-        return { color: 'text-info', bg: 'bg-info/10', border: 'border-info/20', icon: Loader2 };
-      default:
-        return { color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', icon: Clock };
-    }
-  };
-
-  const statusConfig = getStatusConfig(task.status);
-  const StatusIcon = statusConfig.icon;
-
-  const toggleStep = (stepId: string) => {
+  const toggleStep = (stepId: string) =>
     setExpandedSteps(prev => ({ ...prev, [stepId]: !prev[stepId] }));
-  };
+
+  const isRunning =
+    task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING;
 
   return (
-    <div className="max-w-[1280px] mx-auto space-y-6 pb-20">
-      {/* SECTION 1: Header */}
-      <section className="surface-card p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-sm text-xs font-bold uppercase tracking-wider border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
-                <StatusIcon className={`w-3.5 h-3.5 ${task.status === TaskStatus.PROCESSING ? 'animate-spin' : ''}`} />
+    <div className="max-w-[1280px] mx-auto space-y-5 pb-20 animate-wise-fade-up">
+
+      {/* ── Back link ── */}
+      <button
+        onClick={() => navigate('/tasks')}
+        className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+        style={{ color: '#454745' }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#0e0f0c')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#454745')}
+      >
+        <ArrowLeft size={15} />
+        All tasks
+      </button>
+
+      {/* ── SECTION 1: Header ── */}
+      <section className="wise-card" style={{ padding: '28px 28px' }}>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div className="space-y-3 flex-1 min-w-0">
+            {/* Status badge + date */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
+                style={{ background: sStyle.bg, color: sStyle.color }}
+              >
+                <StatusIcon
+                  className={`w-3.5 h-3.5 ${sStyle.spinning ? 'animate-spin' : ''}`}
+                />
                 {task.status}
               </span>
-              <span className="text-muted text-sm flex items-center gap-1">
+              <span className="text-xs flex items-center gap-1.5" style={{ color: '#868685' }}>
                 <Calendar className="w-3.5 h-3.5" />
                 {new Date(task.created_at).toLocaleDateString()}
               </span>
+              <code
+                className="text-[11px] font-mono px-2 py-0.5 rounded-md"
+                style={{ background: '#e8ebe6', color: '#454745' }}
+              >
+                #{task.id}
+              </code>
             </div>
-            <h1 className="text-display-sm text-on-dark tracking-tight">{task.title}</h1>
-            <p className="text-muted max-w-2xl text-sm">{task.description}</p>
+
+            {/* Title */}
+            <h1
+              style={{
+                fontFamily: 'Manrope, sans-serif', fontWeight: 900,
+                fontSize: '28px', lineHeight: '1.2',
+                letterSpacing: '-0.3px', color: '#0e0f0c',
+              }}
+            >
+              {task.title}
+            </h1>
+            <p className="text-sm max-w-2xl" style={{ color: '#454745' }}>
+              {task.description}
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Action buttons */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             {(task.status === TaskStatus.PENDING || task.status === TaskStatus.PROCESSING) && (
-              <button 
+              <button
                 onClick={() => cancelMutation.mutate()}
                 disabled={cancelMutation.isPending}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium transition-colors bg-surface-elevated-dark border border-hairline-on-dark hover:bg-surface-elevated-dark/70 text-on-dark disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="btn-wise-tertiary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontSize: '14px', padding: '9px 18px' }}
               >
-                {cancelMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Ban className="w-4 h-4" />
-                )}
-                Cancel Task
+                {cancelMutation.isPending
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Ban className="w-4 h-4" />
+                }
+                Cancel
               </button>
             )}
             {task.status === TaskStatus.FAILED && (
-              <button 
+              <button
                 onClick={() => retryMutation.mutate()}
                 disabled={retryMutation.isPending}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-wise-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontSize: '14px', padding: '10px 18px' }}
               >
-                {retryMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCcw className="w-4 h-4" />
-                )}
-                Retry Task
+                {retryMutation.isPending
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <RefreshCcw className="w-4 h-4" />
+                }
+                Retry
               </button>
             )}
-            <div className="h-10 w-[1px] bg-hairline-on-dark mx-2 hidden md:block" />
-            <div className="text-right flex flex-col items-end">
-              <span className="text-[10px] uppercase text-muted font-bold tracking-widest">Task ID</span>
-              <code className="text-primary text-xs font-mono">{task.id}</code>
-            </div>
           </div>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Progress & Details */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* SECTION 2: Progress (only visible when running) */}
-          {(task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING) && (
-            <section className="surface-card p-6 overflow-hidden relative">
-              <div className="absolute top-0 left-0 h-[2px] bg-info animate-[loading-bar_2s_infinite]" style={{ width: '30%' }} />
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
-                    <Cpu className="w-5 h-5 text-info animate-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* ── Left column ── */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Progress bar (running) */}
+          {isRunning && (
+            <section className="wise-card overflow-hidden relative" style={{ padding: '24px' }}>
+              {/* Animated lime-green top bar */}
+              <div
+                className="absolute top-0 left-0 h-[3px] rounded-t-full"
+                style={{
+                  background: '#9fe870',
+                  animation: 'loading-bar 2s infinite',
+                  width: '30%',
+                }}
+              />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center"
+                    style={{ background: '#e2f6d5' }}
+                  >
+                    <Cpu className="w-5 h-5 animate-pulse" style={{ color: '#2ead4b' }} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-on-dark">Execution in Progress</h3>
-                    <p className="text-xs text-muted">Agents are working on your request...</p>
+                    <h3 className="font-semibold text-sm" style={{ color: '#0e0f0c', fontFamily: 'Inter,sans-serif', fontWeight: 700 }}>
+                      Execution in Progress
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: '#454745' }}>
+                      Agents are working on your request…
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-2xl font-mono text-info font-bold">{formatTime(elapsedTime)}</span>
-                  <p className="text-[10px] text-muted-strong uppercase tracking-widest mt-1">Elapsed Time</p>
+                  <span
+                    className="text-2xl font-mono font-bold"
+                    style={{ color: '#2ead4b', fontFamily: 'JetBrains Mono,monospace' }}
+                  >
+                    {formatTime(elapsedTime)}
+                  </span>
+                  <p className="text-[10px] uppercase tracking-widest mt-1" style={{ color: '#868685' }}>
+                    Elapsed
+                  </p>
                 </div>
               </div>
-              <div className="w-full h-1.5 bg-surface-elevated-dark rounded-full overflow-hidden">
-                <div className="h-full bg-info w-2/3 animate-[pulse_2s_infinite]" />
+              <div
+                className="mt-4 h-1.5 rounded-full overflow-hidden"
+                style={{ background: '#e8ebe6' }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{ background: '#9fe870', width: '65%', animation: 'pulse 2s infinite' }}
+                />
               </div>
             </section>
           )}
 
-          {/* SECTION 3: Result (visible when COMPLETED) */}
+          {/* Result (completed) */}
           {task.status === TaskStatus.COMPLETED && (
-            <section className="surface-card overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-hairline-on-dark">
-                <div className="flex items-center gap-2">
-                  <FileJson className="w-4 h-4 text-trading-up" />
-                  <h3 className="font-bold text-sm text-on-dark">Task Result</h3>
+            <section className="wise-card overflow-hidden" style={{ padding: 0 }}>
+              <div
+                className="flex items-center gap-2 px-5 py-4"
+                style={{ borderBottom: '1px solid #e8ebe6' }}
+              >
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: '#e2f6d5' }}
+                >
+                  <FileJson className="w-4 h-4" style={{ color: '#2ead4b' }} />
                 </div>
+                <h3 className="font-semibold text-sm" style={{ color: '#0e0f0c' }}>Task Result</h3>
               </div>
               <TaskResultView result={task.result} />
             </section>
           )}
 
-          {/* SECTION 4: Error (visible when FAILED) */}
+          {/* Error (failed) */}
           {task.status === TaskStatus.FAILED && (
-            <section className="surface-card border-trading-down/20 bg-trading-down/5">
-              <div className="p-6">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-trading-down/10 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-6 h-6 text-trading-down" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-on-dark">Execution Failed</h3>
-                    <p className="text-muted text-sm mt-1">The task encountered a critical error during processing.</p>
-                  </div>
+            <section
+              className="wise-card"
+              style={{ border: '1px solid #fde8e9', background: '#fffafa' }}
+            >
+              <div className="flex items-start gap-4 mb-5">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: '#fde8e9' }}
+                >
+                  <AlertCircle className="w-6 h-6" style={{ color: '#d03238' }} />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="p-3 rounded-md bg-surface-elevated-dark border border-hairline-on-dark">
-                    <p className="text-[10px] uppercase text-muted font-bold mb-1">Error Type</p>
-                    <p className="text-trading-down font-mono text-sm">{task.error?.type || 'SystemError'}</p>
-                  </div>
-                  <div className="p-3 rounded-md bg-surface-elevated-dark border border-hairline-on-dark">
-                    <p className="text-[10px] uppercase text-muted font-bold mb-1">Retry Count</p>
-                    <p className="text-primary font-mono text-sm">{task.retry_count} / 3</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-md bg-trading-down/10 border border-trading-down/20">
-                  <p className="text-trading-down/80 text-sm leading-relaxed whitespace-pre-wrap">
-                    {task.error?.message || 'Unknown error occurred during step execution. Please check agent logs for more details.'}
+                <div>
+                  <h3
+                    className="text-lg font-bold"
+                    style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 900, color: '#0e0f0c' }}
+                  >
+                    Execution Failed
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: '#454745' }}>
+                    The task encountered a critical error during processing.
                   </p>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {[
+                  { label: 'Error Type',   val: task.error?.type || 'SystemError', valColor: '#d03238' },
+                  { label: 'Retry Count',  val: `${task.retry_count} / 3`,          valColor: '#0e0f0c' },
+                ].map(m => (
+                  <div
+                    key={m.label}
+                    className="p-3 rounded-xl"
+                    style={{ background: '#e8ebe6' }}
+                  >
+                    <p className="text-[10px] uppercase font-bold mb-1" style={{ color: '#868685' }}>{m.label}</p>
+                    <p className="font-mono text-sm font-bold" style={{ color: m.valColor }}>{m.val}</p>
+                  </div>
+                ))}
+              </div>
+              <div
+                className="p-4 rounded-xl"
+                style={{ background: '#fde8e9', border: '1px solid rgba(208,50,56,0.2)' }}
+              >
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#a7000d' }}>
+                  {task.error?.message || 'Unknown error occurred. Please check agent logs.'}
+                </p>
               </div>
             </section>
           )}
 
-          {/* SECTION 5: Steps */}
-          <section className="surface-card">
-            <div className="flex items-center gap-2 p-5 border-b border-hairline-on-dark">
-              <Layers className="w-4 h-4 text-primary" />
-              <h3 className="font-bold text-on-dark">Agent Execution Steps</h3>
-              <span className="ml-auto px-2 py-0.5 rounded-sm bg-surface-elevated-dark text-[10px] font-bold text-muted border border-hairline-on-dark uppercase tracking-tighter">
-                {task.steps?.length || 0} Steps Total
+          {/* Steps accordion */}
+          <section className="wise-card overflow-hidden" style={{ padding: 0 }}>
+            <div
+              className="flex items-center gap-2 px-5 py-4"
+              style={{ borderBottom: '1px solid #e8ebe6' }}
+            >
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: '#e2f6d5' }}
+              >
+                <Layers className="w-4 h-4" style={{ color: '#2ead4b' }} />
+              </div>
+              <h3 className="font-semibold text-sm" style={{ color: '#0e0f0c' }}>Agent Execution Steps</h3>
+              <span
+                className="ml-auto px-2.5 py-1 rounded-full text-[11px] font-bold"
+                style={{ background: '#e8ebe6', color: '#454745' }}
+              >
+                {task.steps?.length || 0} steps
               </span>
             </div>
-            
-            <div className="divide-y divide-hairline-on-dark">
+
+            <div>
               {!task.steps || task.steps.length === 0 ? (
-                <div className="p-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted mx-auto mb-4 opacity-50" />
-                  <p className="text-muted text-sm">Waiting for agent reports...</p>
+                <div className="p-16 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 opacity-40" style={{ color: '#868685' }} />
+                  <p className="text-sm" style={{ color: '#868685' }}>Waiting for agent reports…</p>
                 </div>
               ) : (
-                task.steps.map((step) => {
+                task.steps.map((step, idx) => {
+                  const ss = getStepStyle(step.status);
+                  const StepIcon = ss.icon;
                   const isExpanded = expandedSteps[step.id];
-                  const stepStatusConfig = step.status === StepStatus.COMPLETED 
-                    ? { icon: CheckCircle2, text: 'text-trading-up', bg: 'bg-trading-up/10' }
-                    : step.status === StepStatus.FAILED 
-                    ? { icon: XCircle, text: 'text-trading-down', bg: 'bg-trading-down/10' }
-                    : { icon: Loader2, text: 'text-info', bg: 'bg-info/10' };
-                  
+
                   return (
-                    <div key={step.id} className="transition-all hover:bg-surface-elevated-dark/50">
-                      <div 
-                        className="p-4 flex items-center gap-4 cursor-pointer select-none"
+                    <div
+                      key={step.id}
+                      style={{ borderTop: idx > 0 ? '1px solid #e8ebe6' : 'none' }}
+                    >
+                      <div
+                        className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors"
                         onClick={() => toggleStep(step.id)}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#fafcf9')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${stepStatusConfig.bg} ${stepStatusConfig.text}`}>
-                          <stepStatusConfig.icon className={`w-4 h-4 ${step.status === StepStatus.RUNNING ? 'animate-spin' : ''}`} />
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: ss.bg }}
+                        >
+                          <StepIcon
+                            className={`w-4 h-4 ${ss.spinning ? 'animate-spin' : ''}`}
+                            style={{ color: ss.color }}
+                          />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-on-dark truncate">{step.agent_name}</h4>
-                            <span className="px-1.5 py-0.5 rounded-sm bg-surface-elevated-dark text-[10px] font-bold text-muted border border-hairline-on-dark">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-semibold truncate" style={{ color: '#0e0f0c' }}>
+                              {step.agent_name}
+                            </h4>
+                            <span
+                              className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase"
+                              style={{ background: '#e8ebe6', color: '#454745' }}
+                            >
                               {step.step_type}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] text-muted flex items-center gap-1">
+                          <div className="flex items-center gap-4 mt-1">
+                            <span className="text-[11px] flex items-center gap-1" style={{ color: '#868685' }}>
                               <Timer className="w-3 h-3" />
                               {step.latency_ms ? `${step.latency_ms}ms` : '--'}
                             </span>
-                            <span className="text-[10px] text-muted flex items-center gap-1">
+                            <span className="text-[11px] flex items-center gap-1" style={{ color: '#868685' }}>
                               <History className="w-3 h-3" />
-                              Score: {step.confidence ? (step.confidence * 100).toFixed(0) : '--'}%
+                              Score: {step.confidence ? `${(step.confidence * 100).toFixed(0)}%` : '--'}
                             </span>
                           </div>
                         </div>
 
-                        {isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />}
+                        {isExpanded
+                          ? <ChevronDown className="w-4 h-4" style={{ color: '#868685' }} />
+                          : <ChevronRight className="w-4 h-4" style={{ color: '#868685' }} />
+                        }
                       </div>
 
                       {isExpanded && (
-                        <div className="px-4 pb-4 pl-16">
-                          <div className="p-4 rounded-md bg-canvas-dark border border-hairline-on-dark overflow-hidden">
+                        <div className="px-5 pb-5 pl-[60px]">
+                          <div
+                            className="rounded-xl p-4 overflow-hidden"
+                            style={{ background: '#e8ebe6' }}
+                          >
                             <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] uppercase font-bold text-muted">Step Payload</p>
+                              <p className="text-[10px] uppercase font-bold" style={{ color: '#868685' }}>
+                                Step Payload
+                              </p>
                               {step.model_used && (
-                                <p className="text-[10px] font-mono text-primary/70">{step.model_used}</p>
+                                <code
+                                  className="text-[10px] font-mono px-2 py-0.5 rounded"
+                                  style={{ background: '#e2f6d5', color: '#054d28' }}
+                                >
+                                  {step.model_used}
+                                </code>
                               )}
                             </div>
-                            <pre className="text-xs text-muted font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
+                            <pre
+                              className="text-xs font-mono whitespace-pre-wrap max-h-60 overflow-y-auto"
+                              style={{ color: '#454745' }}
+                            >
                               {JSON.stringify(step.output_payload, null, 2)}
                             </pre>
                           </div>
@@ -337,99 +470,142 @@ export default function TaskDetailPage() {
           </section>
         </div>
 
-        {/* Right Column: Sidebar Stats */}
-        <div className="space-y-6">
-          <section className="surface-card p-6">
-            <h3 className="font-bold text-on-dark mb-6 flex items-center gap-2">
-              <History className="w-4 h-4 text-primary" />
+        {/* ── Right sidebar ── */}
+        <div className="space-y-5">
+
+          {/* Timeline card */}
+          <section className="wise-card">
+            <h3
+              className="font-semibold text-sm mb-5 flex items-center gap-2"
+              style={{ color: '#0e0f0c' }}
+            >
+              <div
+                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ background: '#e2f6d5' }}
+              >
+                <History className="w-3.5 h-3.5" style={{ color: '#2ead4b' }} />
+              </div>
               Task Timeline
             </h3>
-            
-            <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-hairline-on-dark">
-              <div className="relative pl-8">
-                <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-canvas-dark border border-hairline-on-dark flex items-center justify-center z-10">
-                  <div className="w-2 h-2 rounded-full bg-muted" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-on-dark">Task Created</p>
-                  <p className="text-[10px] text-muted">{new Date(task.created_at).toLocaleString()}</p>
-                </div>
-              </div>
 
-              {task.started_at && (
-                <div className="relative pl-8">
-                  <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-canvas-dark border border-info flex items-center justify-center z-10">
-                    <div className="w-2 h-2 rounded-full bg-info" />
+            <div className="space-y-5 relative" style={{ paddingLeft: '28px' }}>
+              <div
+                className="absolute left-[10px] top-2 bottom-2 w-[1px]"
+                style={{ background: '#e8ebe6' }}
+              />
+
+              {[
+                {
+                  label: 'Created',
+                  time: task.created_at,
+                  dotColor: '#868685',
+                  dotBg: '#e8ebe6',
+                  show: true,
+                },
+                {
+                  label: 'Processing Started',
+                  time: task.started_at,
+                  dotColor: '#2ead4b',
+                  dotBg: '#e2f6d5',
+                  show: !!task.started_at,
+                },
+                {
+                  label: 'Execution Complete',
+                  time: task.completed_at,
+                  dotColor: '#054d28',
+                  dotBg: '#e2f6d5',
+                  show: !!task.completed_at,
+                },
+              ].filter(e => e.show).map(e => (
+                <div key={e.label} className="relative">
+                  <div
+                    className="absolute -left-[28px] top-1 w-5 h-5 rounded-full border-2 flex items-center justify-center z-10"
+                    style={{ background: e.dotBg, borderColor: e.dotColor }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: e.dotColor }}
+                    />
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-on-dark">Processing Started</p>
-                    <p className="text-[10px] text-muted">{new Date(task.started_at).toLocaleString()}</p>
-                  </div>
+                  <p className="text-xs font-semibold" style={{ color: '#0e0f0c' }}>{e.label}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: '#868685' }}>
+                    {new Date(e.time!).toLocaleString()}
+                  </p>
                 </div>
-              )}
+              ))}
 
               {task.completed_at && (
-                <div className="relative pl-8">
-                  <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-canvas-dark border border-trading-up flex items-center justify-center z-10">
-                    <div className="w-2 h-2 rounded-full bg-trading-up" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-on-dark">Execution Complete</p>
-                    <p className="text-[10px] text-muted">{new Date(task.completed_at).toLocaleString()}</p>
-                    <div className="mt-2 text-[10px] text-trading-up/90 p-1.5 rounded-sm bg-trading-up/10 border border-trading-up/20">
-                      Total Duration: {formatTime(Math.floor((new Date(task.completed_at).getTime() - new Date(task.created_at).getTime()) / 1000))}
-                    </div>
-                  </div>
+                <div
+                  className="p-3 rounded-xl text-xs font-semibold"
+                  style={{ background: '#e2f6d5', color: '#054d28' }}
+                >
+                  Total: {formatTime(
+                    Math.floor(
+                      (new Date(task.completed_at).getTime() - new Date(task.created_at).getTime()) / 1000,
+                    ),
+                  )}
                 </div>
               )}
             </div>
           </section>
 
-          <section className="surface-card p-6">
-            <h3 className="font-bold text-on-dark mb-4">Configuration</h3>
+          {/* Config card */}
+          <section className="wise-card">
+            <h3 className="font-semibold text-sm mb-4" style={{ color: '#0e0f0c' }}>Configuration</h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted">Priority</span>
-                <span className="text-primary font-bold">{task.priority} / 10</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted">Retry Policy</span>
-                <span className="text-on-dark">Exponential</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted">Task Type</span>
-                <span className="text-on-dark capitalize">{task.task_type || 'General'}</span>
-              </div>
+              {[
+                { label: 'Priority',     val: `${task.priority} / 10`         },
+                { label: 'Retry Policy', val: 'Exponential'                   },
+                { label: 'Task Type',    val: (task.task_type || 'General')   },
+              ].map(row => (
+                <div
+                  key={row.label}
+                  className="flex justify-between items-center py-2"
+                  style={{ borderBottom: '1px solid #e8ebe6' }}
+                >
+                  <span className="text-xs" style={{ color: '#868685' }}>{row.label}</span>
+                  <span className="text-xs font-semibold capitalize" style={{ color: '#0e0f0c' }}>{row.val}</span>
+                </div>
+              ))}
             </div>
           </section>
         </div>
       </div>
 
-      {/* Agent Trace */}
-      <section className="space-y-3 mt-8">
-        <div className="flex items-center gap-2 px-1">
-          <div className="w-1 h-5 bg-primary rounded-sm" />
-          <h2 className="text-title-md text-on-dark tracking-tight">Agent Workflow Trace</h2>
+      {/* Agent flow */}
+      <section className="space-y-3 mt-3">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-5 rounded-sm" style={{ background: '#9fe870' }} />
+          <h2
+            className="text-base font-semibold"
+            style={{ fontFamily: 'Manrope,sans-serif', fontWeight: 900, color: '#0e0f0c' }}
+          >
+            Agent Workflow Trace
+          </h2>
         </div>
         <AgentFlowChart steps={task.steps || []} />
       </section>
 
-      {/* Timeline */}
-      <section className="space-y-3 mt-8">
-        <div className="flex items-center gap-2 px-1">
-          <div className="w-1 h-5 bg-primary rounded-sm" />
-          <h2 className="text-title-md text-on-dark tracking-tight">Execution Timeline</h2>
+      {/* Execution timeline */}
+      <section className="space-y-3 mt-3">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-5 rounded-sm" style={{ background: '#9fe870' }} />
+          <h2
+            className="text-base font-semibold"
+            style={{ fontFamily: 'Manrope,sans-serif', fontWeight: 900, color: '#0e0f0c' }}
+          >
+            Execution Timeline
+          </h2>
         </div>
         <TaskTimeline steps={task.steps || []} />
       </section>
 
       <style>{`
         @keyframes loading-bar {
-          0% { left: -30%; }
+          0%   { left: -30%; }
           100% { left: 100%; }
         }
       `}</style>
     </div>
   );
 }
-
