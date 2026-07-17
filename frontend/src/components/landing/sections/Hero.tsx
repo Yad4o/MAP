@@ -29,7 +29,11 @@ export default function Hero() {
           <img src="/map-icon.png" alt="" aria-hidden="true" className="hero-v2__mark-img" />
         </div>
 
-        <span className="hero-v2__wordmark">MAP</span>
+        <img
+          src="/map-wordmark.png"
+          alt="MAP"
+          className="hero-v2__wordmark-img"
+        />
 
         <span className="hero-v2__tagline">
           MULTIAGENT <span className="hero-v2__tagline-accent">AI</span> PLATFORM
