@@ -40,18 +40,12 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
       >
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          style={{
-            fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-            fontSize: 20,
-            fontWeight: 400,
-            letterSpacing: '-0.5px',
-            color: '#F5F3EE',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className="nav-logo"
+          aria-label="MAP — back to top"
         >
-          Map
+          <span className="nav-logo__letter">M</span>
+          <span className="nav-logo__letter">A</span>
+          <span className="nav-logo__letter">P</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
@@ -89,52 +83,12 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
             ))}
           </div>
 
-          <button
-            onClick={onLogin}
-            style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              fontSize: 14,
-              fontWeight: 400,
-              color: 'rgba(245, 243, 238, 0.6)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              transition: 'color 0.3s ease',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = '#F5F3EE')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.6)')
-            }
-          >
+          <button onClick={onLogin} className="nav-auth-btn nav-auth-btn--login">
             Log in
           </button>
 
-          <button
-            onClick={onGetStarted}
-            style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              border: '1px solid rgba(245, 243, 238, 0.3)',
-              borderRadius: 100,
-              padding: '8px 24px',
-              fontSize: 14,
-              color: '#F5F3EE',
-              background: 'transparent',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#F5F3EE';
-              e.currentTarget.style.color = '#0C1222';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#F5F3EE';
-            }}
-          >
-            Get Started
+          <button onClick={onGetStarted} className="nav-auth-btn nav-auth-btn--signup">
+            Sign up
           </button>
         </div>
       </div>

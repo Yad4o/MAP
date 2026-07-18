@@ -456,3 +456,425 @@
     padding-top: 72px;
   }
 }
+
+/* =====================================================
+   Intro — first section on the page. Reason-to-scroll only,
+   no auth chrome. Reuses the hero-v2 near-black/emerald palette
+   so the transition into <Hero /> feels continuous.
+   ===================================================== */
+
+.intro-v2 {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05070c;
+}
+
+.intro-v2__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.intro-v2__glow {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: min(1000px, 150vw);
+  height: min(700px, 100vw);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgba(52, 211, 153, 0.10) 0%, rgba(52, 211, 153, 0.04) 40%, rgba(5, 7, 12, 0) 70%);
+  filter: blur(20px);
+}
+
+.intro-v2__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.3;
+  background-image: radial-gradient(rgba(245, 243, 238, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 65% 55% at 50% 35%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 35%, #000 0%, transparent 75%);
+}
+
+.intro-v2__content {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  padding: 0 28px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.intro-v2__eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 238, 0.45);
+  margin-bottom: 24px;
+}
+
+.intro-v2__headline {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: clamp(32px, 5.4vw, 58px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: #F5F3EE;
+}
+
+.intro-v2__headline-accent {
+  color: #34d399;
+}
+
+.intro-v2__subtext {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: rgba(245, 243, 238, 0.55);
+  max-width: 480px;
+  margin: 24px auto 0;
+}
+
+.intro-v2__cta {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  margin-top: 40px;
+  background: transparent;
+  color: #F5F3EE;
+  border: 1px solid rgba(245, 243, 238, 0.25);
+  border-radius: 100px;
+  padding: 14px 34px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.intro-v2__cta:hover {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.intro-v2__scroll-cue {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(245, 243, 238, 0.4);
+  transition: color 0.3s ease;
+}
+
+.intro-v2__scroll-cue:hover {
+  color: rgba(245, 243, 238, 0.8);
+}
+
+.intro-v2__scroll-cue-line {
+  width: 1px;
+  height: 28px;
+  background: currentColor;
+  animation: introScrollLine 1.8s ease-in-out infinite;
+}
+
+@keyframes introScrollLine {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-v2__scroll-cue-line { animation: none; }
+}
+
+/* =====================================================
+   Hero split layout — mockup on the left, existing auth
+   panel on the right. Below tablet width it stacks with
+   the panel first (auth stays the priority on mobile).
+   ===================================================== */
+
+.hero-v2--split .hero-v2__content {
+  margin: 0;
+  max-width: 420px;
+  padding: 64px 28px;
+}
+
+.hero-v2__split {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 64px;
+}
+
+.hero-v2__split-left {
+  flex: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .hero-v2__split-left {
+    display: flex;
+  }
+
+  .hero-v2--split .hero-v2__content {
+    padding: 64px 0;
+  }
+}
+
+/* ---- Hero mockup ("integrated into a real product") ---- */
+
+.hero-mockup {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+}
+
+.hero-mockup__glow {
+  position: absolute;
+  inset: -15%;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.14) 0%, rgba(52, 211, 153, 0) 70%);
+  filter: blur(30px);
+  z-index: 0;
+}
+
+.hero-mockup__window {
+  position: relative;
+  z-index: 1;
+  background: rgba(18, 24, 38, 0.9);
+  border: 1px solid rgba(245, 243, 238, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  transform: perspective(1400px) rotateY(6deg) rotateX(2deg);
+  animation: heroMockupFloat 6s ease-in-out infinite;
+}
+
+@keyframes heroMockupFloat {
+  0%, 100% { transform: perspective(1400px) rotateY(6deg) rotateX(2deg) translateY(0); }
+  50% { transform: perspective(1400px) rotateY(6deg) rotateX(2deg) translateY(-10px); }
+}
+
+.hero-mockup__chrome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(8, 14, 26, 0.9);
+  border-bottom: 1px solid rgba(245, 243, 238, 0.06);
+}
+
+.hero-mockup__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.hero-mockup__dot--a { background: #ff5f56; }
+.hero-mockup__dot--b { background: #ffbd2e; }
+.hero-mockup__dot--c { background: #27c93f; }
+
+.hero-mockup__chrome-url {
+  margin-left: 8px;
+  font-size: 11px;
+  color: rgba(245, 243, 238, 0.3);
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+}
+
+.hero-mockup__body {
+  padding: 20px;
+}
+
+.hero-mockup__body-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.hero-mockup__badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #05070c;
+  background: #34d399;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.hero-mockup__body-title {
+  font-size: 13px;
+  color: rgba(245, 243, 238, 0.55);
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+}
+
+.hero-mockup__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero-mockup__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(245, 243, 238, 0.03);
+  border: 1px solid rgba(245, 243, 238, 0.05);
+}
+
+.hero-mockup__status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hero-mockup__status--done { background: #34d399; }
+.hero-mockup__status--active {
+  background: #D4A574;
+  animation: heroMockupPulse 1.4s ease-in-out infinite;
+}
+.hero-mockup__status--idle { background: rgba(245, 243, 238, 0.2); }
+
+@keyframes heroMockupPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.hero-mockup__row-agent {
+  font-size: 12px;
+  font-weight: 500;
+  color: #F5F3EE;
+  width: 68px;
+  flex-shrink: 0;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+}
+
+.hero-mockup__row-task {
+  font-size: 12px;
+  color: rgba(245, 243, 238, 0.4);
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-mockup__chip {
+  position: absolute;
+  z-index: 2;
+  font-size: 11px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  color: #F5F3EE;
+  background: rgba(18, 24, 38, 0.95);
+  border: 1px solid rgba(245, 243, 238, 0.1);
+  border-radius: 100px;
+  padding: 8px 14px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.hero-mockup__chip--top {
+  top: -14px;
+  right: 20px;
+}
+
+.hero-mockup__chip--bottom {
+  bottom: -14px;
+  left: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mockup__window,
+  .hero-mockup__status--active {
+    animation: none;
+  }
+}
+
+/* =====================================================
+   Nav — animated MAP wordmark + compact auth buttons
+   ===================================================== */
+
+.nav-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nav-logo__letter {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: linear-gradient(120deg, #F5F3EE 0%, #34d399 45%, #F5F3EE 70%, #34d399 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: navLogoShimmer 5s linear infinite;
+}
+
+@keyframes navLogoShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: -220% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-logo__letter {
+    animation: none;
+  }
+}
+
+.nav-auth-btn {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.nav-auth-btn--login {
+  background: none;
+  border: none;
+  color: rgba(245, 243, 238, 0.65);
+  padding: 6px 4px;
+}
+
+.nav-auth-btn--login:hover {
+  color: #F5F3EE;
+}
+
+.nav-auth-btn--signup {
+  background: transparent;
+  border: 1px solid rgba(245, 243, 238, 0.25);
+  border-radius: 100px;
+  color: #F5F3EE;
+  padding: 7px 18px;
+}
+
+.nav-auth-btn--signup:hover {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(52, 211, 153, 0.1);
+}

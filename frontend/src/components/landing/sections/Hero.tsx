@@ -1,10 +1,12 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BASE_URL } from '../../../api/client';
+import HeroMockup from './HeroMockup';
 
 /**
- * Hero — simplified, centered "entry point" layout.
- * Signature element: the MAP mark with a single soft emerald bloom behind it.
- * Everything else (copy, buttons, texture) stays quiet on purpose.
+ * Hero — the second section (after <Intro />). Split layout: the product
+ * mockup anchors the left side so the auth panel on the right reads as
+ * "sign in to the thing you just saw", not a cold form. The panel itself
+ * — mark, wordmark, OAuth buttons — is untouched from the original design.
  */
 export default function Hero() {
   const navigate = useNavigate();
@@ -16,7 +18,7 @@ export default function Hero() {
   };
 
   return (
-    <section id="hero" className="hero-v2">
+    <section id="hero" className="hero-v2 hero-v2--split">
       {/* Ambient background: solid near-black + one soft green bloom + faint dot grid + scattered symbol texture */}
       <div className="hero-v2__bg" aria-hidden="true">
         <div className="hero-v2__glow" />
@@ -24,7 +26,12 @@ export default function Hero() {
         <div className="hero-v2__symbols" />
       </div>
 
-      <div className="hero-v2__content">
+      <div className="hero-v2__split">
+        <div className="hero-v2__split-left">
+          <HeroMockup />
+        </div>
+
+        <div className="hero-v2__content">
         <div className="hero-v2__mark">
           <div className="hero-v2__mark-glow" aria-hidden="true" />
           <img src="/map-icon.png" alt="" aria-hidden="true" className="hero-v2__mark-img" />
@@ -100,6 +107,7 @@ export default function Hero() {
           >
             Already have an account? <span>Sign in</span>
           </button>
+        </div>
         </div>
       </div>
     </section>
