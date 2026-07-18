@@ -53,9 +53,6 @@ jobs:
           ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
           GROQ_API_KEY: gsk_mock_key_for_ci_testing_only
           OPENAI_API_KEY: sk-mock-key-for-tests-12345
-          REDIS_URL: redis://localhost:6379/0
-          CELERY_BROKER_URL: redis://localhost:6379/1
-          CELERY_RESULT_BACKEND: redis://localhost:6379/2
         run: pytest -q
 
   frontend-build:
