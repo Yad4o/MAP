@@ -14,6 +14,7 @@ export default function Intro() {
       <div className="intro-v2__bg" aria-hidden="true">
         <div className="intro-v2__glow" />
         <div className="intro-v2__grid" />
+        <div className="intro-v2__rays" />
       </div>
 
       <div className="intro-v2__content">
