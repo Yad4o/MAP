@@ -94,10 +94,16 @@ test.describe('Authentication', () => {
 
     await expect(page).toHaveURL(/\/login/);
 
-    // Check if auth state is cleared in localStorage
-    const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
-    const parsed = JSON.parse(storageValue || '{}');
-    expect(parsed?.state?.isAuthenticated).toBe(false);
+    // Check if auth state is cleared in localStorage. The redirect can land
+    // a tick before zustand's persist middleware flushes clearAuth() to
+    // localStorage, so poll instead of reading it once immediately.
+    await expect
+      .poll(async () => {
+        const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
+        const parsed = JSON.parse(storageValue || '{}');
+        return parsed?.state?.isAuthenticated;
+      })
+      .toBe(false);
   });
 
   test('cannot access /tasks without login', async ({ page }) => {
