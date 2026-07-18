@@ -1,67 +1,88 @@
 import { test, expect } from '@playwright/test';
 
-const ADMIN_USER = { id: 1, email: 'admin@example.com', username: 'admin', role: 'ADMIN', tier: 'pro', email_verified: true };
+const ADMIN_USER = {
+  id: 1,
+  email: 'admin@example.com',
+  username: 'admin',
+  role: 'ADMIN',
+  tier: 'pro',
+  email_verified: true,
+};
 
-test.describe('Navigation', () => {
-  test.beforeEach(async ({ page }) => {
-    // Set up auth state in localStorage BEFORE the page loads
-    await page.addInitScript((user) => {
-      const authState = {
+/**
+ * Helper: sets up a fully mocked + authenticated session for an ADMIN user.
+ * A single regex handler intercepts ALL /api/v1/ requests so nothing leaks
+ * through to the real network (which would trigger 401 → clearAuth → logout).
+ */
+async function setupAdminSession(page: import('@playwright/test').Page) {
+  // 1. Regex catch-all — must be registered BEFORE goto() so it's ready on
+  //    the very first network request made during page load.
+  await page.route(/\/api\/v1\//, async (route) => {
+    const url = route.request().url();
+    if (url.includes('/auth/me')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ADMIN_USER),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    }
+  });
+
+  // 2. Seed localStorage before any script runs (addInitScript guarantees this).
+  await page.addInitScript((user) => {
+    localStorage.setItem(
+      'map-auth-storage',
+      JSON.stringify({
         state: {
           user,
           accessToken: 'fake_token',
           refreshToken: 'fake_refresh',
           isAuthenticated: true,
         },
-        version: 0
-      };
-      localStorage.setItem('map-auth-storage', JSON.stringify(authState));
-    }, ADMIN_USER);
+        version: 0,
+      }),
+    );
+  }, ADMIN_USER);
+}
 
-    // Regex catch-all: intercepts ALL /api/v1/ requests so nothing can trigger a logout.
-    // Registered before page.goto() so it's active for the initial page load.
-    await page.route(/\/api\/v1\//, async (route) => {
-      const url = route.request().url();
-      // Return the full user object for /auth/me so the store hydrates with ADMIN role
-      if (url.includes('/auth/me')) {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ADMIN_USER) });
-      } else if (url.includes('/tasks')) {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-      } else {
-        // Everything else (api-keys, memory, provider-keys, admin endpoints, etc.) -> empty list
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-      }
-    });
-  });
+test.describe('Navigation', () => {
+  // Test each link independently so no background timers or query-cache
+  // from a previous page can interfere with the next navigation.
+  const navItems = [
+    { label: 'History', url: /\/history/ },
+    { label: 'Logs',    url: /\/logs/ },
+    { label: 'Settings', url: /\/settings/ },
+    { label: 'Admin',  url: /\/admin/ },
+    { label: 'Tasks',  url: /\/tasks/ },
+  ];
 
-  test('all sidebar links navigate to correct pages', async ({ page }) => {
-    await page.goto('/tasks');
+  for (const item of navItems) {
+    test(`sidebar link "${item.label}" navigates to correct page`, async ({ page }) => {
+      await setupAdminSession(page);
+      await page.goto('/tasks');
 
-    // Wait for the sidebar to fully settle (Admin section only renders
-    // once the auth store has hydrated from localStorage)
-    await expect(page.getByRole('link', { name: 'Admin', exact: true })).toBeVisible();
+      // Wait for auth to hydrate — the Admin link is only rendered when role=ADMIN
+      await expect(
+        page.locator('aside').getByRole('link', { name: 'Admin', exact: true }),
+      ).toBeVisible();
 
-    const navItems = [
-      { label: 'History', url: /\/history/ },
-      { label: 'Logs',    url: /\/logs/ },
-      { label: 'Settings', url: /\/settings/ },
-      { label: 'Admin',  url: /\/admin/ },
-      { label: 'Tasks',  url: /\/tasks/ },
-    ];
-
-    for (const item of navItems) {
-      // Use locator with sidebar scope to avoid ambiguity
-      const sidebar = page.locator('aside');
-      const link = sidebar.getByRole('link', { name: item.label, exact: true });
-      // Use force to bypass stability checks if caught in a React re-render
+      // Click the target link
+      const link = page.locator('aside').getByRole('link', { name: item.label, exact: true });
       await link.click({ force: true });
+
+      // Verify URL changed
       await expect(page).toHaveURL(item.url);
-      // Brief pause for page transitions to settle
-      await page.waitForTimeout(300);
-    }
-  });
+    });
+  }
 
   test('browser back button works correctly', async ({ page }) => {
+    await setupAdminSession(page);
     await page.goto('/tasks');
     await page.click('nav a:has-text("History")');
     await expect(page).toHaveURL(/\/history/);
@@ -71,6 +92,7 @@ test.describe('Navigation', () => {
   });
 
   test('unknown route shows 404 page', async ({ page }) => {
+    await setupAdminSession(page);
     await page.goto('/some-non-existent-route');
 
     await expect(page.getByText('404')).toBeVisible();
