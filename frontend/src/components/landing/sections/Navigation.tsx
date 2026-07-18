@@ -21,7 +21,7 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
         left: 0,
         right: 0,
         zIndex: 100,
-        background: 'rgba(12, 18, 34, 0.85)',
+        background: 'rgba(19, 20, 23, 0.85)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(245, 243, 238, 0.06)',
