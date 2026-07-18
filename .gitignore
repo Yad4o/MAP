@@ -50,3 +50,6 @@ bentoml/models/
 *.bin
 *.safetensors
 mapdocs/
+# ── Runtime data (per-user FAISS memory indices) ───────────────
+data/faiss/*
+!data/faiss/.gitkeep
