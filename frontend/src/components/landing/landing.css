@@ -574,6 +574,82 @@
   transition: all 0.3s ease;
 }
 
+.intro-v2__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(245, 243, 238, 0.14);
+  background: rgba(245, 243, 238, 0.04);
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: rgba(245, 243, 238, 0.65);
+  margin-bottom: 22px;
+}
+
+.intro-v2__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
+  flex-shrink: 0;
+  animation: introBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes introBadgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.intro-v2__pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 32px auto 0;
+  flex-wrap: wrap;
+}
+
+.intro-v2__pipeline-step {
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 238, 0.5);
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1px solid rgba(245, 243, 238, 0.1);
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.intro-v2__pipeline-step:hover {
+  color: #F5F3EE;
+  border-color: rgba(245, 243, 238, 0.28);
+}
+
+.intro-v2__pipeline-arrow {
+  color: rgba(245, 243, 238, 0.25);
+  font-size: 13px;
+}
+
+.intro-v2__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intro-v2__cta-arrow {
+  display: inline-flex;
+  transition: transform 0.25s ease;
+}
+
+.intro-v2__cta:hover .intro-v2__cta-arrow {
+  transform: translateX(4px);
+}
+
 .intro-v2__cta:hover {
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.08);
