@@ -70,10 +70,18 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // originalRequest.url is always relative at this point — the request
+    // interceptor above strips any leading slash (line 41-42) — so this
+    // must match WITHOUT the leading slash. It previously checked for
+    // '/auth/login' with a slash and never matched, which meant a failed
+    // login attempt fell through into the refresh-retry branch below,
+    // found no refresh token, and hard-redirected via window.location.href
+    // — a full page reload that wiped the login form before the inline
+    // "Invalid credentials" error could ever render.
     const originalUrl: string = originalRequest.url ?? '';
     if (
-      originalUrl.includes('/auth/login') ||
-      originalUrl.includes('/auth/refresh')
+      originalUrl.includes('auth/login') ||
+      originalUrl.includes('auth/refresh')
     ) {
       return Promise.reject(error);
     }
