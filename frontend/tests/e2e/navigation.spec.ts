@@ -50,6 +50,9 @@ test.describe('Navigation', () => {
     for (const item of navItems) {
       await page.getByRole('link', { name: item.label, exact: true }).click();
       await expect(page).toHaveURL(item.url);
+      // Let the route transition finish before the next click — clicking
+      // through the sidebar in a tight loop can hit a link mid re-render
+      await page.waitForTimeout(500);
     }
   });
 
