@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
+    // Catch-all mock for API to prevent unmocked requests from triggering 401 logouts
+    await page.route('**/api/v1/**', async (route) => {
+      await route.fulfill({ status: 200, body: JSON.stringify([]) });
+    });
+
     // Mock authentication as Admin to see all links
     await page.addInitScript(() => {
       const authState = {

@@ -72,8 +72,8 @@ apiClient.interceptors.response.use(
 
     const originalUrl: string = originalRequest.url ?? '';
     if (
-      originalUrl.includes('/auth/login') ||
-      originalUrl.includes('/auth/refresh')
+      originalUrl.includes('auth/login') ||
+      originalUrl.includes('auth/refresh')
     ) {
       return Promise.reject(error);
     }
