@@ -18,13 +18,18 @@ export default function Intro() {
       </div>
 
       <div className="intro-v2__content">
+        <span className="intro-v2__badge">
+          <span className="intro-v2__badge-dot" aria-hidden="true" />
+          Multi-Agent Runtime · Live
+        </span>
+
         <span className="intro-v2__eyebrow">MULTI-AGENT AI AUTOMATION</span>
 
         <h1 className="intro-v2__headline">
-          Route work through a fleet of
+          One request in.
           <br />
-          <span className="intro-v2__headline-accent">specialized AI agents</span>
-          , not one overloaded prompt.
+          A fleet of <span className="intro-v2__headline-accent">specialized AI agents</span> out —
+          not one overloaded prompt.
         </h1>
 
         <p className="intro-v2__subtext">
@@ -32,8 +37,23 @@ export default function Intro() {
           observable, and built to survive production.
         </p>
 
+        <div className="intro-v2__pipeline" aria-hidden="true">
+          <span className="intro-v2__pipeline-step">Plan</span>
+          <span className="intro-v2__pipeline-arrow">→</span>
+          <span className="intro-v2__pipeline-step">Execute</span>
+          <span className="intro-v2__pipeline-arrow">→</span>
+          <span className="intro-v2__pipeline-step">Validate</span>
+          <span className="intro-v2__pipeline-arrow">→</span>
+          <span className="intro-v2__pipeline-step">Remember</span>
+        </div>
+
         <button type="button" className="intro-v2__cta" onClick={scrollToHero}>
           See how it works
+          <span className="intro-v2__cta-arrow" aria-hidden="true">
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+              <path d="M1 5H13M13 5L9 1M13 5L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
       </div>
 
