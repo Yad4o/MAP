@@ -100,168 +100,178 @@ export default function Features() {
       id="features"
       ref={sectionRef}
       style={{
-        position: 'relative',
         width: '100%',
-        height: '100vh',
         background: '#131417',
-        overflow: 'hidden',
-        perspective: 1000,
-        transformStyle: 'preserve-3d',
+        padding: '140px 40px',
+        position: 'relative',
+        zIndex: 2,
       }}
     >
-      {/* Content overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 60,
-          zIndex: 10,
-          pointerEvents: 'none',
-        }}
-      >
-        <div style={{ pointerEvents: 'auto' }}>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 400,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#D4A574',
-            }}
-          >
-            THE SYSTEM
-          </span>
-          <h2
-            style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              fontSize: 'clamp(32px, 4vw, 48px)',
-              fontWeight: 400,
-              letterSpacing: '-1.92px',
-              color: '#F5F3EE',
-              marginTop: 16,
-              lineHeight: 1.1,
-            }}
-          >
-            Built for Scale
-          </h2>
-          <p
-            style={{
-              fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-              fontSize: 16,
-              color: 'rgba(245, 243, 238, 0.55)',
-              maxWidth: 400,
-              marginTop: 20,
-              lineHeight: 1.6,
-            }}
-          >
-            Every component designed for production workloads — async task
-            queues, distributed locks, circuit breakers, and vector memory.
-          </p>
-          <a
-            href="#architecture"
-            onClick={(e) => {
-              e.preventDefault();
-              document
-                .getElementById('architecture')
-                ?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            style={{
-              display: 'inline-block',
-              marginTop: 24,
-              fontSize: 14,
-              color: '#D4A574',
-              borderBottom: '1px solid #D4A574',
-              paddingBottom: 2,
-              textDecoration: 'none',
-              transition: 'opacity 0.3s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-          >
-            View Documentation
-          </a>
-        </div>
-      </div>
-
-      {/* 3D Card scene */}
-      <div
-        ref={sceneRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transformStyle: 'preserve-3d',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         <div
-          ref={gridRef}
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 20vw)',
-            gridTemplateRows: 'repeat(2, 20vw)',
-            gap: '2vw',
-            transformStyle: 'preserve-3d',
-            transform: 'translateZ(0)',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 60,
+            alignItems: 'center',
           }}
         >
-          {CARDS.map((card, i) => (
-            <div
-              key={i}
+          {/* Left: text */}
+          <div>
+            <span
               style={{
-                background: 'rgba(245, 243, 238, 0.05)',
-                border: '1px solid rgba(245, 243, 238, 0.1)',
-                borderRadius: 12,
-                padding: 24,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
-                transformStyle: 'preserve-3d',
-                transition:
-                  'transform 0.3s ease, border-color 0.3s ease, background 0.3s ease',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateZ(20px) scale(1.02)';
-                e.currentTarget.style.borderColor = 'rgba(212, 165, 116, 0.4)';
-                e.currentTarget.style.background = 'rgba(245, 243, 238, 0.08)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateZ(0) scale(1)';
-                e.currentTarget.style.borderColor =
-                  'rgba(245, 243, 238, 0.1)';
-                e.currentTarget.style.background = 'rgba(245, 243, 238, 0.05)';
+                fontSize: 12,
+                fontWeight: 400,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: '#D4A574',
               }}
             >
-              <div style={{ marginBottom: 16 }}>
-                <FeatureIcon name={card.icon} />
+              THE SYSTEM
+            </span>
+            <h2
+              style={{
+                fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+                fontSize: 'clamp(32px, 4vw, 48px)',
+                fontWeight: 400,
+                letterSpacing: '-1.92px',
+                color: '#F5F3EE',
+                marginTop: 16,
+                lineHeight: 1.1,
+              }}
+            >
+              Built for Scale
+            </h2>
+            <p
+              style={{
+                fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+                fontSize: 16,
+                color: 'rgba(245, 243, 238, 0.55)',
+                maxWidth: 420,
+                marginTop: 20,
+                lineHeight: 1.6,
+              }}
+            >
+              Every component designed for production workloads — async task
+              queues, distributed locks, circuit breakers, and vector memory.
+            </p>
+            <a
+              href="#architecture"
+              onClick={(e) => {
+                e.preventDefault();
+                document
+                  .getElementById('architecture')
+                  ?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              style={{
+                display: 'inline-block',
+                marginTop: 24,
+                fontSize: 14,
+                color: '#D4A574',
+                borderBottom: '1px solid #D4A574',
+                paddingBottom: 2,
+                textDecoration: 'none',
+                transition: 'opacity 0.3s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+            >
+              View Documentation
+            </a>
+          </div>
+
+          {/* Right: card grid, contained to its own column — tilts toward the cursor, never overlaps the text */}
+          <div
+            style={{
+              position: 'relative',
+              perspective: 1000,
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              ref={sceneRef}
+              style={{
+                transformStyle: 'preserve-3d',
+                width: '100%',
+                maxWidth: 480,
+              }}
+            >
+              <div
+                ref={gridRef}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gridAutoRows: '110px',
+                  gap: 14,
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                {CARDS.map((card, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: 'rgba(245, 243, 238, 0.05)',
+                      border: '1px solid rgba(245, 243, 238, 0.1)',
+                      borderRadius: 12,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-end',
+                      transformStyle: 'preserve-3d',
+                      transition:
+                        'transform 0.3s ease, border-color 0.3s ease, background 0.3s ease',
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateZ(20px) scale(1.03)';
+                      e.currentTarget.style.borderColor = 'rgba(212, 165, 116, 0.4)';
+                      e.currentTarget.style.background = 'rgba(245, 243, 238, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateZ(0) scale(1)';
+                      e.currentTarget.style.borderColor = 'rgba(245, 243, 238, 0.1)';
+                      e.currentTarget.style.background = 'rgba(245, 243, 238, 0.05)';
+                    }}
+                  >
+                    <div style={{ marginBottom: 8, transform: 'scale(0.7)', transformOrigin: 'left' }}>
+                      <FeatureIcon name={card.icon} />
+                    </div>
+                    <h3
+                      style={{
+                        fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
+                        fontSize: 13,
+                        fontWeight: 400,
+                        letterSpacing: '-0.2px',
+                        color: '#F5F3EE',
+                        margin: 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {card.title}
+                    </h3>
+                    <p
+                      style={{
+                        fontFamily: "'Geist Mono', monospace",
+                        fontSize: 10,
+                        color: 'rgba(245, 243, 238, 0.4)',
+                        marginTop: 3,
+                        letterSpacing: '0.01em',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {card.subtitle}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <h3
-                style={{
-                  fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-                  fontSize: 18,
-                  fontWeight: 400,
-                  letterSpacing: '-0.3px',
-                  color: '#F5F3EE',
-                  margin: 0,
-                }}
-              >
-                {card.title}
-              </h3>
-              <p
-                style={{
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: 12,
-                  color: 'rgba(245, 243, 238, 0.4)',
-                  marginTop: 6,
-                  letterSpacing: '0.02em',
-                }}
-              >
-                {card.subtitle}
-              </p>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>
