@@ -1,18 +1,9 @@
-import { useCallback } from 'react';
-
 interface NavigationProps {
   onGetStarted: () => void;
   onLogin: () => void;
 }
 
 export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
-  const scrollTo = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, []);
-
   return (
     <nav
       style={{
@@ -48,41 +39,7 @@ export default function Navigation({ onGetStarted, onLogin }: NavigationProps) {
           <span className="nav-logo__letter">P</span>
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <div style={{ display: 'flex', gap: 28 }}>
-            {[
-              { label: 'Features', id: 'features' },
-              { label: 'Pipeline', id: 'pipeline' },
-              { label: 'Docs', id: 'architecture' },
-              { label: 'Pricing', id: 'cta' },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => scrollTo(item.id)}
-                className="nav-link"
-                style={{
-                  fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
-                  fontSize: 14,
-                  fontWeight: 400,
-                  color: 'rgba(245, 243, 238, 0.6)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'color 0.3s ease',
-                  padding: 0,
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = '#F5F3EE')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'rgba(245, 243, 238, 0.6)')
-                }
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <button onClick={onLogin} className="nav-auth-btn nav-auth-btn--login">
             Log in
           </button>
