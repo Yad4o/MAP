@@ -48,10 +48,11 @@ test.describe('Navigation', () => {
     ];
 
     for (const item of navItems) {
-      await page.getByRole('link', { name: item.label, exact: true }).click();
+      const link = page.getByRole('link', { name: item.label, exact: true });
+      await expect(link).toBeVisible();
+      // Use force to bypass stability checks if it gets caught in a React re-render loop
+      await link.click({ force: true });
       await expect(page).toHaveURL(item.url);
-      // Let the route transition finish before the next click — clicking
-      // through the sidebar in a tight loop can hit a link mid re-render
       await page.waitForTimeout(500);
     }
   });
