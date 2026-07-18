@@ -67,7 +67,7 @@ function DualWaves() {
     ) as SVGGElement;
     if (!group1 || !group2) return;
 
-    const paths1 = createWavePaths(group1, ['#0C4A6E', '#0C1222'], 3);
+    const paths1 = createWavePaths(group1, ['#0C4A6E', '#131417'], 3);
     const paths2 = createWavePaths(group2, ['#D4A574', '#F5F3EE'], 2.5);
 
     const cleanup1 = animateWave(paths1, {
@@ -155,7 +155,7 @@ export default function Pipeline() {
       id="pipeline"
       style={{
         width: '100%',
-        background: '#0C1222',
+        background: '#131417',
         padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
