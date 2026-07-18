@@ -49,9 +49,14 @@ export default defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
+  /* Run your local dev server before starting the tests.
+   * On CI, serve the production build with `vite preview` instead of
+   * `npm run dev` — the dev server compiles modules on demand per request,
+   * which is both slower and a source of first-hit timing flakes when
+   * Playwright starts hitting routes immediately. Locally, keep using the
+   * dev server for faster iteration. */
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run preview -- --port 5173' : 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
