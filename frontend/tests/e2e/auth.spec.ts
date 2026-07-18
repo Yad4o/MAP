@@ -12,31 +12,26 @@ test.describe('Authentication', () => {
     await page.route('**/api/v1/auth/register', async (route) => {
       await route.fulfill({ status: 201, body: JSON.stringify({ id: 1, email: 'test@example.com', username: 'testuser' }) });
     });
-    await page.route('**/api/v1/auth/login', async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify({ access_token: 'fake_token', refresh_token: 'fake_refresh' }) });
-    });
-    // For the getMe call after login
-    await page.route('**/api/v1/auth/me', async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify({ id: 1, email: 'test@example.com', username: 'testuser' }) });
-    });
 
     await page.goto('/register');
-    await page.fill('input[name="username"]', 'testuser');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.fill('input[name="confirmPassword"]', 'password123');
+    await page.fill('#username', 'testuser');
+    await page.fill('#email', 'test@example.com');
+    await page.fill('#password', 'password123');
+    await page.fill('#confirmPassword', 'password123');
     await page.click('button[type="submit"]');
 
-    await expect(page).toHaveURL(/\/tasks/);
+    // RegisterPage does not auto-login — it sends the user to /login to sign in.
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('shows validation errors on invalid email', async ({ page }) => {
     await page.goto('/register');
-    await page.fill('input[name="email"]', 'invalid-email');
-    await page.fill('input[name="password"]', 'password123');
+    await page.fill('#email', 'invalid-email');
+    await page.fill('#password', 'password123');
     await page.click('button[type="submit"]');
 
-    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+    // Message comes from the zod schema on RegisterPage/LoginPage.
+    await expect(page.getByText('Enter a valid email address')).toBeVisible();
   });
 
   test('shows error on wrong password', async ({ page }) => {
@@ -49,8 +44,8 @@ test.describe('Authentication', () => {
     await page.fill('#password', 'wrongpass');
     await page.click('button[type="submit"]');
 
-    // The component shows serverError inside the glass-card, not the form.
-    await expect(page.locator('.glass-card')).toContainText(/invalid credentials|incorrect/i);
+    // LoginPage renders serverError as <p role="alert" className="hero-v2__oauth-error">
+    await expect(page.getByRole('alert')).toContainText(/invalid credentials|incorrect/i);
   });
 
   test('redirects to /tasks after login', async ({ page }) => {
@@ -98,7 +93,7 @@ test.describe('Authentication', () => {
     await page.click('button:has-text("Sign Out")');
 
     await expect(page).toHaveURL(/\/login/);
-    
+
     // Check if auth state is cleared in localStorage
     const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
     const parsed = JSON.parse(storageValue || '{}');
