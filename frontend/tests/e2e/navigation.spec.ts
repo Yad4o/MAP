@@ -1,17 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_USER = { id: 1, email: 'admin@example.com', username: 'admin', role: 'ADMIN', tier: 'pro', email_verified: true };
+
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    // Catch-all mock for API to prevent unmocked requests from triggering 401 logouts
-    await page.route('**/api/v1/**', async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify([]) });
-    });
-
-    // Mock authentication as Admin to see all links
-    await page.addInitScript(() => {
+    // Set up auth state in localStorage BEFORE the page loads
+    await page.addInitScript((user) => {
       const authState = {
         state: {
-          user: { id: 1, email: 'admin@example.com', username: 'admin', role: 'ADMIN' },
+          user,
           accessToken: 'fake_token',
           refreshToken: 'fake_refresh',
           isAuthenticated: true,
@@ -19,21 +16,21 @@ test.describe('Navigation', () => {
         version: 0
       };
       localStorage.setItem('map-auth-storage', JSON.stringify(authState));
-    });
+    }, ADMIN_USER);
 
-    await page.route('**/api/v1/auth/me', async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify({ id: 1, email: 'admin@example.com', username: 'admin', role: 'ADMIN' }) });
-    });
-
-    // Mock tasks to avoid empty state hanging if needed
-    await page.route('**/api/v1/tasks', async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify([]) });
-    });
-
-    // Register the admin route mock up front so it's active before any
-    // click reaches /admin — avoids adding a route mid-loop.
-    await page.route(/\/api\/v1\/admin/, async (route) => {
-      await route.fulfill({ status: 200, body: JSON.stringify([]) });
+    // Regex catch-all: intercepts ALL /api/v1/ requests so nothing can trigger a logout.
+    // Registered before page.goto() so it's active for the initial page load.
+    await page.route(/\/api\/v1\//, async (route) => {
+      const url = route.request().url();
+      // Return the full user object for /auth/me so the store hydrates with ADMIN role
+      if (url.includes('/auth/me')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ADMIN_USER) });
+      } else if (url.includes('/tasks')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      } else {
+        // Everything else (api-keys, memory, provider-keys, admin endpoints, etc.) -> empty list
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      }
     });
   });
 
@@ -41,24 +38,26 @@ test.describe('Navigation', () => {
     await page.goto('/tasks');
 
     // Wait for the sidebar to fully settle (Admin section only renders
-    // once the auth store has hydrated) before starting to click through.
+    // once the auth store has hydrated from localStorage)
     await expect(page.getByRole('link', { name: 'Admin', exact: true })).toBeVisible();
 
     const navItems = [
       { label: 'History', url: /\/history/ },
-      { label: 'Logs', url: /\/logs/ },
+      { label: 'Logs',    url: /\/logs/ },
       { label: 'Settings', url: /\/settings/ },
-      { label: 'Admin', url: /\/admin/ },
-      { label: 'Tasks', url: /\/tasks/ },
+      { label: 'Admin',  url: /\/admin/ },
+      { label: 'Tasks',  url: /\/tasks/ },
     ];
 
     for (const item of navItems) {
-      const link = page.getByRole('link', { name: item.label, exact: true });
-      await expect(link).toBeVisible();
-      // Use force to bypass stability checks if it gets caught in a React re-render loop
+      // Use locator with sidebar scope to avoid ambiguity
+      const sidebar = page.locator('aside');
+      const link = sidebar.getByRole('link', { name: item.label, exact: true });
+      // Use force to bypass stability checks if caught in a React re-render
       await link.click({ force: true });
       await expect(page).toHaveURL(item.url);
-      await page.waitForTimeout(500);
+      // Brief pause for page transitions to settle
+      await page.waitForTimeout(300);
     }
   });
 
