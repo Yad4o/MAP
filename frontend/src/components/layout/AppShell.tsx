@@ -79,25 +79,28 @@ export default function AppShell() {
           </NavLink>
         ))}
 
-        {isAdmin && (
-          <>
-            <div className="my-4 mx-2" style={{ borderTop: '1px solid rgba(14,15,12,0.08)' }} />
-            <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#868685]">
-              Administration
-            </p>
-            {adminItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={navLinkClass}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon size={17} className="flex-shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </>
-        )}
+        {/* Admin nav is always mounted, just hidden when not applicable —
+            conditionally mounting it (`{isAdmin && ...}`) meant any brief
+            flicker in auth state (e.g. a re-render between store updates)
+            would unmount/remount this link, which is exactly the shape of
+            the "element was detached from the DOM" flake seen in e2e. */}
+        <div style={{ display: isAdmin ? undefined : 'none' }}>
+          <div className="my-4 mx-2" style={{ borderTop: '1px solid rgba(14,15,12,0.08)' }} />
+          <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#868685]">
+            Administration
+          </p>
+          {adminItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={navLinkClass}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <item.icon size={17} className="flex-shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
 
       {/* User footer */}
