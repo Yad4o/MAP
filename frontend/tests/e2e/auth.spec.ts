@@ -42,7 +42,14 @@ test.describe('Authentication', () => {
     await page.goto('/login');
     await page.fill('#email', 'wrong@example.com');
     await page.fill('#password', 'wrongpass');
-    await page.click('button[type="submit"]');
+
+    // Wait for the mocked 401 to actually round-trip before asserting on
+    // the alert — clicking and immediately asserting can race the
+    // route fulfillment + React state update on a loaded CI runner.
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/v1/auth/login') && res.status() === 401),
+      page.click('button[type="submit"]'),
+    ]);
 
     // LoginPage renders serverError as <p role="alert" className="hero-v2__oauth-error">
     await expect(page.getByRole('alert')).toContainText(/invalid credentials|incorrect/i);
