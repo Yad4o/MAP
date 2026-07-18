@@ -9,7 +9,7 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
       id="cta"
       style={{
         width: '100%',
-        background: '#0C1222',
+        background: '#131417',
         padding: '160px 40px',
         textAlign: 'center',
         position: 'relative',
@@ -67,7 +67,7 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
           style={{
             fontFamily: "'PP Neue Montreal', system-ui, sans-serif",
             background: '#D4A574',
-            color: '#0C1222',
+            color: '#131417',
             borderRadius: 100,
             padding: '16px 44px',
             fontSize: 17,
