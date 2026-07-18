@@ -13,7 +13,7 @@ export default function Architecture() {
       id="architecture"
       style={{
         width: '100%',
-        background: '#0C1222',
+        background: '#131417',
         padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
