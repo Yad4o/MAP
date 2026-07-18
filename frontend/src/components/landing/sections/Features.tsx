@@ -120,7 +120,7 @@ export default function Features() {
         position: 'relative',
         width: '100%',
         height: '100vh',
-        background: '#0C1222',
+        background: '#131417',
         overflow: 'hidden',
         perspective: 1000,
         transformStyle: 'preserve-3d',
