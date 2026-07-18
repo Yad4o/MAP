@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #05070c;
+  background: #131417;
 }
 
 .hero-v2__bg {
@@ -48,7 +48,7 @@
   width: min(900px, 140vw);
   height: min(900px, 140vw);
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.14) 0%, rgba(52, 211, 153, 0.05) 35%, rgba(5, 7, 12, 0) 65%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 35%, rgba(5, 7, 12, 0) 65%);
   filter: blur(10px);
 }
 
@@ -101,7 +101,7 @@
   position: absolute;
   inset: -30%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.35) 0%, rgba(52, 211, 153, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
   filter: blur(14px);
 }
 
@@ -110,7 +110,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 24px rgba(52, 211, 153, 0.25));
+  filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.25));
 }
 
 .hero-v2__wordmark-img {
@@ -118,7 +118,7 @@
   height: auto;
   object-fit: contain;
   margin-bottom: 10px;
-  filter: drop-shadow(0 0 18px rgba(52, 211, 153, 0.18));
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.18));
 }
 
 .hero-v2__tagline {
@@ -131,12 +131,12 @@
 }
 
 .hero-v2__tagline-accent {
-  color: #34d399;
+  color: #ffffff;
   font-weight: 600;
 }
 
 .hero-v2__headline-accent {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .hero-v2__subtext {
@@ -211,7 +211,7 @@
 }
 
 .hero-v2__btn--outline:hover {
-  border-color: rgba(52, 211, 153, 0.5);
+  border-color: rgba(255, 255, 255, 0.5);
   color: #f5f3ee;
 }
 
@@ -246,7 +246,7 @@
 }
 
 .hero-v2__signin span {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .hero-v2__signin:hover span {
@@ -301,7 +301,7 @@
   width: 56px;
   height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 0 20px rgba(52, 211, 153, 0.25));
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.25));
   margin-bottom: 12px;
 }
 
@@ -310,7 +310,7 @@
   height: auto;
   object-fit: contain;
   margin-bottom: 18px;
-  filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.16));
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.16));
 }
 
 .auth-v2__heading {
@@ -322,13 +322,13 @@
 }
 
 .hero-v2__btn--primary {
-  background: #34d399;
-  color: #05070c;
+  background: #ffffff;
+  color: #131417;
   font-weight: 600;
 }
 
 .hero-v2__btn--primary:hover:not(:disabled) {
-  background: #2dc78d;
+  background: #e6e6e6;
   transform: translateY(-1px);
 }
 
@@ -358,7 +358,7 @@
 }
 
 .auth-v2__label a {
-  color: #34d399;
+  color: #ffffff;
   text-decoration: none;
 }
 
@@ -385,7 +385,7 @@
 }
 
 .auth-v2__input:focus {
-  border-color: rgba(52, 211, 153, 0.5);
+  border-color: rgba(255, 255, 255, 0.5);
   background: rgba(245, 243, 238, 0.065);
 }
 
@@ -420,7 +420,7 @@
 }
 
 .auth-v2__strength-bar.is-filled {
-  background: var(--strength-color, #34d399);
+  background: var(--strength-color, #ffffff);
 }
 
 .auth-v2__strength-label {
@@ -442,7 +442,7 @@
 }
 
 .auth-v2__footer a {
-  color: #34d399;
+  color: #ffffff;
   font-weight: 500;
   text-decoration: none;
 }
@@ -471,7 +471,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #05070c;
+  background: #131417;
 }
 
 .intro-v2__bg {
@@ -487,7 +487,7 @@
   width: min(1000px, 150vw);
   height: min(700px, 100vw);
   transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse, rgba(52, 211, 153, 0.10) 0%, rgba(52, 211, 153, 0.04) 40%, rgba(5, 7, 12, 0) 70%);
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(5, 7, 12, 0) 70%);
   filter: blur(20px);
 }
 
@@ -530,7 +530,7 @@
 }
 
 .intro-v2__headline-accent {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .intro-v2__subtext {
@@ -556,8 +556,8 @@
 }
 
 .intro-v2__cta:hover {
-  border-color: rgba(52, 211, 153, 0.5);
-  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .intro-v2__scroll-cue {
@@ -650,7 +650,7 @@
 .hero-mockup__glow {
   position: absolute;
   inset: -15%;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.14) 0%, rgba(52, 211, 153, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 70%);
   filter: blur(30px);
   z-index: 0;
 }
@@ -658,7 +658,7 @@
 .hero-mockup__window {
   position: relative;
   z-index: 1;
-  background: rgba(18, 24, 38, 0.9);
+  background: rgba(32, 32, 34, 0.9);
   border: 1px solid rgba(245, 243, 238, 0.08);
   border-radius: 16px;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
@@ -677,7 +677,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(8, 14, 26, 0.9);
+  background: rgba(20, 20, 21, 0.9);
   border-bottom: 1px solid rgba(245, 243, 238, 0.06);
 }
 
@@ -714,8 +714,8 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: #05070c;
-  background: #34d399;
+  color: #131417;
+  background: #ffffff;
   border-radius: 6px;
   padding: 3px 8px;
 }
@@ -749,7 +749,7 @@
   flex-shrink: 0;
 }
 
-.hero-mockup__status--done { background: #34d399; }
+.hero-mockup__status--done { background: #ffffff; }
 .hero-mockup__status--active {
   background: #D4A574;
   animation: heroMockupPulse 1.4s ease-in-out infinite;
@@ -785,7 +785,7 @@
   font-size: 11px;
   font-family: 'PP Neue Montreal', system-ui, sans-serif;
   color: #F5F3EE;
-  background: rgba(18, 24, 38, 0.95);
+  background: rgba(32, 32, 34, 0.95);
   border: 1px solid rgba(245, 243, 238, 0.1);
   border-radius: 100px;
   padding: 8px 14px;
@@ -828,7 +828,7 @@
   font-size: 21px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  background: linear-gradient(120deg, #F5F3EE 0%, #34d399 45%, #F5F3EE 70%, #34d399 100%);
+  background: linear-gradient(120deg, #F5F3EE 0%, #ffffff 45%, #F5F3EE 70%, #ffffff 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -875,6 +875,6 @@
 }
 
 .nav-auth-btn--signup:hover {
-  border-color: rgba(52, 211, 153, 0.5);
-  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
