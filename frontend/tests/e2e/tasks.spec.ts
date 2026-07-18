@@ -132,6 +132,9 @@ test.describe('Tasks', () => {
     const pendingBadge = page.locator('.wise-card').filter({ hasText: 'Pending Task' }).locator('span').first();
     await expect(pendingBadge).toHaveCSS('background-color', 'rgb(255, 245, 194)'); // #fff5c2
 
+    // The Completed section is collapsed by default, so we must open it first
+    await page.getByRole('button', { name: /Completed/i }).click();
+
     const completedBadge = page.locator('.wise-card').filter({ hasText: 'Completed Task' }).locator('span').first();
     await expect(completedBadge).toHaveCSS('background-color', 'rgb(226, 246, 213)'); // #e2f6d5
   });

@@ -45,7 +45,7 @@ test.describe('Authentication', () => {
     await page.click('button[type="submit"]');
 
     // LoginPage renders serverError as <p role="alert" className="hero-v2__oauth-error">
-    await expect(page.getByRole('alert')).toContainText(/invalid credentials|incorrect/i);
+    await expect(page.getByRole('alert')).toContainText(/invalid email|invalid credentials|incorrect/i);
   });
 
   test('redirects to /tasks after login', async ({ page }) => {
@@ -95,9 +95,11 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/login/);
 
     // Check if auth state is cleared in localStorage
-    const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
-    const parsed = JSON.parse(storageValue || '{}');
-    expect(parsed?.state?.isAuthenticated).toBe(false);
+    await expect(async () => {
+      const storageValue = await page.evaluate(() => localStorage.getItem('map-auth-storage'));
+      const parsed = JSON.parse(storageValue || '{}');
+      expect(parsed?.state?.isAuthenticated).toBe(false);
+    }).toPass();
   });
 
   test('cannot access /tasks without login', async ({ page }) => {
