@@ -23,6 +23,7 @@ export default function Hero() {
       <div className="hero-v2__bg" aria-hidden="true">
         <div className="hero-v2__glow" />
         <div className="hero-v2__grid" />
+        <div className="hero-v2__rays" />
         <div className="hero-v2__symbols" />
       </div>
 
