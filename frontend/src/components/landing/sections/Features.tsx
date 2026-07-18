@@ -1,8 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const CARDS = [
   { icon: 'grid', title: 'PostgreSQL', subtitle: 'Relational persistence' },
@@ -72,8 +69,7 @@ export default function Features() {
   useEffect(() => {
     const section = sectionRef.current;
     const scene = sceneRef.current;
-    const grid = gridRef.current;
-    if (!section || !scene || !grid) return;
+    if (!section || !scene) return;
 
     let mouseX = 0;
     let mouseY = 0;
@@ -93,22 +89,9 @@ export default function Features() {
     };
     gsap.ticker.add(ticker);
 
-    const st = ScrollTrigger.create({
-      trigger: section,
-      start: 'top top',
-      end: '+=150%',
-      pin: true,
-      scrub: 1.5,
-      onUpdate: (self) => {
-        const progress = self.progress;
-        gsap.set(grid, { z: -1000 + progress * 2500 });
-      },
-    });
-
     return () => {
       document.removeEventListener('mousemove', onMouseMove);
       gsap.ticker.remove(ticker);
-      st.kill();
     };
   }, []);
 
@@ -220,8 +203,7 @@ export default function Features() {
             gridTemplateRows: 'repeat(2, 20vw)',
             gap: '2vw',
             transformStyle: 'preserve-3d',
-            transform: 'translateZ(-1000px)',
-            transition: 'transform 0.1s ease-out',
+            transform: 'translateZ(0)',
           }}
         >
           {CARDS.map((card, i) => (
