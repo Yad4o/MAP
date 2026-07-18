@@ -262,28 +262,126 @@ export default function Pipeline() {
             </div>
           </div>
 
-          {/* Right: agent pipeline artwork */}
+          {/* Right: agent pipeline artwork — blended into the section bg, no framed image */}
           <div
             data-animate-child
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
+              minHeight: 500,
             }}
           >
-            <img
-              src="/images/img-pipeline.jpg"
-              alt="Planner, Executor, Analyzer, Memory agent pipeline"
+            <div
+              aria-hidden="true"
               style={{
-                width: '100%',
-                maxWidth: 520,
-                objectFit: 'contain',
-                opacity: 0.93,
-                animation: 'pipelineFloat 6s ease-in-out infinite',
-                pointerEvents: 'none',
-                userSelect: 'none',
+                position: 'absolute',
+                inset: '-15%',
+                background:
+                  'radial-gradient(ellipse 55% 55% at 55% 45%, rgba(212, 165, 116, 0.13) 0%, transparent 70%)',
+                filter: 'blur(50px)',
+                zIndex: 0,
               }}
             />
+
+            <svg
+              viewBox="0 0 520 520"
+              width="100%"
+              style={{ position: 'relative', zIndex: 1, maxWidth: 480, overflow: 'visible' }}
+              aria-label="Planner hands off to Executor, Executor to Analyzer, Analyzer to Memory"
+              role="img"
+            >
+              <defs>
+                <filter id="pipeGlow" x="-60%" y="-60%" width="220%" height="220%">
+                  <feGaussianBlur stdDeviation="3.2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <linearGradient id="pipeChip" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                </linearGradient>
+              </defs>
+
+              {/* Ambient rings + scattered points, same language as the Architecture diagram */}
+              <g opacity="0.5">
+                {[70, 130, 190, 250, 310].map((r) => (
+                  <circle key={r} cx="330" cy="250" r={r} fill="none" stroke="rgba(245,243,238,0.06)" strokeDasharray="1 7" />
+                ))}
+              </g>
+              {[[60, 40], [460, 70], [40, 260], [480, 220], [70, 460], [440, 480], [220, 20]].map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r="1.6" fill="rgba(212,165,116,0.35)" />
+              ))}
+
+              {/* Flowing traces between stages */}
+              <g fill="none" stroke="rgba(212,165,116,0.55)" strokeWidth="1.5" strokeLinecap="round" filter="url(#pipeGlow)">
+                <path d="M280,98 C280,140 400,120 400,162" />
+                <path d="M400,218 C400,260 260,240 260,282" />
+                <path d="M260,338 C260,380 380,360 380,402" />
+              </g>
+
+              {/* Traveling pulse along the whole hand-off chain */}
+              <circle r="3" fill="#F5F3EE" filter="url(#pipeGlow)">
+                <animateMotion
+                  dur="5s"
+                  repeatCount="indefinite"
+                  path="M280,70 V98 C280,140 400,120 400,162 V190 V218 C400,260 260,240 260,282 V310 V338 C260,380 380,360 380,402 V430"
+                />
+              </circle>
+
+              {/* Stage chips */}
+              {[
+                { id: 'planner', x: 280, y: 70, num: '01', label: 'PLANNER', icon: 'branch' },
+                { id: 'executor', x: 400, y: 190, num: '02', label: 'EXECUTOR', icon: 'play' },
+                { id: 'analyzer', x: 260, y: 310, num: '03', label: 'ANALYZER', icon: 'bars' },
+                { id: 'memory', x: 380, y: 430, num: '04', label: 'MEMORY', icon: 'stack' },
+              ].map((chip) => (
+                <g key={chip.id} transform={`translate(${chip.x - 60}, ${chip.y - 32})`}>
+                  <rect width="120" height="64" rx="12" fill="#131417" stroke="rgba(212,165,116,0.4)" strokeWidth="1" />
+                  <rect width="120" height="64" rx="12" fill="url(#pipeChip)" />
+                  <text x="12" y="18" fontFamily="'Geist Mono', monospace" fontSize="9" fill="rgba(212,165,116,0.7)">
+                    {chip.num}
+                  </text>
+                  <g transform="translate(48, 16)" stroke="#D4A574" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    {chip.icon === 'branch' && (
+                      <>
+                        <circle cx="12" cy="2" r="1.8" />
+                        <circle cx="2" cy="14" r="1.8" />
+                        <circle cx="22" cy="14" r="1.8" />
+                        <path d="M12 4v4 M12 8 4 12 M12 8l8 4" />
+                      </>
+                    )}
+                    {chip.icon === 'play' && <path d="M4 1 20 9 4 17Z" fill="#D4A574" stroke="none" />}
+                    {chip.icon === 'bars' && (
+                      <>
+                        <path d="M3 16V9 M11 16V3 M19 16v-6" />
+                      </>
+                    )}
+                    {chip.icon === 'stack' && (
+                      <>
+                        <ellipse cx="11" cy="3" rx="8" ry="2.4" />
+                        <path d="M3 3v10c0 1.3 3.6 2.4 8 2.4s8-1.1 8-2.4V3" />
+                        <path d="M3 8.3c0 1.3 3.6 2.4 8 2.4s8-1.1 8-2.4" />
+                      </>
+                    )}
+                  </g>
+                  <text
+                    x="60"
+                    y="52"
+                    textAnchor="middle"
+                    fontFamily="'PP Neue Montreal', system-ui, sans-serif"
+                    fontSize="10.5"
+                    letterSpacing="0.05em"
+                    fill="rgba(245,243,238,0.8)"
+                  >
+                    {chip.label}
+                  </text>
+                </g>
+              ))}
+            </svg>
           </div>
         </div>
 
@@ -336,13 +434,6 @@ export default function Pipeline() {
           ))}
         </div>
       </div>
-
-      <style>{`
-        @keyframes pipelineFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-14px); }
-        }
-      `}</style>
     </section>
   );
 }
