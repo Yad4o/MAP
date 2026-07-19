@@ -9,6 +9,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import LandingPage from './pages/LandingPage'
 import TermsPage from './pages/TermsPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TaskListPage from './pages/TaskListPage'
 import TaskCreatePage from './pages/TaskCreatePage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         {/* All authenticated routes are rendered inside the AppShell layout */}
         <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
