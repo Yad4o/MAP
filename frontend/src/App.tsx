@@ -8,6 +8,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import LandingPage from './pages/LandingPage'
+import TermsPage from './pages/TermsPage'
 import TaskListPage from './pages/TaskListPage'
 import TaskCreatePage from './pages/TaskCreatePage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         {/* All authenticated routes are rendered inside the AppShell layout */}
         <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
