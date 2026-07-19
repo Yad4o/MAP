@@ -314,6 +314,13 @@
 .auth-v2__content {
   padding-top: 64px;
   padding-bottom: 48px;
+  padding-left: 32px;
+  padding-right: 32px;
+  border-radius: 20px;
+  background: rgba(245, 243, 238, 0.025);
+  border: 1px solid rgba(245, 243, 238, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .auth-v2__mark {
