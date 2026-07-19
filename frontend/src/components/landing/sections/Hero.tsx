@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BASE_URL } from '../../../api/client';
 import HeroMockup from './HeroMockup';
 
@@ -108,6 +108,12 @@ export default function Hero() {
           >
             Already have an account? <span>Sign in</span>
           </button>
+
+          <p className="hero-v2__legal">
+            By continuing, you accept our{' '}
+            <Link to="/terms">Terms of Service</Link> and{' '}
+            <Link to="/privacy">Privacy Policy</Link>.
+          </p>
         </div>
         </div>
       </div>

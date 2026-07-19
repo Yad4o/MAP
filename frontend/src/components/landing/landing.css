@@ -272,6 +272,42 @@
   text-decoration: underline;
 }
 
+.hero-v2__legal {
+  margin-top: 18px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(245, 243, 238, 0.35);
+}
+
+.hero-v2__legal a {
+  color: rgba(245, 243, 238, 0.55);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hero-v2__legal a:hover {
+  color: #34d399;
+}
+
+.auth-v2__legal {
+  margin-top: 14px;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(245, 243, 238, 0.35);
+}
+
+.auth-v2__legal a {
+  color: rgba(245, 243, 238, 0.55);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-v2__legal a:hover {
+  color: #34d399;
+}
+
 @keyframes heroMarkIn {
   from {
     opacity: 0;

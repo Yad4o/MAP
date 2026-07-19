@@ -213,6 +213,12 @@ export default function RegisterPage() {
           <p className="auth-v2__footer">
             Already have an account? <Link to="/login">Sign in</Link>
           </p>
+
+          <p className="auth-v2__legal">
+            By continuing, you accept our{' '}
+            <Link to="/terms">Terms of Service</Link> and{' '}
+            <Link to="/privacy">Privacy Policy</Link>.
+          </p>
         </div>
       </section>
     </div>
