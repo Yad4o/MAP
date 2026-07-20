@@ -18,11 +18,6 @@ export default function Intro() {
       </div>
 
       <div className="intro-v2__content">
-        <span className="intro-v2__badge">
-          <span className="intro-v2__badge-dot" aria-hidden="true" />
-          Multi-Agent Runtime · Live
-        </span>
-
         <span className="intro-v2__eyebrow">MULTI-AGENT AI AUTOMATION</span>
 
         <h1 className="intro-v2__headline">
