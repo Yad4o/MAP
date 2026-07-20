@@ -572,6 +572,54 @@
   text-align: center;
 }
 
+/* Side rails — pure ornament to stop the centered column from
+   floating in empty space on wide/laptop screens. Hidden below
+   1100px; mobile and tablet layouts are untouched. */
+.intro-v2__rail {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .intro-v2__rail {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transform: translateY(-50%);
+  }
+
+  .intro-v2__rail--left {
+    left: clamp(24px, 4vw, 64px);
+    flex-direction: column;
+  }
+
+  .intro-v2__rail--right {
+    right: clamp(24px, 4vw, 64px);
+    flex-direction: column;
+  }
+
+  .intro-v2__rail-line {
+    width: 1px;
+    height: 64px;
+    background: linear-gradient(to bottom, transparent, rgba(245, 243, 238, 0.18), transparent);
+  }
+
+  .intro-v2__rail-text {
+    writing-mode: vertical-rl;
+    font-family: 'PP Neue Montreal', system-ui, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: rgba(245, 243, 238, 0.3);
+    white-space: nowrap;
+  }
+
+  .intro-v2__rail--left .intro-v2__rail-text {
+    transform: rotate(180deg);
+  }
+}
+
 .intro-v2__eyebrow {
   display: inline-block;
   font-size: 11px;

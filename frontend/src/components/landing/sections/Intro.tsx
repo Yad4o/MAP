@@ -17,6 +17,16 @@ export default function Intro() {
         <div className="intro-v2__rays" />
       </div>
 
+      <div className="intro-v2__rail intro-v2__rail--left" aria-hidden="true">
+        <span className="intro-v2__rail-line" />
+        <span className="intro-v2__rail-text">MAP — MULTI-AGENT PLATFORM</span>
+      </div>
+
+      <div className="intro-v2__rail intro-v2__rail--right" aria-hidden="true">
+        <span className="intro-v2__rail-text">PLAN · EXECUTE · VALIDATE · REMEMBER</span>
+        <span className="intro-v2__rail-line" />
+      </div>
+
       <div className="intro-v2__content">
         <span className="intro-v2__eyebrow">MULTI-AGENT AI AUTOMATION</span>
 
