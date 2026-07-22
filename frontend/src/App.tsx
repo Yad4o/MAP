@@ -39,7 +39,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function RootRoute() {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
-  if (isAuthenticated) return <Navigate to="/tasks" replace />
+  if (isAuthenticated) return <Navigate to="/tasks/new" replace />
   return <LandingPage />
 }
 
