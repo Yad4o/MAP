@@ -40,7 +40,7 @@ export default function OAuthCallbackPage() {
         setUser(user);
         // Clear the tokens out of the URL/history before leaving.
         window.history.replaceState({}, '', '/oauth/callback');
-        navigate('/tasks', { replace: true });
+        navigate('/tasks/new', { replace: true });
       } catch {
         setError("Signed in, but couldn't load your profile. Please try logging in again.");
       }
