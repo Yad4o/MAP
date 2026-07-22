@@ -25,7 +25,7 @@ describe('TaskCreatePage', () => {
     renderWithProviders(<TaskCreatePage />);
     const user = userEvent.setup();
 
-    const composer = screen.getByPlaceholderText(/summarize last week's support tickets/i);
+    const composer = screen.getByPlaceholderText(/message map/i);
     await user.type(composer, 'hi');
 
     const sendButton = screen.getByRole('button', { name: /create task/i });
@@ -42,7 +42,7 @@ describe('TaskCreatePage', () => {
     renderWithProviders(<TaskCreatePage />);
     const user = userEvent.setup();
 
-    const composer = screen.getByPlaceholderText(/summarize last week's support tickets/i);
+    const composer = screen.getByPlaceholderText(/message map/i);
     await user.type(composer, 'Summarize the Q2 onboarding survey results');
 
     const sendButton = screen.getByRole('button', { name: /create task/i });
@@ -57,13 +57,23 @@ describe('TaskCreatePage', () => {
     });
   });
 
-  it('renders the composer, priority pills, and back link', () => {
+  it('renders the composer, priority pills, and quick-start prompts', () => {
     renderWithProviders(<TaskCreatePage />);
 
-    expect(screen.getByPlaceholderText(/summarize last week's support tickets/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/message map/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^high$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^medium$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^low$/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to tasks/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /summarize documents/i })).toBeInTheDocument();
+  });
+
+  it('fills the composer when a quick-start prompt is clicked', async () => {
+    renderWithProviders(<TaskCreatePage />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: /draft an email/i }));
+
+    const composer = screen.getByPlaceholderText(/message map/i) as HTMLTextAreaElement;
+    expect(composer.value).toMatch(/follow-up email/i);
   });
 });
