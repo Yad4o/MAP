@@ -4,26 +4,27 @@ import { useNavigate, Link } from 'react-router-dom';
 import { createTask, getTasks } from '../api/tasks';
 import { TaskCreate, TaskStatus } from '../types/task';
 import {
-  Workflow, ArrowUp, Loader2, AlertTriangle,
+  ArrowUp, Loader2, AlertTriangle,
   Flame, Gauge, Feather,
   FileText, Mail, Search, BarChart3,
-  Clock, Zap, CheckSquare, CircleX, ChevronRight,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
-/* ── Dark-grey palette — mostly grey, minimal white, no bright glow ────────── */
+/* ── Near-black palette — matches the ChatGPT-style reference ──────────────── */
 const C = {
-  page: '#1c1d1a',
-  card: '#242521',
-  cardHover: '#2b2c27',
-  chip: '#20211d',
-  border: '#34352e',
-  borderStrong: '#4a4b42',
-  divider: '#2c2d27',
-  textPrimary: '#f2f3ef',
-  textSecondary: '#9a9c93',
-  textMuted: '#6f716a',
-  icon: '#e7e8e3',
+  page: '#0d0d0d',
+  pill: '#2a2a2a',
+  pillBorder: '#3a3a3a',
+  pillBorderActive: '#525252',
+  rowHover: 'rgba(255,255,255,0.05)',
+  divider: '#232323',
+  textPrimary: '#ececec',
+  textSecondary: '#9b9b9b',
+  textMuted: '#6e6e6e',
+  dotPending: '#9b9b9b',
+  dotRunning: '#ececec',
+  dotFailed: '#6e6e6e',
 };
 
 /* ── Priority options ────────────────────────────────────────────────────── */
@@ -33,7 +34,7 @@ const PRIORITY_OPTIONS = [
   { value: 2, label: 'Low', icon: Feather },
 ] as const;
 
-/* ── Quick-start prompts ─────────────────────────────────────────────────── */
+/* ── Quick-start prompts — plain icon + text rows, no card boxes ───────────── */
 const QUICK_STARTS = [
   {
     icon: FileText,
@@ -57,17 +58,13 @@ const QUICK_STARTS = [
   },
 ];
 
-/* ── Compact status glyph for the recent-tasks strip — grayscale only ──── */
-const recentStatusMeta: Record<TaskStatus, { icon: typeof Clock; color: string }> = {
-  [TaskStatus.PENDING]: { icon: Clock, color: '#9a9c93' },
-  [TaskStatus.PROCESSING]: { icon: Zap, color: '#f2f3ef' },
-  [TaskStatus.RETRYING]: { icon: Zap, color: '#f2f3ef' },
-  [TaskStatus.COMPLETED]: { icon: CheckSquare, color: '#c7c9c0' },
-  [TaskStatus.FAILED]: { icon: CircleX, color: '#6f716a' },
-  [TaskStatus.CANCELLED]: { icon: CircleX, color: '#6f716a' },
+const dotColor = (status: TaskStatus) => {
+  if (status === TaskStatus.PROCESSING || status === TaskStatus.RETRYING) return C.dotRunning;
+  if (status === TaskStatus.FAILED || status === TaskStatus.CANCELLED) return C.dotFailed;
+  return C.dotPending;
 };
 
-const MAX_TEXTAREA_HEIGHT = 220;
+const MAX_TEXTAREA_HEIGHT = 200;
 
 function deriveTitle(text: string): string {
   const firstLine = text.trim().split('\n')[0].replace(/\s+/g, ' ').trim();
@@ -143,7 +140,7 @@ export default function TaskCreatePage() {
 
   const recentTasks = [...(tasks ?? [])]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+    .slice(0, 6);
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -153,153 +150,147 @@ export default function TaskCreatePage() {
   };
 
   return (
-    /* Full-bleed dark canvas — cancels the AppShell's padding so the grey
-       fills the whole content area instead of leaving a light border. */
+    /* Full-bleed near-black canvas — cancels the AppShell's padding so the
+       page reads as one continuous dark surface, ChatGPT-style. */
     <div
       className="-m-5 lg:-m-8 px-5 lg:px-8 flex flex-col"
       style={{ background: C.page, minHeight: 'calc(100vh - 56px)' }}
     >
-      <div className="flex flex-col flex-1 max-w-3xl w-full mx-auto">
+      <div className="flex flex-col flex-1 max-w-2xl w-full mx-auto">
 
-        {/* ── Scroll area: greeting, quick starts, recent tasks ── */}
-        <div className="flex-1 space-y-8 pt-6 pb-8 animate-wise-fade-up">
+        {/* ── Content: greeting, plain suggestion list, recent tasks ── */}
+        <div className="flex-1 pt-10 pb-8">
 
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{ background: C.chip, border: `1px solid ${C.border}` }}
-            >
-              <Workflow className="w-5 h-5" style={{ color: C.icon }} />
-            </div>
-            <div>
-              <h1
-                style={{
-                  fontFamily: 'Manrope, sans-serif',
-                  fontWeight: 900,
-                  fontSize: '26px',
-                  lineHeight: '1.15',
-                  letterSpacing: '-0.4px',
-                  color: C.textPrimary,
-                }}
-              >
-                {greeting()}{user?.username ? `, ${user.username}` : ''}
-              </h1>
-              <p className="text-sm mt-0.5" style={{ color: C.textSecondary }}>
-                Describe what you need done — MAP will plan, execute, and validate it.
-              </p>
-            </div>
+          <h1
+            style={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 800,
+              fontSize: '24px',
+              lineHeight: '1.2',
+              letterSpacing: '-0.3px',
+              color: C.textPrimary,
+            }}
+          >
+            {greeting()}{user?.username ? `, ${user.username}` : ''}
+          </h1>
+          <p className="text-sm mt-1.5" style={{ color: C.textSecondary }}>
+            Describe what you need done — MAP will plan, execute, and validate it.
+          </p>
+
+          {/* Suggestions — plain icon + text rows, no boxes */}
+          <div className="mt-8">
+            {QUICK_STARTS.map(qs => {
+              const Icon = qs.icon;
+              return (
+                <button
+                  key={qs.title}
+                  type="button"
+                  onClick={() => applyQuickStart(qs.prompt)}
+                  className="w-full flex items-center gap-4 py-3 px-2 -mx-2 rounded-xl text-left transition-colors duration-150"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.rowHover)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <Icon size={20} strokeWidth={1.75} style={{ color: C.textPrimary }} className="flex-shrink-0" />
+                  <span className="text-[15px]" style={{ color: C.textPrimary }}>{qs.title}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Quick starts */}
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: C.textMuted }}>
-              Quick start
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {QUICK_STARTS.map(qs => {
-                const Icon = qs.icon;
-                return (
-                  <button
-                    key={qs.title}
-                    type="button"
-                    onClick={() => applyQuickStart(qs.prompt)}
-                    className="text-left rounded-2xl p-4 transition-colors duration-150"
-                    style={{ background: C.card, border: `1px solid ${C.border}` }}
-                    onMouseEnter={e => (e.currentTarget.style.background = C.cardHover)}
-                    onMouseLeave={e => (e.currentTarget.style.background = C.card)}
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
-                      style={{ background: C.chip, border: `1px solid ${C.border}` }}
-                    >
-                      <Icon className="w-4 h-4" style={{ color: C.icon }} />
-                    </div>
-                    <p className="text-sm font-semibold" style={{ color: C.textPrimary }}>{qs.title}</p>
-                    <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: C.textSecondary }}>
-                      {qs.prompt}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Recent tasks — keeps the tasks list reachable from the same screen */}
+          {/* Recent tasks — plain list, matches the Recents panel look */}
           {recentTasks.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: C.textMuted }}>
-                  Recent tasks
-                </p>
+            <div className="mt-10">
+              <div className="flex items-center justify-between mb-1 px-2">
+                <p className="text-xs font-medium" style={{ color: C.textMuted }}>Recent tasks</p>
                 <Link
                   to="/tasks"
-                  className="inline-flex items-center gap-1 text-xs font-semibold transition-colors"
-                  style={{ color: C.textSecondary }}
+                  className="inline-flex items-center gap-1 text-xs transition-colors"
+                  style={{ color: C.textMuted }}
                   onMouseEnter={e => (e.currentTarget.style.color = C.textPrimary)}
-                  onMouseLeave={e => (e.currentTarget.style.color = C.textSecondary)}
+                  onMouseLeave={e => (e.currentTarget.style.color = C.textMuted)}
                 >
                   View all
-                  <ChevronRight size={13} />
+                  <ChevronRight size={12} />
                 </Link>
               </div>
-              <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
-                {recentTasks.map((task, i) => {
-                  const meta = recentStatusMeta[task.status as TaskStatus] ?? recentStatusMeta[TaskStatus.CANCELLED];
-                  const StatusIcon = meta.icon;
-                  return (
-                    <Link
-                      key={task.id}
-                      to={`/tasks/${task.id}`}
-                      className="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
-                      style={{
-                        background: C.card,
-                        borderTop: i === 0 ? 'none' : `1px solid ${C.divider}`,
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = C.cardHover)}
-                      onMouseLeave={e => (e.currentTarget.style.background = C.card)}
-                    >
-                      <StatusIcon size={14} style={{ color: meta.color }} className="flex-shrink-0" />
-                      <span className="text-sm truncate flex-1" style={{ color: C.textPrimary }}>
-                        {task.title}
-                      </span>
-                      <span className="text-[11px] flex-shrink-0" style={{ color: C.textMuted }}>
-                        {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    </Link>
-                  );
-                })}
+              <div>
+                {recentTasks.map(task => (
+                  <Link
+                    key={task.id}
+                    to={`/tasks/${task.id}`}
+                    className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-xl transition-colors duration-150"
+                    onMouseEnter={e => (e.currentTarget.style.background = C.rowHover)}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: dotColor(task.status as TaskStatus) }}
+                    />
+                    <span className="text-[14px] truncate flex-1" style={{ color: C.textPrimary }}>
+                      {task.title}
+                    </span>
+                    <span className="text-xs flex-shrink-0" style={{ color: C.textMuted }}>
+                      {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </Link>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Composer — pinned to the bottom of the page, ChatGPT/Claude style ── */}
+        {/* ── Composer — floating pill, pinned to the bottom ── */}
         <div
-          className="sticky bottom-0 pt-3 pb-2"
-          style={{ background: `linear-gradient(180deg, rgba(28,29,26,0) 0%, ${C.page} 28%)` }}
+          className="sticky bottom-0 pt-3 pb-3"
+          style={{ background: `linear-gradient(180deg, rgba(13,13,13,0) 0%, ${C.page} 30%)` }}
         >
           {mutation.isError && (
             <div
               className="flex items-center gap-3 p-3 mb-3 rounded-xl text-sm"
-              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textSecondary }}
+              style={{ background: C.pill, border: `1px solid ${C.pillBorder}`, color: C.textSecondary }}
             >
               <AlertTriangle size={15} className="flex-shrink-0" style={{ color: C.textPrimary }} />
               <span>Failed to create the task. Please try again.</span>
             </div>
           )}
 
+          {/* Priority — small plain row above the pill */}
+          <div className="flex items-center gap-1.5 mb-2 px-1">
+            {PRIORITY_OPTIONS.map(opt => {
+              const Icon = opt.icon;
+              const isActive = priority === opt.value;
+              return (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setPriority(opt.value)}
+                  title={`${opt.label} priority`}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150"
+                  style={{
+                    background: isActive ? C.pill : 'transparent',
+                    color: isActive ? C.textPrimary : C.textMuted,
+                    border: `1px solid ${isActive ? C.pillBorder : 'transparent'}`,
+                  }}
+                >
+                  <Icon size={12} />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* The pill itself */}
           <div
-            className="rounded-[22px] transition-colors duration-150"
+            className="flex items-end gap-2 rounded-[28px] px-4 py-2.5 transition-colors duration-150"
             style={{
-              background: C.card,
-              border: `1.5px solid ${description.trim().length >= 3 ? C.borderStrong : C.border}`,
-              padding: '14px 16px',
+              background: C.pill,
+              border: `1px solid ${description.trim().length >= 3 ? C.pillBorderActive : C.pillBorder}`,
             }}
           >
             <textarea
               ref={textareaRef}
-              rows={2}
+              rows={1}
               value={description}
               onChange={e => {
                 setDescription(e.target.value);
@@ -308,63 +299,37 @@ export default function TaskCreatePage() {
               onInput={autoResize}
               onKeyDown={handleKeyDown}
               placeholder="Message MAP — describe the task you need done…"
-              className="w-full resize-none overflow-y-auto bg-transparent outline-none"
+              className="flex-1 resize-none overflow-y-auto bg-transparent outline-none py-1.5"
               style={{
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '15px',
-                lineHeight: '1.6',
+                lineHeight: '1.5',
                 color: C.textPrimary,
                 maxHeight: MAX_TEXTAREA_HEIGHT,
               }}
             />
 
-            <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: `1px solid ${C.divider}` }}>
-              <div className="flex items-center gap-1.5">
-                {PRIORITY_OPTIONS.map(opt => {
-                  const Icon = opt.icon;
-                  const isActive = priority === opt.value;
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => setPriority(opt.value)}
-                      title={`${opt.label} priority`}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150"
-                      style={{
-                        background: isActive ? C.chip : 'transparent',
-                        color: isActive ? C.textPrimary : C.textMuted,
-                        border: `1px solid ${isActive ? C.borderStrong : 'transparent'}`,
-                      }}
-                    >
-                      <Icon size={12} />
-                      <span className="hidden sm:inline">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={submit}
-                disabled={!canSubmit}
-                aria-label="Create task"
-                className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center transition-colors duration-150"
-                style={{
-                  background: canSubmit ? C.textPrimary : C.chip,
-                  color: canSubmit ? C.page : C.textMuted,
-                  cursor: canSubmit ? 'pointer' : 'not-allowed',
-                }}
-              >
-                {mutation.isPending
-                  ? <Loader2 size={15} className="animate-spin" />
-                  : <ArrowUp size={16} />
-                }
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!canSubmit}
+              aria-label="Create task"
+              className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center transition-colors duration-150 mb-0.5"
+              style={{
+                background: canSubmit ? C.textPrimary : '#3a3a3a',
+                color: canSubmit ? C.page : C.textMuted,
+                cursor: canSubmit ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {mutation.isPending
+                ? <Loader2 size={14} className="animate-spin" />
+                : <ArrowUp size={15} />
+              }
+            </button>
           </div>
 
           {error && (
-            <p className="text-sm flex items-center gap-2 px-1 mt-2" style={{ color: C.textSecondary }}>
+            <p className="text-sm flex items-center gap-2 px-2 mt-2" style={{ color: C.textSecondary }}>
               <AlertTriangle size={13} />
               {error}
             </p>
