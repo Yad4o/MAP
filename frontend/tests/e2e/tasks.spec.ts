@@ -38,9 +38,11 @@ test.describe('Tasks', () => {
     await page.goto('/tasks');
     await page.click('#create-task-btn');
     await page.waitForURL(/\/tasks\/new/);
-    // TaskCreatePage's heading is "What do you need done?" — there is no
-    // separate title field, the title is derived from the description.
-    await expect(page.locator('h1')).toContainText('What do you need done?');
+    // TaskCreatePage's h1 is now a dynamic time-of-day greeting (e.g. "Good
+    // morning, testuser"), not a fixed string, so assert on the stable
+    // composer placeholder instead — the real signal that we landed on the
+    // create-task screen.
+    await expect(page.getByPlaceholder(/message map/i)).toBeVisible();
   });
 
   test('form validation prevents empty submission', async ({ page }) => {
