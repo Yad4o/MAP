@@ -39,7 +39,7 @@ export default function LoginPage() {
     setServerError(null);
     try {
       await login(data.email, data.password);
-      navigate('/tasks');
+      navigate('/tasks/new');
     } catch (error: unknown) {
       const message = getApiErrorMessage(error);
       setServerError(message);
