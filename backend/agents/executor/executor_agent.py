@@ -157,6 +157,16 @@ class ExecutorAgent(BaseAgent):
 
 Please use the available tools to complete this step. Provide a clear result when finished."""
 
+            EXECUTOR_SYSTEM_PROMPT = (
+                "You are an expert executor agent in a multi-agent system.\n"
+                "Your job is to execute the given step completely and accurately using available tools.\n\n"
+                "Rules:\n"
+                "1. For coding steps, write complete, production-ready, functional code that directly solves the problem statement.\n"
+                "2. NEVER output trivial dummy placeholder code (such as print('Hello World')). Always write the actual solution.\n"
+                "3. If a tool fails, is rate-limited, or returns no results, do NOT give up. Rely on your internal knowledge and reasoning to fulfill the step accurately.\n"
+                "4. Provide clean, well-structured, and verified outputs.\n"
+            )
+
             # Try primary provider, then fallback(s), on rate limit specifically.
             # Any non-rate-limit error is re-raised immediately (not retried
             # against a different provider, since it's likely not provider-specific).
@@ -171,20 +181,39 @@ Please use the available tools to complete this step. Provide a clear result whe
                     temperature=settings.EXECUTOR_TEMPERATURE,
                     max_tokens=settings.MAX_TOKENS,
                 )
-                agent = create_react_agent(llm, tools)
+                agent = create_react_agent(llm, tools, state_modifier=EXECUTOR_SYSTEM_PROMPT)
                 try:
                     result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
                     break
                 except Exception as exc:
-                    if not _is_rate_limit_error(exc):
-                        raise
-                    last_rate_limit_exc = exc
-                    logger.warning(
-                        f"[executor] Rate limit on provider={creds.provider} "
-                        f"(candidate {i + 1}/{len(creds_candidates)}); "
-                        f"{'trying fallback' if i + 1 < len(creds_candidates) else 'no fallback left'}."
-                    )
-                    continue
+                    if _is_rate_limit_error(exc):
+                        last_rate_limit_exc = exc
+                        logger.warning(
+                            f"[executor] Rate limit on provider={creds.provider} "
+                            f"(candidate {i + 1}/{len(creds_candidates)}); "
+                            f"{'trying fallback' if i + 1 < len(creds_candidates) else 'no fallback left'}."
+                        )
+                        continue
+                    
+                    # If tool invocation or function call schema fails (e.g. 400 tool_use_failed),
+                    # fall back to direct LLM completion without tool binding to complete the step gracefully.
+                    exc_msg = str(exc).lower()
+                    if "tool" in exc_msg or "function" in exc_msg or "400" in exc_msg:
+                        logger.warning(
+                            f"[executor] Tool call error ({type(exc).__name__}: {exc}); "
+                            "falling back to direct LLM completion without tool binding."
+                        )
+                        try:
+                            direct_resp = await llm.ainvoke([
+                                SystemMessage(content=EXECUTOR_SYSTEM_PROMPT),
+                                HumanMessage(content=prompt)
+                            ])
+                            result = {"messages": [direct_resp]}
+                            break
+                        except Exception as inner_exc:
+                            logger.error(f"[executor] Direct LLM fallback failed: {inner_exc}")
+                            raise exc
+                    raise exc
 
             if result is None:
                 # Every candidate provider was rate-limited. Re-raise (rather

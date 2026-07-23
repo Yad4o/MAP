@@ -1000,3 +1000,44 @@ class TestIntegration:
                 assert step_result["step_id"] == "multi_tool_step"
                 assert step_result["status"] == "completed"
                 assert len(step_result["tool_calls_used"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_executor_agent_tool_use_error_fallback(self):
+        """Test ExecutorAgent falls back to direct LLM call when tool calling schema fails"""
+        task_id = uuid.uuid4()
+        executor = ExecutorAgent(task_id, {"llm": MagicMock()})
+
+        message = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={
+                "step": {
+                    "id": "step_tool_err",
+                    "description": "Write two sum solution",
+                    "tool_names": ["web_search"]
+                }
+            }
+        )
+
+        with patch('agents.executor.executor_agent.build_chat_model') as mock_build_model:
+            mock_llm = AsyncMock()
+            direct_msg = MagicMock()
+            direct_msg.content = "def twoSum(nums, target): return []"
+            mock_llm.ainvoke.return_value = direct_msg
+            mock_build_model.return_value = mock_llm
+
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
+                mock_agent.ainvoke.side_effect = Exception("400 - tool_use_failed: Failed to call a function")
+                mock_create_agent.return_value = mock_agent
+
+                result = await executor.run(message)
+
+                assert result.message_type == "step_result"
+                step_result = result.payload["step_result"]
+                assert "def twoSum" in step_result["output"]
+                mock_llm.ainvoke.assert_called_once()
+

@@ -219,10 +219,12 @@ class AgentController:
 
         status = "FAILED" if result.message_type == "error" else "COMPLETED"
         meta = result.payload.get("metadata", {})
+        assigned_agent_raw = step.get("assigned_agent", "executor")
+        agent_name = f"{assigned_agent_raw.capitalize()}Agent" if assigned_agent_raw else "ExecutorAgent"
         await self._persist_step(
             step_index=step_index + 1,  # +1 because planner is step 0
             step_type="EXECUTE",
-            agent_name="ExecutorAgent",
+            agent_name=agent_name,
             status=status,
             input_payload={"step": step},
             output_payload=result.payload,

@@ -31,7 +31,7 @@ Rules:
 - Each step must have a unique step_id (step_1, step_2, ...)
 - dependency_step_ids lists step_ids that must complete before this step starts
 - Tool names allowed: web_search, file_reader, code_interpreter, api_call, memory_retrieval
-- assigned_agent is: executor, analyzer, or memory.
+- assigned_agent: set to "executor" for all execution steps (understanding, researching, writing code, testing). "analyzer" evaluates overall pipeline results at the end.
 - Keep steps atomic — one action per step
 - Never include more than 8 steps.
 - For simple tasks (single question, single lookup), output exactly 1 step.
@@ -52,8 +52,8 @@ Response:
     },
     {
       "step_id": "step_2",
-      "description": "Analyze the weather data and provide a concise summary.",
-      "assigned_agent": "analyzer",
+      "description": "Synthesize the weather data and provide a concise summary.",
+      "assigned_agent": "executor",
       "tool_names": [],
       "dependency_step_ids": ["step_1"],
       "estimated_duration_s": 10
