@@ -28,6 +28,14 @@ import {
   Eye,
   EyeOff,
   Zap,
+  Copy,
+  Check,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Sparkles,
+  BrainCircuit,
+  FileText,
+  Wrench,
 } from 'lucide-react';
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
@@ -66,6 +74,14 @@ export default function TaskDetailPage() {
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
   const [rawJsonSteps, setRawJsonSteps] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [copiedFull, setCopiedFull] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (key: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const cancelMutation = useMutation({
     mutationFn: () => cancelTask(id!),
@@ -165,6 +181,89 @@ export default function TaskDetailPage() {
     return sr.description ?? '';
   };
 
+  const getStepTokens = (st: typeof task.steps[0]) => {
+    const sr = getStepResult(st);
+    const inTokens = st.tokens_in || sr?.tokens_used?.in || 0;
+    const outTokens = st.tokens_out || sr?.tokens_used?.out || 0;
+    return { inTokens, outTokens };
+  };
+
+  const handleCopyFullDebugReport = () => {
+    if (!task) return;
+    const reportLines: string[] = [];
+    reportLines.push(`==================================================`);
+    reportLines.push(`MAP EXECUTION DEBUG REPORT - TASK #${task.id}`);
+    reportLines.push(`==================================================`);
+    reportLines.push(`Title: ${task.title}`);
+    reportLines.push(`Status: ${task.status}`);
+    reportLines.push(`Created: ${new Date(task.created_at).toLocaleString()}`);
+    if (task.started_at) reportLines.push(`Started: ${new Date(task.started_at).toLocaleString()}`);
+    if (task.completed_at) reportLines.push(`Completed: ${new Date(task.completed_at).toLocaleString()}`);
+    if (task.description) reportLines.push(`Task Description: ${task.description}`);
+    
+    if (task.error) {
+      reportLines.push(`\n--------------------------------------------------`);
+      reportLines.push(`CRITICAL ERROR DETAILS`);
+      reportLines.push(`--------------------------------------------------`);
+      reportLines.push(`Type: ${task.error.type}`);
+      reportLines.push(`Message: ${task.error.message}`);
+      if (task.error.traceback) reportLines.push(`Traceback:\n${task.error.traceback}`);
+    }
+    
+    if (task.steps && task.steps.length > 0) {
+      reportLines.push(`\n==================================================`);
+      reportLines.push(`EXECUTION STEPS & LLM TRACES (${task.steps.length} steps)`);
+      reportLines.push(`==================================================`);
+      
+      task.steps.forEach((st, idx) => {
+        const sr = getStepResult(st);
+        const { inTokens, outTokens } = getStepTokens(st);
+        reportLines.push(`\n--------------------------------------------------`);
+        reportLines.push(`STEP ${idx + 1}: [${st.step_type}] ${st.agent_name} (Status: ${st.status})`);
+        reportLines.push(`--------------------------------------------------`);
+        if (st.model_used) reportLines.push(`Model Used: ${st.model_used}`);
+        reportLines.push(`Token Usage: Input=${inTokens} | Output=${outTokens} | Total=${inTokens + outTokens}`);
+        if (st.latency_ms) reportLines.push(`Latency: ${st.latency_ms}ms`);
+        
+        if (sr) {
+          if (sr.step_id) reportLines.push(`Step ID: ${sr.step_id}`);
+          if (sr.description) reportLines.push(`Goal/Description: ${sr.description}`);
+          
+          const promptText = getPromptText(sr);
+          if (promptText) {
+            reportLines.push(`\n>>> PROMPT SENT >>>`);
+            reportLines.push(promptText);
+          }
+          if (sr.tool_inputs && sr.tool_inputs.length > 0) {
+            reportLines.push(`\n>>> TOOL CALLS (${sr.tool_inputs.length}) >>>`);
+            sr.tool_inputs.forEach((ti, tIdx) => {
+              reportLines.push(`Tool #${tIdx + 1}: ${ti.tool}`);
+              reportLines.push(`Args: ${JSON.stringify(ti.args, null, 2)}`);
+            });
+          }
+          if (sr.output) {
+            reportLines.push(`\n<<< LLM OUTPUT / RESPONSE <<<`);
+            reportLines.push(sr.output);
+          }
+          if (sr.trace && sr.trace.length > 0) {
+            reportLines.push(`\n<<< FULL TRACE MESSAGES (${sr.trace.length}) <<<`);
+            sr.trace.forEach((tMsg, tmIdx) => {
+              reportLines.push(`[Message ${tmIdx + 1}]:\n${tMsg}`);
+            });
+          }
+        } else if (st.output_payload) {
+          reportLines.push(`\n<<< RAW OUTPUT PAYLOAD <<<`);
+          reportLines.push(JSON.stringify(st.output_payload, null, 2));
+        }
+      });
+    }
+
+    const textToCopy = reportLines.join('\n');
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedFull(true);
+    setTimeout(() => setCopiedFull(false), 2500);
+  };
+
   const isRunning =
     task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING;
 
@@ -226,7 +325,22 @@ export default function TaskDetailPage() {
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
+            {/* One-Click Copy Full Execution Report Button */}
+            <button
+              onClick={handleCopyFullDebugReport}
+              className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+              style={{
+                background: copiedFull ? '#123820' : '#1e232a',
+                color: copiedFull ? '#7ee787' : '#eaecef',
+                border: copiedFull ? '1px solid #7ee787' : '1px solid rgba(255,255,255,0.12)',
+              }}
+              title="Copy all prompts, step outputs, tool calls, errors, and traces to clipboard in one click"
+            >
+              {copiedFull ? <Check className="w-4 h-4 text-[#7ee787]" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedFull ? 'Report Copied!' : 'Copy Debug Report'}</span>
+            </button>
+
             {(task.status === TaskStatus.PENDING || task.status === TaskStatus.PROCESSING) && (
               <button
                 onClick={() => cancelMutation.mutate()}
@@ -474,6 +588,7 @@ export default function TaskDetailPage() {
                       {isExpanded && (() => {
                         const sr = getStepResult(step);
                         const showRaw = rawJsonSteps[step.id];
+                        const { inTokens, outTokens } = getStepTokens(step);
                         return (
                           <div className="px-5 pb-5 pl-[60px] space-y-3">
 
@@ -487,31 +602,37 @@ export default function TaskDetailPage() {
                                   {step.model_used}
                                 </code>
                               )}
-                              {sr && (
-                                <>
-                                  {sr.tokens_used && (
-                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded flex items-center gap-1"
-                                      style={{ background: '#1e232a', color: '#848e9c' }}>
-                                      <Zap className="w-2.5 h-2.5" />
-                                      {sr.tokens_used.in ?? 0}↑ {sr.tokens_used.out ?? 0}↓
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={e => toggleRawJson(e, step.id)}
-                                    className="ml-auto flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
-                                    style={{ background: '#1e232a', color: showRaw ? '#7ee787' : '#848e9c', border: '1px solid rgba(255,255,255,0.08)' }}
-                                  >
-                                    {showRaw ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                    {showRaw ? 'Inspector' : 'Raw JSON'}
-                                  </button>
-                                </>
+                              {(inTokens > 0 || outTokens > 0) && (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded flex items-center gap-1"
+                                  style={{ background: '#1e232a', color: '#848e9c' }}>
+                                  <Zap className="w-2.5 h-2.5" />
+                                  {inTokens}↑ {outTokens}↓
+                                </span>
                               )}
+                              <button
+                                onClick={e => toggleRawJson(e, step.id)}
+                                className="ml-auto flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
+                                style={{ background: '#1e232a', color: showRaw ? '#7ee787' : '#848e9c', border: '1px solid rgba(255,255,255,0.08)' }}
+                              >
+                                {showRaw ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                {showRaw ? 'Inspector' : 'Raw JSON'}
+                              </button>
                             </div>
 
                             {showRaw || !sr ? (
                               /* ── Raw JSON fallback ── */
                               <div className="rounded-xl p-4" style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                <p className="text-[10px] uppercase font-bold mb-2" style={{ color: '#848e9c' }}>Raw Payload</p>
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-[10px] uppercase font-bold" style={{ color: '#848e9c' }}>Raw Payload</p>
+                                  <button
+                                    onClick={() => copyToClipboard(`raw-${step.id}`, JSON.stringify(step.output_payload, null, 2))}
+                                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded"
+                                    style={{ background: '#1e232a', color: '#848e9c' }}
+                                  >
+                                    {copiedKey === `raw-${step.id}` ? <Check className="w-3 h-3 text-[#7ee787]" /> : <Copy className="w-3 h-3" />}
+                                    <span>{copiedKey === `raw-${step.id}` ? 'Copied' : 'Copy Payload'}</span>
+                                  </button>
+                                </div>
                                 <pre className="text-xs font-mono whitespace-pre-wrap max-h-72 overflow-y-auto" style={{ color: '#eaecef' }}>
                                   {JSON.stringify(step.output_payload, null, 2)}
                                 </pre>
@@ -523,9 +644,19 @@ export default function TaskDetailPage() {
                                 {/* Prompt sent */}
                                 {getPromptText(sr) && (
                                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(159,232,112,0.2)' }}>
-                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#0d1a0f' }}>
-                                      <Send className="w-3 h-3" style={{ color: '#7ee787' }} />
-                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#7ee787' }}>Prompt Sent</span>
+                                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#0d1a0f' }}>
+                                      <div className="flex items-center gap-2">
+                                        <Send className="w-3 h-3" style={{ color: '#7ee787' }} />
+                                        <span className="text-[10px] uppercase font-bold" style={{ color: '#7ee787' }}>Prompt Sent</span>
+                                      </div>
+                                      <button
+                                        onClick={() => copyToClipboard(`prompt-${step.id}`, getPromptText(sr))}
+                                        className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
+                                        style={{ background: 'rgba(126,231,135,0.15)', color: '#7ee787' }}
+                                      >
+                                        {copiedKey === `prompt-${step.id}` ? <Check className="w-3 h-3 text-[#7ee787]" /> : <Copy className="w-3 h-3" />}
+                                        <span>{copiedKey === `prompt-${step.id}` ? 'Copied' : 'Copy Prompt'}</span>
+                                      </button>
                                     </div>
                                     <pre className="text-xs font-mono whitespace-pre-wrap px-3 py-3 max-h-48 overflow-y-auto"
                                       style={{ background: '#0f1f12', color: '#c8e6c9' }}>
@@ -537,9 +668,19 @@ export default function TaskDetailPage() {
                                 {/* Tool calls */}
                                 {sr.tool_inputs && sr.tool_inputs.length > 0 && (
                                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,200,60,0.2)' }}>
-                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#1a1500' }}>
-                                      <Code2 className="w-3 h-3" style={{ color: '#ffd11a' }} />
-                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#ffd11a' }}>Tool Calls ({sr.tool_inputs.length})</span>
+                                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#1a1500' }}>
+                                      <div className="flex items-center gap-2">
+                                        <Code2 className="w-3 h-3" style={{ color: '#ffd11a' }} />
+                                        <span className="text-[10px] uppercase font-bold" style={{ color: '#ffd11a' }}>Tool Calls ({sr.tool_inputs.length})</span>
+                                      </div>
+                                      <button
+                                        onClick={() => copyToClipboard(`tools-${step.id}`, JSON.stringify(sr.tool_inputs, null, 2))}
+                                        className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
+                                        style={{ background: 'rgba(255,209,26,0.15)', color: '#ffd11a' }}
+                                      >
+                                        {copiedKey === `tools-${step.id}` ? <Check className="w-3 h-3 text-[#ffd11a]" /> : <Copy className="w-3 h-3" />}
+                                        <span>{copiedKey === `tools-${step.id}` ? 'Copied' : 'Copy Tools'}</span>
+                                      </button>
                                     </div>
                                     <div className="divide-y" style={{ background: '#12100a', borderColor: 'rgba(255,200,60,0.1)' }}>
                                       {sr.tool_inputs.map((tc, ti) => (
@@ -564,9 +705,19 @@ export default function TaskDetailPage() {
                                 {/* Raw output / LLM response */}
                                 {sr.output && (
                                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(130,140,160,0.2)' }}>
-                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#13151a' }}>
-                                      <Inbox className="w-3 h-3" style={{ color: '#848e9c' }} />
-                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#848e9c' }}>Raw Output</span>
+                                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#13151a' }}>
+                                      <div className="flex items-center gap-2">
+                                        <Inbox className="w-3 h-3" style={{ color: '#848e9c' }} />
+                                        <span className="text-[10px] uppercase font-bold" style={{ color: '#848e9c' }}>Raw Output / Response</span>
+                                      </div>
+                                      <button
+                                        onClick={() => copyToClipboard(`output-${step.id}`, sr.output || '')}
+                                        className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
+                                        style={{ background: 'rgba(255,255,255,0.08)', color: '#eaecef' }}
+                                      >
+                                        {copiedKey === `output-${step.id}` ? <Check className="w-3 h-3 text-[#7ee787]" /> : <Copy className="w-3 h-3" />}
+                                        <span>{copiedKey === `output-${step.id}` ? 'Copied' : 'Copy Output'}</span>
+                                      </button>
                                     </div>
                                     <pre className="text-xs font-mono whitespace-pre-wrap px-3 py-3 max-h-60 overflow-y-auto"
                                       style={{ background: '#0e1014', color: '#b0b8c4' }}>
@@ -578,17 +729,27 @@ export default function TaskDetailPage() {
                                 {/* Trace messages if multiple (tool round-trips) */}
                                 {sr.trace && sr.trace.filter(Boolean).length > 2 && (
                                   <details className="group">
-                                    <summary className="cursor-pointer flex items-center gap-2 text-[10px] uppercase font-bold py-1 select-none"
+                                    <summary className="cursor-pointer flex items-center justify-between text-[10px] uppercase font-bold py-1 select-none"
                                       style={{ color: '#848e9c' }}>
-                                      <Terminal className="w-3 h-3" />
-                                      Full Trace ({sr.trace.filter(Boolean).length} messages)
+                                      <span className="flex items-center gap-2">
+                                        <Terminal className="w-3 h-3" />
+                                        Full Trace ({sr.trace.filter(Boolean).length} messages)
+                                      </span>
                                     </summary>
                                     <div className="mt-2 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                                       {sr.trace.filter(Boolean).map((msg, mi) => (
                                         <div key={mi} className="px-3 py-2" style={{ background: mi % 2 === 0 ? '#0e1014' : '#111318', borderTop: mi > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                                          <span className="text-[9px] font-bold uppercase mb-1 block" style={{ color: mi === 0 ? '#7ee787' : '#848e9c' }}>
-                                            {mi === 0 ? 'prompt' : `msg ${mi}`}
-                                          </span>
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[9px] font-bold uppercase block" style={{ color: mi === 0 ? '#7ee787' : '#848e9c' }}>
+                                              {mi === 0 ? 'prompt' : `msg ${mi}`}
+                                            </span>
+                                            <button
+                                              onClick={() => copyToClipboard(`trace-${step.id}-${mi}`, msg)}
+                                              className="text-[9px] text-[#848e9c] hover:text-[#eaecef]"
+                                            >
+                                              {copiedKey === `trace-${step.id}-${mi}` ? 'Copied' : 'Copy'}
+                                            </button>
+                                          </div>
                                           <pre className="text-[11px] font-mono whitespace-pre-wrap max-h-32 overflow-y-auto" style={{ color: '#b0b8c4' }}>{msg}</pre>
                                         </div>
                                       ))}
@@ -709,56 +870,128 @@ export default function TaskDetailPage() {
             </div>
           </section>
 
-          {/* LLM Call Summary card */}
+          {/* Sleek Redesigned LLM Call Summary card */}
           {task.steps && task.steps.length > 0 && (() => {
-            const execSteps = task.steps.filter(s => s.step_type === StepType.EXECUTE || s.step_type === StepType.PLAN || s.step_type === StepType.ANALYZE);
+            const execSteps = task.steps;
             if (execSteps.length === 0) return null;
-            const totalIn  = execSteps.reduce((s, st) => s + (st.tokens_in  ?? 0), 0);
-            const totalOut = execSteps.reduce((s, st) => s + (st.tokens_out ?? 0), 0);
-            return (
-              <section className="wise-card-dark-surface">
-                <h3 className="font-semibold text-sm mb-4 flex items-center gap-2" style={{ color: '#eaecef' }}>
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#1a1500' }}>
-                    <Zap className="w-3.5 h-3.5" style={{ color: '#ffd11a' }} />
-                  </div>
-                  LLM Call Summary
-                </h3>
+            
+            let totalIn = 0;
+            let totalOut = 0;
+            execSteps.forEach(st => {
+              const { inTokens, outTokens } = getStepTokens(st);
+              totalIn += inTokens;
+              totalOut += outTokens;
+            });
+            const grandTotal = totalIn + totalOut;
+            const inPercent = grandTotal > 0 ? Math.round((totalIn / grandTotal) * 100) : 50;
 
-                {/* Totals */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {[
-                    { label: 'Total ↑ Tokens', val: totalIn.toLocaleString(),  color: '#7ee787' },
-                    { label: 'Total ↓ Tokens', val: totalOut.toLocaleString(), color: '#ffd11a' },
-                  ].map(m => (
-                    <div key={m.label} className="p-2.5 rounded-xl text-center" style={{ background: '#1e232a' }}>
-                      <p className="text-[9px] uppercase font-bold mb-1" style={{ color: '#848e9c' }}>{m.label}</p>
-                      <p className="text-sm font-mono font-bold" style={{ color: m.color }}>{m.val}</p>
+            return (
+              <section className="wise-card-dark-surface overflow-hidden relative" style={{ border: '1px solid rgba(255,209,26,0.2)' }}>
+                {/* Glowing accent ambient background blur */}
+                <div
+                  className="absolute -top-12 -right-12 w-32 h-32 rounded-full pointer-events-none opacity-20 blur-2xl"
+                  style={{ background: '#ffd11a' }}
+                />
+
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-sm flex items-center gap-2" style={{ color: '#eaecef' }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-inner" style={{ background: 'rgba(255,209,26,0.12)', border: '1px solid rgba(255,209,26,0.3)' }}>
+                      <BrainCircuit className="w-4 h-4 text-[#ffd11a]" />
                     </div>
-                  ))}
+                    <span>LLM Diagnostics & Token Usage</span>
+                  </h3>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full" style={{ background: '#1e232a', color: '#848e9c' }}>
+                    {execSteps.length} calls
+                  </span>
                 </div>
 
-                {/* Per-step rows */}
+                {/* Token Stat Cards */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="p-3 rounded-xl relative overflow-hidden" style={{ background: '#0e1f13', border: '1px solid rgba(126,231,135,0.2)' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#7ee787' }}>Prompt / In</span>
+                      <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: 'rgba(126,231,135,0.2)' }}>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-[#7ee787]" />
+                      </div>
+                    </div>
+                    <p className="text-lg font-mono font-extrabold" style={{ color: '#eaecef' }}>{totalIn.toLocaleString()}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#848e9c' }}>Input tokens sent</p>
+                  </div>
+
+                  <div className="p-3 rounded-xl relative overflow-hidden" style={{ background: '#1c1705', border: '1px solid rgba(255,209,26,0.25)' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#ffd11a' }}>Completion / Out</span>
+                      <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: 'rgba(255,209,26,0.2)' }}>
+                        <ArrowDownLeft className="w-3.5 h-3.5 text-[#ffd11a]" />
+                      </div>
+                    </div>
+                    <p className="text-lg font-mono font-extrabold" style={{ color: '#eaecef' }}>{totalOut.toLocaleString()}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#848e9c' }}>Output tokens generated</p>
+                  </div>
+                </div>
+
+                {/* Total & Distribution Progress Bar */}
+                <div className="p-3 rounded-xl mb-4 space-y-2" style={{ background: '#161a20', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#eaecef' }}>
+                      <Sparkles className="w-3.5 h-3.5 text-[#ffd11a]" />
+                      Total Volume
+                    </span>
+                    <span className="font-mono font-bold" style={{ color: '#7ee787' }}>{grandTotal.toLocaleString()} tokens</span>
+                  </div>
+
+                  {/* Ratio bar */}
+                  {grandTotal > 0 && (
+                    <div className="space-y-1">
+                      <div className="h-2 rounded-full overflow-hidden flex" style={{ background: '#1e232a' }}>
+                        <div className="h-full transition-all duration-500" style={{ width: `${inPercent}%`, background: '#7ee787' }} title={`Prompt: ${inPercent}%`} />
+                        <div className="h-full transition-all duration-500" style={{ width: `${100 - inPercent}%`, background: '#ffd11a' }} title={`Generation: ${100 - inPercent}%`} />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-mono" style={{ color: '#848e9c' }}>
+                        <span>{inPercent}% In</span>
+                        <span>{100 - inPercent}% Out</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Per-step breakdown */}
                 <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#848e9c' }}>Per-Step Call Breakdown</p>
                   {execSteps.map((st, i) => {
                     const sr = getStepResult(st);
+                    const { inTokens, outTokens } = getStepTokens(st);
                     const toolsUsed = sr?.tool_calls_used ?? [];
-                    const stepLabel = st.step_type === StepType.PLAN ? 'Plan' :
-                                     st.step_type === StepType.ANALYZE ? 'Analyze' :
-                                     `Step ${i}`;
+                    const stepLabel = st.step_type === StepType.PLAN ? 'Planner' :
+                                     st.step_type === StepType.ANALYZE ? 'Analyzer' :
+                                     `Step ${i + 1}`;
                     return (
-                      <div key={st.id} className="rounded-xl p-2.5" style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[11px] font-semibold" style={{ color: '#eaecef' }}>{stepLabel}</span>
-                          <span className="text-[10px] font-mono" style={{ color: '#848e9c' }}>
-                            {(st.tokens_in ?? 0)}↑ {(st.tokens_out ?? 0)}↓
+                      <div key={st.id} className="rounded-xl p-3 transition-colors" style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold" style={{ color: '#eaecef' }}>{stepLabel}</span>
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#252b33', color: '#848e9c' }}>
+                              {st.agent_name}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono font-semibold flex items-center gap-1" style={{ color: '#7ee787' }}>
+                            <Zap className="w-3 h-3 text-[#7ee787]" />
+                            {inTokens}↑ {outTokens}↓
                           </span>
                         </div>
-                        <p className="text-[10px] truncate mb-1.5" style={{ color: '#848e9c' }}>{st.agent_name}</p>
+
+                        <div className="flex items-center justify-between text-[10px] mt-1.5" style={{ color: '#848e9c' }}>
+                          <span>Model: <code className="text-[10px] font-mono text-[#eaecef]">{st.model_used || 'default'}</code></span>
+                          {st.latency_ms && <span>{st.latency_ms}ms</span>}
+                        </div>
+
                         {toolsUsed.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                            <span className="text-[9px] uppercase font-bold self-center" style={{ color: '#848e9c' }}>Tools:</span>
                             {toolsUsed.map(t => (
-                              <span key={t} className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                                style={{ background: '#2a1f00', color: '#ffd11a' }}>
+                              <span key={t} className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
+                                style={{ background: 'rgba(255,209,26,0.12)', color: '#ffd11a', border: '1px solid rgba(255,209,26,0.2)' }}>
+                                <Wrench className="w-2.5 h-2.5" />
                                 {t}
                               </span>
                             ))}
