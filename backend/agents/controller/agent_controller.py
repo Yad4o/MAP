@@ -77,7 +77,7 @@ class AgentController:
             retried_any = False
 
             for i, step in enumerate(steps):
-                step_id = str(step.get("id", ""))
+                step_id = str(step.get("step_id") or step.get("id") or "")
                 if not failed_steps or step_id in failed_steps:
                     step_results[i] = await self._execute_step(step, step_index=i)
                     retried_any = True

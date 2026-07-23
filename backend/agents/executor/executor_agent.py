@@ -283,8 +283,10 @@ Please use the available tools to complete this step. Provide a clear result whe
             primary_output = code_artifacts[-1] if code_artifacts else final_message
 
             # Build step result
+            # Note: Planner emits steps with key 'step_id'; fall back to 'id' for
+            # older plan formats, and finally to 'unknown' if neither is present.
             step_result = {
-                "step_id": step.get("id", "unknown"),
+                "step_id": step.get("step_id") or step.get("id") or "unknown",
                 "description": step_description,
                 "status": "completed",
                 "output": primary_output,

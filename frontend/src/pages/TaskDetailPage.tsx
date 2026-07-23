@@ -21,6 +21,13 @@ import {
   History,
   Timer,
   ArrowLeft,
+  Terminal,
+  Send,
+  Inbox,
+  Code2,
+  Eye,
+  EyeOff,
+  Zap,
 } from 'lucide-react';
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
@@ -57,6 +64,7 @@ export default function TaskDetailPage() {
   const queryClient = useQueryClient();
   const { data: task, isLoading: isQueryLoading, error } = useTaskDetail(id);
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
+  const [rawJsonSteps, setRawJsonSteps] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
 
   const cancelMutation = useMutation({
@@ -127,6 +135,35 @@ export default function TaskDetailPage() {
 
   const toggleStep = (stepId: string) =>
     setExpandedSteps(prev => ({ ...prev, [stepId]: !prev[stepId] }));
+
+  const toggleRawJson = (e: React.MouseEvent, stepId: string) => {
+    e.stopPropagation();
+    setRawJsonSteps(prev => ({ ...prev, [stepId]: !prev[stepId] }));
+  };
+
+  /* ── LLM I/O helpers ────────────────────────────────────────────────── */
+  type StepResult = {
+    trace?: string[];
+    output?: string;
+    summary?: string;
+    step_id?: string;
+    description?: string;
+    tokens_used?: { in?: number; out?: number };
+    tool_inputs?: Array<{ tool: string; args: Record<string, unknown> }>;
+    tool_calls_used?: string[];
+    code_artifacts?: string[];
+  };
+
+  const getStepResult = (step: typeof task.steps[0]): StepResult | null => {
+    const payload = step.output_payload as Record<string, unknown> | undefined;
+    if (!payload) return null;
+    return (payload.step_result as StepResult) ?? (payload.plan as StepResult) ?? null;
+  };
+
+  const getPromptText = (sr: StepResult): string => {
+    if (sr.trace && sr.trace.length > 0 && sr.trace[0]) return sr.trace[0];
+    return sr.description ?? '';
+  };
 
   const isRunning =
     task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING;
@@ -434,16 +471,14 @@ export default function TaskDetailPage() {
                         }
                       </div>
 
-                      {isExpanded && (
-                        <div className="px-5 pb-5 pl-[60px]">
-                          <div
-                            className="rounded-xl p-4 overflow-hidden"
-                            style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.08)' }}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] uppercase font-bold" style={{ color: '#848e9c' }}>
-                                Step Payload
-                              </p>
+                      {isExpanded && (() => {
+                        const sr = getStepResult(step);
+                        const showRaw = rawJsonSteps[step.id];
+                        return (
+                          <div className="px-5 pb-5 pl-[60px] space-y-3">
+
+                            {/* ── Header bar: model pill + raw toggle ── */}
+                            <div className="flex items-center gap-2">
                               {step.model_used && (
                                 <code
                                   className="text-[10px] font-mono px-2 py-0.5 rounded"
@@ -452,16 +487,120 @@ export default function TaskDetailPage() {
                                   {step.model_used}
                                 </code>
                               )}
+                              {sr && (
+                                <>
+                                  {sr.tokens_used && (
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded flex items-center gap-1"
+                                      style={{ background: '#1e232a', color: '#848e9c' }}>
+                                      <Zap className="w-2.5 h-2.5" />
+                                      {sr.tokens_used.in ?? 0}↑ {sr.tokens_used.out ?? 0}↓
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={e => toggleRawJson(e, step.id)}
+                                    className="ml-auto flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-colors"
+                                    style={{ background: '#1e232a', color: showRaw ? '#7ee787' : '#848e9c', border: '1px solid rgba(255,255,255,0.08)' }}
+                                  >
+                                    {showRaw ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    {showRaw ? 'Inspector' : 'Raw JSON'}
+                                  </button>
+                                </>
+                              )}
                             </div>
-                            <pre
-                              className="text-xs font-mono whitespace-pre-wrap max-h-60 overflow-y-auto"
-                              style={{ color: '#eaecef' }}
-                            >
-                              {JSON.stringify(step.output_payload, null, 2)}
-                            </pre>
+
+                            {showRaw || !sr ? (
+                              /* ── Raw JSON fallback ── */
+                              <div className="rounded-xl p-4" style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <p className="text-[10px] uppercase font-bold mb-2" style={{ color: '#848e9c' }}>Raw Payload</p>
+                                <pre className="text-xs font-mono whitespace-pre-wrap max-h-72 overflow-y-auto" style={{ color: '#eaecef' }}>
+                                  {JSON.stringify(step.output_payload, null, 2)}
+                                </pre>
+                              </div>
+                            ) : (
+                              /* ── Structured LLM I/O Inspector ── */
+                              <div className="space-y-3">
+
+                                {/* Prompt sent */}
+                                {getPromptText(sr) && (
+                                  <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(159,232,112,0.2)' }}>
+                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#0d1a0f' }}>
+                                      <Send className="w-3 h-3" style={{ color: '#7ee787' }} />
+                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#7ee787' }}>Prompt Sent</span>
+                                    </div>
+                                    <pre className="text-xs font-mono whitespace-pre-wrap px-3 py-3 max-h-48 overflow-y-auto"
+                                      style={{ background: '#0f1f12', color: '#c8e6c9' }}>
+                                      {getPromptText(sr)}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                {/* Tool calls */}
+                                {sr.tool_inputs && sr.tool_inputs.length > 0 && (
+                                  <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,200,60,0.2)' }}>
+                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#1a1500' }}>
+                                      <Code2 className="w-3 h-3" style={{ color: '#ffd11a' }} />
+                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#ffd11a' }}>Tool Calls ({sr.tool_inputs.length})</span>
+                                    </div>
+                                    <div className="divide-y" style={{ background: '#12100a', borderColor: 'rgba(255,200,60,0.1)' }}>
+                                      {sr.tool_inputs.map((tc, ti) => (
+                                        <div key={ti} className="px-3 py-3">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+                                              style={{ background: '#2a1f00', color: '#ffd11a' }}>
+                                              {tc.tool}
+                                            </span>
+                                            <span className="text-[10px]" style={{ color: '#848e9c' }}>Call #{ti + 1}</span>
+                                          </div>
+                                          <pre className="text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                            style={{ color: '#e6d080' }}>
+                                            {JSON.stringify(tc.args, null, 2)}
+                                          </pre>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Raw output / LLM response */}
+                                {sr.output && (
+                                  <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(130,140,160,0.2)' }}>
+                                    <div className="flex items-center gap-2 px-3 py-2" style={{ background: '#13151a' }}>
+                                      <Inbox className="w-3 h-3" style={{ color: '#848e9c' }} />
+                                      <span className="text-[10px] uppercase font-bold" style={{ color: '#848e9c' }}>Raw Output</span>
+                                    </div>
+                                    <pre className="text-xs font-mono whitespace-pre-wrap px-3 py-3 max-h-60 overflow-y-auto"
+                                      style={{ background: '#0e1014', color: '#b0b8c4' }}>
+                                      {sr.output}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                {/* Trace messages if multiple (tool round-trips) */}
+                                {sr.trace && sr.trace.filter(Boolean).length > 2 && (
+                                  <details className="group">
+                                    <summary className="cursor-pointer flex items-center gap-2 text-[10px] uppercase font-bold py-1 select-none"
+                                      style={{ color: '#848e9c' }}>
+                                      <Terminal className="w-3 h-3" />
+                                      Full Trace ({sr.trace.filter(Boolean).length} messages)
+                                    </summary>
+                                    <div className="mt-2 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                                      {sr.trace.filter(Boolean).map((msg, mi) => (
+                                        <div key={mi} className="px-3 py-2" style={{ background: mi % 2 === 0 ? '#0e1014' : '#111318', borderTop: mi > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                                          <span className="text-[9px] font-bold uppercase mb-1 block" style={{ color: mi === 0 ? '#7ee787' : '#848e9c' }}>
+                                            {mi === 0 ? 'prompt' : `msg ${mi}`}
+                                          </span>
+                                          <pre className="text-[11px] font-mono whitespace-pre-wrap max-h-32 overflow-y-auto" style={{ color: '#b0b8c4' }}>{msg}</pre>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                )}
+
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   );
                 })
@@ -569,6 +708,69 @@ export default function TaskDetailPage() {
               ))}
             </div>
           </section>
+
+          {/* LLM Call Summary card */}
+          {task.steps && task.steps.length > 0 && (() => {
+            const execSteps = task.steps.filter(s => s.step_type === StepType.EXECUTE || s.step_type === StepType.PLAN || s.step_type === StepType.ANALYZE);
+            if (execSteps.length === 0) return null;
+            const totalIn  = execSteps.reduce((s, st) => s + (st.tokens_in  ?? 0), 0);
+            const totalOut = execSteps.reduce((s, st) => s + (st.tokens_out ?? 0), 0);
+            return (
+              <section className="wise-card-dark-surface">
+                <h3 className="font-semibold text-sm mb-4 flex items-center gap-2" style={{ color: '#eaecef' }}>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#1a1500' }}>
+                    <Zap className="w-3.5 h-3.5" style={{ color: '#ffd11a' }} />
+                  </div>
+                  LLM Call Summary
+                </h3>
+
+                {/* Totals */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {[
+                    { label: 'Total ↑ Tokens', val: totalIn.toLocaleString(),  color: '#7ee787' },
+                    { label: 'Total ↓ Tokens', val: totalOut.toLocaleString(), color: '#ffd11a' },
+                  ].map(m => (
+                    <div key={m.label} className="p-2.5 rounded-xl text-center" style={{ background: '#1e232a' }}>
+                      <p className="text-[9px] uppercase font-bold mb-1" style={{ color: '#848e9c' }}>{m.label}</p>
+                      <p className="text-sm font-mono font-bold" style={{ color: m.color }}>{m.val}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Per-step rows */}
+                <div className="space-y-2">
+                  {execSteps.map((st, i) => {
+                    const sr = getStepResult(st);
+                    const toolsUsed = sr?.tool_calls_used ?? [];
+                    const stepLabel = st.step_type === StepType.PLAN ? 'Plan' :
+                                     st.step_type === StepType.ANALYZE ? 'Analyze' :
+                                     `Step ${i}`;
+                    return (
+                      <div key={st.id} className="rounded-xl p-2.5" style={{ background: '#1b2026', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-semibold" style={{ color: '#eaecef' }}>{stepLabel}</span>
+                          <span className="text-[10px] font-mono" style={{ color: '#848e9c' }}>
+                            {(st.tokens_in ?? 0)}↑ {(st.tokens_out ?? 0)}↓
+                          </span>
+                        </div>
+                        <p className="text-[10px] truncate mb-1.5" style={{ color: '#848e9c' }}>{st.agent_name}</p>
+                        {toolsUsed.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {toolsUsed.map(t => (
+                              <span key={t} className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                                style={{ background: '#2a1f00', color: '#ffd11a' }}>
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
         </div>
       </div>
 
