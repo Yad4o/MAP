@@ -15,7 +15,7 @@ export default function TaskTimeline({ steps }: TaskTimelineProps) {
   };
 
   return (
-    <div className="surface-card p-6 border-hairline-on-dark">
+    <div className="wise-card-dark-surface p-6 border-hairline-on-dark">
       <div className="flex items-center gap-2 mb-8">
         <Clock className="w-5 h-5 text-primary" />
         <h3 className="font-bold text-lg text-on-dark">Execution Timeline</h3>

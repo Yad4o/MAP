@@ -172,6 +172,15 @@
     padding: 24px;
   }
 
+  /* Dark surface card — for dark theme pages */
+  .wise-card-dark-surface {
+    background: #14181d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    color: #eaecef;
+  }
+
   /* Dark polarity card — ink bg + lime text */
   .wise-card-dark {
     background: #0e0f0c;
@@ -213,6 +222,24 @@
   }
   .wise-input::placeholder { color: #868685; }
 
+  .wise-input-dark {
+    width: 100%;
+    padding: 10px 16px;
+    height: 44px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    color: #eaecef;
+    background: #1b2026;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    outline: none;
+    transition: box-shadow 150ms ease;
+  }
+  .wise-input-dark:focus {
+    box-shadow: 0 0 0 3px rgba(159, 232, 112, 0.35);
+  }
+  .wise-input-dark::placeholder { color: #848e9c; }
+
   /* Legacy form-input alias */
   .form-input {
     @apply wise-input;
@@ -234,6 +261,20 @@
     border-radius: 9999px;
   }
 
+  .badge-wise-positive-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #123820;
+    color: #7ee787;
+    border-radius: 9999px;
+  }
+
   .badge-wise-negative {
     display: inline-flex;
     align-items: center;
@@ -245,6 +286,20 @@
     line-height: 20px;
     background: #320707;
     color: #ffffff;
+    border-radius: 9999px;
+  }
+
+  .badge-wise-negative-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #3e1414;
+    color: #f85149;
     border-radius: 9999px;
   }
 
@@ -262,6 +317,20 @@
     border-radius: 9999px;
   }
 
+  .badge-wise-warning-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #362a08;
+    color: #ffd11a;
+    border-radius: 9999px;
+  }
+
   .badge-wise-neutral {
     display: inline-flex;
     align-items: center;
@@ -273,6 +342,20 @@
     line-height: 20px;
     background: #e8ebe6;
     color: #454745;
+    border-radius: 9999px;
+  }
+
+  .badge-wise-neutral-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    background: #1e232a;
+    color: #8b949e;
     border-radius: 9999px;
   }
 
@@ -374,6 +457,11 @@
     height: 100%;
   }
 
+  body.theme-dark .wise-sidebar {
+    background: #0e1117;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
   .wise-nav-link {
     display: flex;
     align-items: center;
@@ -396,6 +484,19 @@
     background: #e2f6d5;
     color: #0e0f0c;
   }
+
+  body.theme-dark .wise-nav-link {
+    color: #8b949e;
+  }
+  body.theme-dark .wise-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #eaecef;
+  }
+  body.theme-dark .wise-nav-link.active {
+    background: rgba(159, 232, 112, 0.15);
+    color: #9fe870;
+  }
+
   .wise-nav-link.active::before {
     content: '';
     position: absolute;

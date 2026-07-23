@@ -24,12 +24,11 @@ describe('TaskListPage', () => {
   it('renders list of tasks from mock handler', async () => {
     renderWithProviders(<TaskListPage />);
 
-    // Wait for the mock tasks to load
+    // Wait for the mock tasks in open sections (Running, Pending) to load
     await waitFor(() => {
-      expect(screen.getByText('Design system architecture')).toBeInTheDocument();
+      expect(screen.getByText('Implement agent orchestration layer')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Implement agent orchestration layer')).toBeInTheDocument();
     expect(screen.getByText('Write E2E test suite')).toBeInTheDocument();
   });
 
@@ -52,11 +51,11 @@ describe('TaskListPage', () => {
     renderWithProviders(<TaskListPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Design system architecture')).toBeInTheDocument();
+      expect(screen.getByText('Implement agent orchestration layer')).toBeInTheDocument();
     });
 
     // There should be a "Create Task" link in the header
-    const createLinks = screen.getAllByText('Create Task');
+    const createLinks = screen.getAllByText('New Task');
     expect(createLinks.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -162,7 +162,7 @@ export default function AgentFlowChart({ steps }: AgentFlowChartProps) {
   };
 
   return (
-    <div className="surface-card overflow-hidden h-[500px] relative border border-hairline-on-dark rounded-md">
+    <div className="wise-card-dark-surface overflow-hidden h-[500px] relative border border-hairline-on-dark rounded-md">
       <div className="flex items-center gap-2 p-4 border-b border-hairline-on-dark bg-canvas-dark">
         <Brain className="w-4 h-4 text-primary" />
         <h3 className="font-bold text-sm text-on-dark">Agent Activity Trace</h3>
