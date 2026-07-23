@@ -619,8 +619,52 @@ class TestExecutorAgent:
                     content = call_args.kwargs.get('content', '')
                 assert "Important context 1" in content
                 assert "Important context 2" in content
-                assert "Context from memory:" in content
+                assert "Background" in content
                 assert "Test step" in content
+
+    @pytest.mark.asyncio
+    async def test_executor_agent_filters_low_score_memory_context(self, executor_agent):
+        """Test ExecutorAgent filters out memory items with similarity score < 0.5"""
+        message = AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=executor_agent.task_id,
+            sender="controller",
+            recipient="executor",
+            message_type="execute_step",
+            payload={
+                "step": {
+                    "description": "Test LeetCode Problem",
+                    "tool_names": ["web_search"]
+                },
+                "context": [
+                    {"text": "Unrelated prior task error output", "score": 0.0},
+                    {"text": "Relevant prior problem pattern", "score": 0.85}
+                ]
+            }
+        )
+
+        mock_human_message = MagicMock()
+
+        with patch('agents.executor.executor_agent.HumanMessage', return_value=mock_human_message) as mock_human_class:
+            with patch('agents.executor.executor_agent.create_react_agent') as mock_create_agent:
+                mock_agent = AsyncMock()
+                mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Result")]}
+                mock_create_agent.return_value = mock_agent
+
+                await executor_agent.run(message)
+
+                mock_human_class.assert_called_once()
+                call_args = mock_human_class.call_args
+                content = call_args.args[0] if call_args.args else call_args.kwargs.get('content', '')
+
+                # Score 0.0 item must be filtered out
+                assert "Unrelated prior task error output" not in content
+                # Score 0.85 item must be included
+                assert "Relevant prior problem pattern" in content
+                # Must be formatted cleanly without dict stringification
+                assert "{'text':" not in content
+                # Must be labeled as background
+                assert "Background" in content
 
     @pytest.mark.asyncio
     async def test_executor_agent_handles_execution_error(self, executor_agent):

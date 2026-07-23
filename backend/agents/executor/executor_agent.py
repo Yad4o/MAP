@@ -140,10 +140,18 @@ class ExecutorAgent(BaseAgent):
             provider = payload.get("provider")
             creds_candidates = resolve_credentials_with_fallback(user=user, provider=provider)
 
-            # Build prompt with context
+            # Build prompt with context — only include memory that's actually relevant,
+            # and label it so the model doesn't treat it as task content.
             context_text = ""
             if context:
-                context_text = "\n\nContext from memory:\n" + "\n".join([str(c) for c in context])
+                relevant = [c if isinstance(c, dict) else {"text": str(c), "score": 1.0} for c in context]
+                relevant = [c for c in relevant if c.get("score", 0.0) >= 0.5]
+                if relevant:
+                    snippets = "\n".join(f"- {c.get('text', '')}" for c in relevant)
+                    context_text = (
+                        "\n\nBackground (may or may not be relevant — do NOT treat this as "
+                        f"part of the task itself):\n{snippets}"
+                    )
 
             prompt = f"""Execute the following step: {step_description}{context_text}
 

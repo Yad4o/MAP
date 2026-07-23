@@ -13,6 +13,7 @@ Phase 4: Dispatches on message_type:
 """
 
 import logging
+import os
 import uuid
 
 from agents.memory.vector_store import vector_store
@@ -122,8 +123,10 @@ class MemoryAgent(BaseAgent):
     # ── Public helpers (also callable directly) ───────────────────────────────
 
     async def retrieve(self, user_id: uuid.UUID | str, query: str, top_k: int = 3) -> list[dict]:
-        """Semantic search over a user's long-term memory."""
-        return await vector_store.search(str(user_id), query, top_k=top_k)
+        """Semantic search over a user's long-term memory, relevance-filtered."""
+        results = await vector_store.search(str(user_id), query, top_k=top_k)
+        min_score = float(os.getenv("MEMORY_MIN_RELEVANCE_SCORE", "0.5"))
+        return [r for r in results if r.get("score", 0.0) >= min_score]
 
     async def store(
         self,

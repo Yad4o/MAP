@@ -136,12 +136,29 @@ class TestMemoryAgentRun:
         )
 
         with patch("agents.memory.memory_agent.vector_store") as mock_vs:
-            mock_vs.search = AsyncMock(return_value=[{"text": "hello", "score": 0.1}])
+            mock_vs.search = AsyncMock(return_value=[{"text": "hello", "score": 0.8}])
             result = await agent.run(message)
 
         assert result.message_type == "memory_context"
         assert "memory_context" in result.payload
-        assert result.payload["memory_context"] == [{"text": "hello", "score": 0.1}]
+        assert result.payload["memory_context"] == [{"text": "hello", "score": 0.8}]
+
+    async def test_retrieve_filters_low_score_results(self, user_id, task_id):
+        agent = _make_agent(task_id)
+        message = _make_message(
+            "retrieve",
+            {"user_id": user_id, "query": "something"},
+            task_id=task_id,
+        )
+
+        with patch("agents.memory.memory_agent.vector_store") as mock_vs:
+            mock_vs.search = AsyncMock(return_value=[
+                {"text": "low score item", "score": 0.1},
+                {"text": "high score item", "score": 0.85}
+            ])
+            result = await agent.run(message)
+
+        assert result.payload["memory_context"] == [{"text": "high score item", "score": 0.85}]
 
     # 4. "store" returns memory_stored=True
     async def test_store_returns_memory_stored(self, user_id, task_id):
