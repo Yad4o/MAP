@@ -131,13 +131,16 @@ test.describe('Tasks', () => {
     // Badges use inline styles (cfg.badgeBg/cfg.badgeText), not Tailwind
     // color utility classes, and "Pending"/"Completed" also appear as
     // section headers — so scope to the specific task card by title.
-    const pendingBadge = page.locator('.wise-card').filter({ hasText: 'Pending Task' }).locator('span').first();
-    await expect(pendingBadge).toHaveCSS('background-color', 'rgb(255, 245, 194)'); // #fff5c2
+    // Card class is `wise-card-dark-surface` (renamed from `wise-card`
+    // during the dark-theme redesign), and badge colors now use the
+    // dark-theme palette instead of the old light pastels.
+    const pendingBadge = page.locator('.wise-card-dark-surface').filter({ hasText: 'Pending Task' }).locator('span').first();
+    await expect(pendingBadge).toHaveCSS('background-color', 'rgb(54, 42, 8)'); // #362a08
 
     // The Completed section is collapsed by default, so we must open it first
     await page.getByRole('button', { name: /Completed/i }).click();
 
-    const completedBadge = page.locator('.wise-card').filter({ hasText: 'Completed Task' }).locator('span').first();
-    await expect(completedBadge).toHaveCSS('background-color', 'rgb(226, 246, 213)'); // #e2f6d5
+    const completedBadge = page.locator('.wise-card-dark-surface').filter({ hasText: 'Completed Task' }).locator('span').first();
+    await expect(completedBadge).toHaveCSS('background-color', 'rgb(18, 56, 32)'); // #123820
   });
 });
