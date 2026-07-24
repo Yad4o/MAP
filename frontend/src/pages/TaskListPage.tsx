@@ -326,7 +326,7 @@ export default function TaskListPage() {
   );
 
   return (
-    <div className="space-y-5 animate-wise-fade-up">
+    <div className="space-y-6 animate-wise-fade-up">
 
       {/* ── Welcome banner ── */}
       <div className="wise-card-dark-surface flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
@@ -348,7 +348,7 @@ export default function TaskListPage() {
           >
             {greeting()}{user?.username ? `, ${user.username}` : ''} 👋
           </h1>
-          <p className="text-sm" style={{ color: '#848e9c' }}>
+          <p className="text-sm" style={{ color: '#848e9c', lineHeight: '1.6' }}>
             Your intelligent automation workspace. Describe a task — MAP handles the rest.
           </p>
         </div>
@@ -405,7 +405,7 @@ export default function TaskListPage() {
           >
             No tasks yet
           </h3>
-          <p className="text-sm mb-8 max-w-xs mx-auto" style={{ color: '#848e9c' }}>
+          <p className="text-sm mb-8 max-w-xs mx-auto" style={{ color: '#848e9c', lineHeight: '1.6' }}>
             Describe what you need done in plain language — MAP's agents will plan,
             execute, and validate it automatically.
           </p>
@@ -440,7 +440,7 @@ export default function TaskListPage() {
       )}
 
       {/* ── How MAP Works ── */}
-      <div className="wise-card-dark-surface mt-4">
+      <div className="wise-card-dark-surface mt-6">
         <p
           className="text-[11px] font-bold uppercase tracking-widest mb-5"
           style={{ color: '#848e9c' }}
