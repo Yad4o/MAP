@@ -239,7 +239,7 @@ export default function TaskDetailPage() {
         <h2 className="text-xl mb-3" style={{ fontFamily: 'Manrope,sans-serif', fontWeight: 900, color: '#eaecef' }}>
           Task Unavailable
         </h2>
-        <p className="text-sm mb-8" style={{ color: '#848e9c' }}>
+        <p className="text-sm mb-8" style={{ color: '#848e9c', lineHeight: '1.6' }}>
           We couldn't retrieve the details for this task. It may have been deleted.
         </p>
         <button onClick={() => navigate('/tasks')} className="btn-wise-primary w-full max-w-xs">
@@ -596,12 +596,12 @@ export default function TaskDetailPage() {
                                   {sr.trace.filter(Boolean).map((msg, mi) => (
                                     <div key={mi} className="px-3 py-2" style={{ background: mi % 2 === 0 ? '#0e1014' : '#111318', borderTop: mi > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                                       <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[9px] font-bold uppercase block" style={{ color: mi === 0 ? '#7ee787' : '#848e9c' }}>
+                                        <span className="text-[10px] font-bold uppercase block" style={{ color: mi === 0 ? '#7ee787' : '#848e9c' }}>
                                           {mi === 0 ? 'prompt' : `msg ${mi}`}
                                         </span>
                                         <button
                                           onClick={() => copyToClipboard(`trace-${step.id}-${mi}`, msg)}
-                                          className="text-[9px] text-[#848e9c] hover:text-[#eaecef]"
+                                          className="text-[10px] text-[#848e9c] hover:text-[#eaecef]"
                                         >
                                           {copiedKey === `trace-${step.id}-${mi}` ? 'Copied' : 'Copy'}
                                         </button>
@@ -811,7 +811,7 @@ export default function TaskDetailPage() {
 
             {/* Description — only shown when it actually adds information beyond the title */}
             {showDescription && (
-              <p className="text-sm max-w-2xl" style={{ color: '#848e9c' }}>
+              <p className="text-sm max-w-2xl" style={{ color: '#848e9c', lineHeight: '1.6' }}>
                 {task.description}
               </p>
             )}
