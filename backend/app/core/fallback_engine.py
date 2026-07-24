@@ -18,10 +18,16 @@ from typing import Dict, List, Tuple
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
-from app.core.llm_provider import resolve_credentials
+from app.core.llm_provider import resolve_credentials, resolve_credentials_with_fallback
 from app.db.models.user import User
 
 logger = logging.getLogger(__name__)
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """True if `exc` looks like a provider rate-limit error (HTTP 429 etc.)."""
+    msg = str(exc).lower()
+    return "rate limit" in msg or "429" in msg or "ratelimit" in msg
 
 
 class FallbackEngine:
@@ -37,31 +43,52 @@ class FallbackEngine:
         provider: str | None = None,
     ) -> Tuple[str, bool, int, int]:
         """
-        Run a chat completion against the resolved provider.
+        Run a chat completion, trying the resolved provider first and then
+        falling through to a platform fallback provider (e.g. Groq -> OpenAI)
+        if the primary hits a rate limit. Mirrors the fallback behavior the
+        executor agent already has via resolve_credentials_with_fallback,
+        which this previously did not use — meaning a Groq daily-token-limit
+        429 here used to kill the whole planning step instead of quietly
+        switching providers.
 
         Returns (content, fallback_used, tokens_in, tokens_out).
-        `fallback_used` is always False — kept in the signature so
-        existing callers don't need to change.
+        `fallback_used` is True iff a non-primary candidate was the one that
+        actually succeeded.
         """
         request_id = str(uuid.uuid4())[:8]
-        creds = resolve_credentials(user=user, provider=provider)
-        call_model = model or creds.model
-        logger.info(f"[{request_id}] {creds.provider} ({'byok' if creds.is_byok else 'platform'}) -> {call_model}")
+        creds_candidates = resolve_credentials_with_fallback(user=user, provider=provider)
 
-        try:
-            if creds.provider == "anthropic":
-                content, tokens_in, tokens_out = await self._call_anthropic(
-                    creds, call_model, messages, temperature, max_tokens
-                )
-            else:
-                content, tokens_in, tokens_out = await self._call_openai_compatible(
-                    creds, call_model, messages, temperature, max_tokens
-                )
-            logger.info(f"[{request_id}] succeeded, tokens: {tokens_in}+{tokens_out}")
-            return content, False, tokens_in, tokens_out
-        except Exception as error:
-            logger.error(f"[{request_id}] call failed: {error}")
-            raise
+        last_error: Exception | None = None
+        for i, creds in enumerate(creds_candidates):
+            call_model = model or creds.model
+            logger.info(
+                f"[{request_id}] {creds.provider} ({'byok' if creds.is_byok else 'platform'}) -> {call_model} "
+                f"(candidate {i + 1}/{len(creds_candidates)})"
+            )
+            try:
+                if creds.provider == "anthropic":
+                    content, tokens_in, tokens_out = await self._call_anthropic(
+                        creds, call_model, messages, temperature, max_tokens
+                    )
+                else:
+                    content, tokens_in, tokens_out = await self._call_openai_compatible(
+                        creds, call_model, messages, temperature, max_tokens
+                    )
+                logger.info(f"[{request_id}] succeeded, tokens: {tokens_in}+{tokens_out}")
+                return content, i > 0, tokens_in, tokens_out
+            except Exception as error:
+                last_error = error
+                if _is_rate_limit_error(error) and i + 1 < len(creds_candidates):
+                    logger.warning(
+                        f"[{request_id}] rate limit on provider={creds.provider}; trying fallback provider."
+                    )
+                    continue
+                logger.error(f"[{request_id}] call failed: {error}")
+                raise
+
+        # Should be unreachable (loop either returns or raises), but keeps
+        # mypy/type-checkers happy and fails loudly if it ever isn't.
+        raise last_error or RuntimeError("chat_completion: no credential candidates available")
 
     async def _call_openai_compatible(self, creds, model, messages, temperature, max_tokens) -> Tuple[str, int, int]:
         client = AsyncOpenAI(api_key=creds.api_key, base_url=creds.base_url)
