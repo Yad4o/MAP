@@ -163,7 +163,10 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "Rules:\n"
                 "1. For coding steps, write complete, production-ready, functional code that directly solves the problem statement.\n"
                 "2. NEVER output trivial dummy placeholder code (such as print('Hello World')). Always write the actual solution.\n"
-                "3. If a tool fails, is rate-limited, or returns no results, do NOT give up. Rely on your internal knowledge and reasoning to fulfill the step accurately.\n"
+                "3. If a tool call returns an error, TOOL_ERROR, rate-limit message, or 'file not found', do NOT pretend it succeeded and do NOT silently ignore it. "
+                "You may still complete the step using your own knowledge, but you MUST say so explicitly at the start of your answer "
+                "(e.g. 'Note: the requested file/search tool failed, so this answer is from my own knowledge, not the source requested.'). "
+                "Never claim to have read, searched, or retrieved something that a tool actually failed to provide.\n"
                 "4. Provide clean, well-structured, and verified outputs.\n"
             )
 
