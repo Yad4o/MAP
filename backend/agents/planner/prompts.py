@@ -34,9 +34,17 @@ Rules:
 - assigned_agent: set to "executor" for all execution steps (understanding, researching, writing code, testing). "analyzer" evaluates overall pipeline results at the end.
 - Keep steps atomic — one action per step
 - Never include more than 8 steps.
-- For simple tasks (single question, single lookup), output exactly 1 step.
+- For simple tasks (single question, single lookup, a single well-known coding
+  problem/algorithm, writing one function or script), output EXACTLY 1 step
+  that just does the task and returns the answer. Do not add separate
+  "understand the problem" or "research solutions" steps for something you
+  already know how to do — those only apply when the task genuinely needs
+  external/current information (web_search) or a file you don't have yet
+  (file_reader). A request like "write code for X" where X is a standard,
+  well-known problem is always 1 step, tool_names: [] or ["code_interpreter"]
+  if you want to verify the code runs — never web_search.
 
-Few-shot Example:
+Few-shot Example (multi-step — needs external, current information):
 Task: "Research the current weather in Paris and summarize the findings."
 Response:
 {
@@ -61,6 +69,25 @@ Response:
   ],
   "estimated_total_duration_s": 25,
   "notes": "Ensure the summary highlights temperature and conditions."
+}
+
+Few-shot Example (simple — a single well-known task, output exactly 1 step):
+Task: "Give me code for the LeetCode Two Sum problem."
+Response:
+{
+  "task_type": "code",
+  "steps": [
+    {
+      "step_id": "step_1",
+      "description": "Write a working Python solution to the Two Sum problem (return indices of the two numbers that add up to target) and briefly explain its time complexity.",
+      "assigned_agent": "executor",
+      "tool_names": [],
+      "dependency_step_ids": [],
+      "estimated_duration_s": 15
+    }
+  ],
+  "estimated_total_duration_s": 15,
+  "notes": "Well-known problem — no research or a separate understanding step needed."
 }
 """
 
