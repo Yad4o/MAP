@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
-import { createTask, getTasks } from '../api/tasks';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { createTask } from '../api/tasks';
 import { TaskCreate, TaskStatus } from '../types/task';
 import {
   ArrowUp, Loader2, AlertTriangle,
   Flame, Gauge, Feather,
   FileText, Mail, Search, BarChart3,
-  ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -58,12 +57,6 @@ const QUICK_STARTS = [
   },
 ];
 
-const dotColor = (status: TaskStatus) => {
-  if (status === TaskStatus.PROCESSING || status === TaskStatus.RETRYING) return C.dotRunning;
-  if (status === TaskStatus.FAILED || status === TaskStatus.CANCELLED) return C.dotFailed;
-  return C.dotPending;
-};
-
 const MAX_TEXTAREA_HEIGHT = 200;
 
 function deriveTitle(text: string): string {
@@ -81,8 +74,6 @@ export default function TaskCreatePage() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<number>(5);
   const [error, setError] = useState<string | null>(null);
-
-  const { data: tasks } = useQuery({ queryKey: ['tasks'], queryFn: getTasks });
 
   const mutation = useMutation({
     mutationFn: createTask,
@@ -137,10 +128,6 @@ export default function TaskCreatePage() {
   };
 
   const canSubmit = !mutation.isPending && description.trim().length >= 3;
-
-  const recentTasks = [...(tasks ?? [])]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 6);
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -197,47 +184,6 @@ export default function TaskCreatePage() {
               );
             })}
           </div>
-
-          {/* Recent tasks — plain list, matches the Recents panel look */}
-          {recentTasks.length > 0 && (
-            <div className="mt-10">
-              <div className="flex items-center justify-between mb-1 px-2">
-                <p className="text-xs font-medium" style={{ color: C.textMuted }}>Recent tasks</p>
-                <Link
-                  to="/tasks"
-                  className="inline-flex items-center gap-1 text-xs transition-colors"
-                  style={{ color: C.textMuted }}
-                  onMouseEnter={e => (e.currentTarget.style.color = C.textPrimary)}
-                  onMouseLeave={e => (e.currentTarget.style.color = C.textMuted)}
-                >
-                  View all
-                  <ChevronRight size={12} />
-                </Link>
-              </div>
-              <div>
-                {recentTasks.map(task => (
-                  <Link
-                    key={task.id}
-                    to={`/tasks/${task.id}`}
-                    className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-xl transition-colors duration-150"
-                    onMouseEnter={e => (e.currentTarget.style.background = C.rowHover)}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: dotColor(task.status as TaskStatus) }}
-                    />
-                    <span className="text-[14px] truncate flex-1" style={{ color: C.textPrimary }}>
-                      {task.title}
-                    </span>
-                    <span className="text-xs flex-shrink-0" style={{ color: C.textMuted }}>
-                      {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── Composer — floating pill, pinned to the bottom ── */}
