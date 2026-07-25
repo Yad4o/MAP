@@ -40,17 +40,20 @@ async def test_agent_controller_success():
         payload={"memory_stored": True}
     )
     
-    # Mock executor
+    # Mock executor — summary now comes straight from the executor's own
+    # output on the fast path, since the Analyzer is skipped entirely.
     mock_exec_msg = AgentMessage(
         message_id=uuid.uuid4(),
         task_id=task_id,
         sender="executor",
         recipient="controller",
         message_type="step_result",
-        payload={"step_result": {"status": "completed", "output": "Done"}}
+        payload={"step_result": {"status": "completed", "output": "Done", "summary": "Looks good"}}
     )
     
-    # Mock analyzer
+    # Analyzer mock — kept as a patch target but should NOT be called: a
+    # single-step plan has nothing to cross-validate, so the fast path
+    # (_build_fast_path_validation) skips the real Analyzer LLM call.
     mock_analyzer_msg = AgentMessage(
         message_id=uuid.uuid4(),
         task_id=task_id,
@@ -63,7 +66,7 @@ async def test_agent_controller_success():
     with patch.object(controller.planner, "run", return_value=mock_plan_msg), \
          patch.object(controller.memory, "run", side_effect=[mock_memory_msg, mock_memory_store_msg]), \
          patch.object(controller.executor, "run", return_value=mock_exec_msg), \
-         patch.object(controller.analyzer, "run", return_value=mock_analyzer_msg):
+         patch.object(controller.analyzer, "run", return_value=mock_analyzer_msg) as mock_analyzer:
         
         result = await controller.run_pipeline()
         
@@ -72,6 +75,8 @@ async def test_agent_controller_success():
         assert result["summary"] == "Looks good"
         assert "plan" in result
         assert "validation" in result
+        # Fast path: single-step plans skip the Analyzer LLM call entirely
+        assert mock_analyzer.call_count == 0
 
 @pytest.mark.asyncio
 async def test_agent_controller_planner_failure():
@@ -96,9 +101,14 @@ async def test_agent_controller_planner_failure():
 @pytest.mark.asyncio
 async def test_agent_controller_analyzer_failure():
     """
-    When the analyzer returns passed=False the controller retries up to 2 times,
-    then surfaces FAILED. Memory.retrieve is called once per execution (initial + 2
-    retries = 3 retrieves) and store is called once at the end.
+    Single-step plan where the executor itself fails (returns an error
+    instead of a step_result). The fast path (_build_fast_path_validation)
+    catches this without an initial real Analyzer call — there's nothing
+    to cross-validate on a single step, and an executor-level error is
+    unambiguous — then the standard retry loop kicks in and DOES use the
+    real Analyzer on each retry pass, retries up to 2 times, then
+    surfaces FAILED. Memory.retrieve is called once per execution
+    (initial + 2 retries = 3 retrieves) and store is called once at the end.
     """
     task_id = uuid.uuid4()
     controller = AgentController(task_id, "Test task")
@@ -131,24 +141,25 @@ async def test_agent_controller_analyzer_failure():
         payload={"memory_stored": True}
     )
 
-    # Executor uses return_value so unlimited calls succeed
+    # Executor always errors out (return_value handles multiple calls) —
+    # this is what actually triggers the fast path's failure branch.
     mock_exec_msg = AgentMessage(
         message_id=uuid.uuid4(),
         task_id=task_id,
         sender="executor",
         recipient="controller",
-        message_type="step_result",
-        payload={"step_result": {"status": "completed", "output": "Done"}}
+        message_type="error",
+        payload={"error": "Executor crashed"}
     )
 
-    # Analyzer always returns failed (return_value handles multiple calls)
+    # Real analyzer, used only during retries — still failing
     mock_analyzer_msg = AgentMessage(
         message_id=uuid.uuid4(),
         task_id=task_id,
         sender="analyzer",
         recipient="controller",
         message_type="validation",
-        payload={"validation_report": {"passed": False, "summary": "Failed validation"}}
+        payload={"validation_report": {"passed": False, "summary": "Failed validation", "failed_steps": ["1"]}}
     )
 
     with patch.object(controller.planner, "run", return_value=mock_plan_msg), \
@@ -168,8 +179,9 @@ async def test_agent_controller_analyzer_failure():
         assert result["summary"] == "Failed validation"
         # Confirm retries fired: executor called 3 times (initial + 2 retries)
         assert mock_exec.call_count == 3
-        # Analyzer called 3 times (initial + 2 re-analyses)
-        assert mock_analyzer.call_count == 3
+        # Analyzer called only during the 2 retries — the initial check
+        # is the fast path, which never calls the real Analyzer LLM.
+        assert mock_analyzer.call_count == 2
 
 @pytest.mark.asyncio
 async def test_agent_controller_partial_retry():
