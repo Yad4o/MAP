@@ -248,6 +248,29 @@ class AgentController:
         logger.info(f"[controller] Running AnalyzerAgent")
         t0 = time.monotonic()
 
+        plan_steps = plan_dict.get("steps", [])
+
+        def _resolve_step_result(index: int, r: AgentMessage) -> dict:
+            step_result = r.payload.get("step_result")
+            if step_result:
+                return step_result
+            # The executor returned an error (e.g. a GraphRecursionError
+            # aborting a step) instead of a step_result. Previously this
+            # collapsed to `{}` here, which gave the Analyzer nothing to
+            # key on — no step_id, no indication anything failed — so
+            # the step silently vanished from step_scores and the task
+            # was reported as passed. Synthesize a real failed record so
+            # the Analyzer (and its retry-on-failure loop upstream) can
+            # actually see and act on it.
+            step = plan_steps[index] if index < len(plan_steps) else {}
+            return {
+                "step_id": step.get("step_id") or step.get("id") or f"step_{index + 1}",
+                "description": step.get("description", ""),
+                "status": "failed",
+                "output": "",
+                "summary": r.payload.get("error", "Step execution failed with no result."),
+            }
+
         msg = AgentMessage(
             message_id=uuid.uuid4(),
             task_id=self.task_id,
@@ -255,7 +278,7 @@ class AgentController:
             recipient="analyzer",
             message_type="validation",
             payload={
-                "step_results": [r.payload.get("step_result", {}) for r in step_results],
+                "step_results": [_resolve_step_result(i, r) for i, r in enumerate(step_results)],
                 "plan": plan_dict
             }
         )
