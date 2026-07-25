@@ -1,5 +1,8 @@
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { getTasks } from '../../api/tasks';
+import { TaskStatus } from '../../types/task';
 import {
   CheckSquare,
   Clock,
@@ -23,12 +26,25 @@ const adminItems = [
   { to: '/admin', label: 'Admin', icon: Shield },
 ];
 
+const RECENT_LIMIT = 8;
+
+const dotColor = (status: TaskStatus) => {
+  if (status === TaskStatus.PROCESSING || status === TaskStatus.RETRYING) return '#7ee787';
+  if (status === TaskStatus.FAILED || status === TaskStatus.CANCELLED) return '#f85149';
+  return '#ffd11a';
+};
+
 export default function AppShell() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: tasks } = useQuery({ queryKey: ['tasks'], queryFn: getTasks });
+  const recentTasks = [...(tasks ?? [])]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, RECENT_LIMIT);
 
   useEffect(() => {
     document.body.classList.add('theme-dark');
@@ -104,6 +120,33 @@ export default function AppShell() {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+          </>
+        )}
+
+        {recentTasks.length > 0 && (
+          <>
+            <div className="my-4 mx-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+            <p className="px-4 mb-2 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
+              Recent
+            </p>
+            <div className="space-y-0.5">
+              {recentTasks.map((task) => (
+                <Link
+                  key={task.id}
+                  to={`/tasks/${task.id}`}
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 rounded-xl transition-colors duration-150 hover:bg-white/[0.06]"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ background: dotColor(task.status as TaskStatus) }}
+                  />
+                  <span className="text-[13px] truncate text-[#8b949e] hover:text-[#eaecef]" title={task.title}>
+                    {task.title}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </>
         )}
       </nav>
