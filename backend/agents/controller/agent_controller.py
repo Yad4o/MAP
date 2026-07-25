@@ -66,7 +66,21 @@ class AgentController:
         step_results = await self._run_executor(steps)
 
         # 3. Analyzer
-        validation_message = await self._run_analyzer(step_results, plan_dict)
+        # Fast path: a single-step plan has nothing to cross-validate — the
+        # Analyzer's job is checking step results against each other and the
+        # overall plan, which is meaningless with only one step. Paying for
+        # a full extra LLM round-trip (and up to 2 more on top via the retry
+        # loop below) here was pure overhead: it's a big part of why a
+        # one-line request like "write two_sum" was taking 8-11 steps
+        # end-to-end instead of just planning once and executing once.
+        # If the single step itself failed, this still produces a
+        # passed=False report so the retry loop below runs exactly as it
+        # would have anyway — the real Analyzer only gets involved once
+        # there's an actual failure worth a second opinion on.
+        if len(steps) <= 1:
+            validation_message = self._build_fast_path_validation(step_results, steps)
+        else:
+            validation_message = await self._run_analyzer(step_results, plan_dict)
         validation_report = validation_message.payload.get("validation_report", {})
 
         # 4. Retry loop (max 2 retries)
@@ -242,6 +256,50 @@ class AgentController:
             result_msg = await self._execute_step(step, step_index=i)
             step_results.append(result_msg)
         return step_results
+
+    def _build_fast_path_validation(
+        self, step_results: list[AgentMessage], steps: list[dict]
+    ) -> AgentMessage:
+        """
+        Synthesize a validation message for single-step plans instead of
+        calling the Analyzer LLM. See the fast-path comment in run_pipeline
+        for why: there's nothing to cross-validate with only one step.
+        """
+        result = step_results[0] if step_results else None
+        step = steps[0] if steps else {}
+        step_id = str(step.get("step_id") or step.get("id") or "step_1")
+
+        step_result = result.payload.get("step_result") if result else None
+        failed = result is None or result.message_type == "error" or not step_result
+
+        if failed:
+            error = (result.payload.get("error") if result else None) or "Step produced no result."
+            report = {
+                "passed": False,
+                "confidence": 0.0,
+                "step_scores": {step_id: 0.0},
+                "failed_steps": [step_id],
+                "critique": error,
+                "summary": "",
+            }
+        else:
+            report = {
+                "passed": True,
+                "confidence": 1.0,
+                "step_scores": {step_id: 1.0},
+                "failed_steps": [],
+                "critique": "",
+                "summary": step_result.get("summary") or step_result.get("output", ""),
+            }
+
+        return AgentMessage(
+            message_id=uuid.uuid4(),
+            task_id=self.task_id,
+            sender="controller",
+            recipient="controller",
+            message_type="validation",
+            payload={"validation_report": report},
+        )
 
     async def _run_analyzer(self, step_results: list[AgentMessage], plan_dict: dict) -> AgentMessage:
         """Validate all step results, return validation message."""
