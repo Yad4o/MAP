@@ -118,8 +118,20 @@ class AnalyzerAgent(BaseAgent):
 
             # Enforce passed/failed invariants
             step_scores = report.get("step_scores", {})
-            failed = [sid for sid, score in step_scores.items() if score < _DEFAULT_THRESHOLD]
-            report["failed_steps"] = failed
+            failed = {sid for sid, score in step_scores.items() if score < _DEFAULT_THRESHOLD}
+
+            # Belt-and-suspenders: any step the controller marked as
+            # explicitly failed (e.g. it crashed before producing a
+            # result, such as a recursion-limit abort) must count as
+            # failed even if the LLM didn't score it — an unscored step
+            # is not the same as a passing one.
+            for step_result in step_results:
+                if step_result.get("status") == "failed":
+                    sid = step_result.get("step_id")
+                    if sid:
+                        failed.add(sid)
+
+            report["failed_steps"] = sorted(failed)
             report["passed"] = len(failed) == 0
 
             # Ensure required keys exist with safe defaults
