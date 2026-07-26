@@ -16,7 +16,6 @@ import {
   Loader2,
   Calendar,
   Layers,
-  FileJson,
   Cpu,
   History,
   Timer,
@@ -901,21 +900,9 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Result (completed) */}
+        {/* Result (completed) — blended directly on the page, no card/header chrome */}
         {task.status === TaskStatus.COMPLETED && (
-          <section className="wise-card-dark-surface overflow-hidden" style={{ padding: 0 }}>
-            <div
-              className="flex items-center gap-2 px-5 py-4"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: '#123820' }}
-              >
-                <FileJson className="w-4 h-4" style={{ color: '#7ee787' }} />
-              </div>
-              <h3 className="font-semibold text-sm" style={{ color: '#eaecef' }}>Task Result</h3>
-            </div>
+          <section className="pt-2">
             <TaskResultView result={task.result} />
           </section>
         )}
