@@ -6,49 +6,13 @@ import { Check, Clipboard } from 'lucide-react';
  * ──────────────
  * Renders a fenced code block (```lang\n...\n```) with basic syntax
  * highlighting and a copy button. Deliberately dependency-free — no
- * prismjs/shiki/highlight.js install required, since none is currently
- * in package.json and this needs to work without a new `npm install`.
+ * prismjs/shiki/highlight.js install required.
  *
- * Also exports `parseFencedSegments`, which splits a string containing
- * mixed prose and ```fenced``` blocks into typed segments, so callers
- * (e.g. TaskResultView) can render text as text and code as <CodeBlock>
- * instead of dumping everything — backticks included — into one
- * whitespace-pre-wrap paragraph.
+ * Used directly by pages that already have isolated code strings, and
+ * by Markdown.tsx's `code` renderer for fenced blocks found inside
+ * full agent/step output text (which also needs real bold/italic/list
+ * formatting — see Markdown.tsx for that).
  */
-
-type Segment =
-  | { type: 'text'; content: string }
-  | { type: 'code'; content: string; lang: string };
-
-const FENCE_RE = /```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g;
-
-export function parseFencedSegments(input: string): Segment[] {
-  const segments: Segment[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  FENCE_RE.lastIndex = 0;
-  while ((match = FENCE_RE.exec(input)) !== null) {
-    if (match.index > lastIndex) {
-      const text = input.slice(lastIndex, match.index);
-      if (text.trim()) segments.push({ type: 'text', content: text });
-    }
-    segments.push({ type: 'code', lang: match[1] || 'text', content: match[2].replace(/\n$/, '') });
-    lastIndex = FENCE_RE.lastIndex;
-  }
-
-  if (lastIndex < input.length) {
-    const text = input.slice(lastIndex);
-    if (text.trim()) segments.push({ type: 'text', content: text });
-  }
-
-  // No fences found at all — whole input is plain text.
-  if (segments.length === 0 && input.trim()) {
-    segments.push({ type: 'text', content: input });
-  }
-
-  return segments;
-}
 
 const PY_KEYWORDS = new Set([
   'def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'import', 'from',
@@ -155,28 +119,6 @@ export function CodeBlock({ code, lang = 'python' }: CodeBlockProps) {
           ))}
         </code>
       </pre>
-    </div>
-  );
-}
-
-/**
- * Renders a string that may contain a mix of prose and ```fenced``` code
- * blocks as properly separated, styled segments — used anywhere a tool
- * output or step output is shown (e.g. TaskResultView).
- */
-export function FormattedOutput({ text }: { text: string }) {
-  const segments = parseFencedSegments(text);
-  return (
-    <div className="space-y-1">
-      {segments.map((seg, idx) =>
-        seg.type === 'code' ? (
-          <CodeBlock key={idx} code={seg.content} lang={seg.lang} />
-        ) : (
-          <p key={idx} className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
-            {seg.content.trim()}
-          </p>
-        )
-      )}
     </div>
   );
 }
