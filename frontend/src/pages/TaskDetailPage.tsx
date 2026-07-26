@@ -371,6 +371,54 @@ export default function TaskDetailPage() {
   const isRunning =
     task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING;
 
+  // Compact live-progress strip — small status icon per real step (planner →
+  // executor → analyzer → …), in order, instead of the previous fake 65%
+  // bar. New icons simply appear as polling picks up new TaskStep rows, so
+  // it naturally reads as "one step lands at a time" without extra plumbing.
+  const orderedSteps = task.steps || [];
+  const currentStep = [...orderedSteps].reverse().find(s => s.status === StepStatus.RUNNING) || orderedSteps[orderedSteps.length - 1];
+  const currentStepLabel = currentStep
+    ? `${currentStep.status === StepStatus.RUNNING ? 'Running' : currentStep.status === StepStatus.FAILED ? 'Failed at' : 'Finished'}: ${currentStep.agent_name} · ${currentStep.step_type}`
+    : 'Planning…';
+
+  const stepProgressStrip = (
+    <section className="wise-card-dark-surface" style={{ padding: '14px 18px' }}>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+          {orderedSteps.length === 0 ? (
+            <span className="text-xs flex items-center gap-2" style={{ color: '#848e9c' }}>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: '#7ee787' }} />
+              Warming up…
+            </span>
+          ) : (
+            orderedSteps.map((step) => {
+              const ss = getStepStyle(step.status);
+              const StepIcon = ss.icon;
+              return (
+                <div
+                  key={step.id}
+                  title={`${step.agent_name} · ${step.step_type} · ${step.status}`}
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 step-pop-in"
+                  style={{ background: ss.bg }}
+                >
+                  <StepIcon className={`w-3 h-3 ${ss.spinning ? 'animate-spin' : ''}`} style={{ color: ss.color }} />
+                </div>
+              );
+            })
+          )}
+        </div>
+        {isRunning && (
+          <span className="text-xs font-mono flex-shrink-0" style={{ color: '#848e9c' }}>
+            {formatTime(elapsedTime)}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] mt-2 truncate" style={{ color: '#848e9c' }}>
+        {currentStepLabel}
+      </p>
+    </section>
+  );
+
   /* ── Steps panel content (flow chart + accordion) ── */
   const stepsPanelContent = (
     <div className="space-y-5">
@@ -861,47 +909,8 @@ export default function TaskDetailPage() {
       {/* ── Output — the main thing people came here to see ── */}
       <div className="space-y-5">
 
-        {/* Progress bar (running) */}
-        {isRunning && (
-          <section className="wise-card-dark-surface overflow-hidden relative" style={{ padding: '24px' }}>
-            <div
-              className="absolute top-0 left-0 h-[3px] rounded-t-full"
-              style={{ background: '#9fe870', animation: 'loading-bar 2s infinite', width: '30%' }}
-            />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center"
-                  style={{ background: '#123820' }}
-                >
-                  <Cpu className="w-5 h-5 animate-pulse" style={{ color: '#7ee787' }} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm" style={{ color: '#eaecef', fontFamily: 'Inter,sans-serif', fontWeight: 700 }}>
-                    Execution in Progress
-                  </h3>
-                  <p className="text-xs mt-0.5" style={{ color: '#848e9c' }}>
-                    Agents are working on your request…
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span
-                  className="text-2xl font-mono font-bold"
-                  style={{ color: '#7ee787', fontFamily: 'JetBrains Mono,monospace' }}
-                >
-                  {formatTime(elapsedTime)}
-                </span>
-                <p className="text-[10px] uppercase tracking-widest mt-1" style={{ color: '#848e9c' }}>
-                  Elapsed
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 h-1.5 rounded-full overflow-hidden" style={{ background: '#1e232a' }}>
-              <div className="h-full rounded-full" style={{ background: '#9fe870', width: '65%', animation: 'pulse 2s infinite' }} />
-            </div>
-          </section>
-        )}
+        {/* Live step strip (running) — small icons only, grows as real steps land */}
+        {isRunning && stepProgressStrip}
 
         {/* Result (completed) — blended directly on the page, no card/header chrome */}
         {task.status === TaskStatus.COMPLETED && (
@@ -910,8 +919,10 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Error (failed) */}
+        {/* Error (failed) — step strip first, so people see where it broke */}
         {task.status === TaskStatus.FAILED && (
+          <>
+          {orderedSteps.length > 0 && stepProgressStrip}
           <section
             className="wise-card-dark-surface"
             style={{ border: '1px solid rgba(248,81,73,0.3)', background: '#181214' }}
@@ -959,6 +970,7 @@ export default function TaskDetailPage() {
               </p>
             </div>
           </section>
+          </>
         )}
 
       </div>
@@ -981,9 +993,12 @@ export default function TaskDetailPage() {
       )}
 
       <style>{`
-        @keyframes loading-bar {
-          0%   { left: -30%; }
-          100% { left: 100%; }
+        @keyframes step-pop-in {
+          0%   { opacity: 0; transform: scale(0.5); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .step-pop-in {
+          animation: step-pop-in 0.25s ease-out;
         }
       `}</style>
     </div>

@@ -77,9 +77,9 @@ export default function TaskCreatePage() {
 
   const mutation = useMutation({
     mutationFn: createTask,
-    onSuccess: () => {
+    onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      navigate('/dashboard');
+      navigate(`/tasks/${task.id}`);
     },
   });
 

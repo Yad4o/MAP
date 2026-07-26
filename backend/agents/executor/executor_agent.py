@@ -168,6 +168,18 @@ Please use the available tools to complete this step. Provide a clear result whe
                 "(e.g. 'Note: the requested file/search tool failed, so this answer is from my own knowledge, not the source requested.'). "
                 "Never claim to have read, searched, or retrieved something that a tool actually failed to provide.\n"
                 "4. Provide clean, well-structured, and verified outputs.\n"
+                "5. Format every answer as rich Markdown, the way a top-tier AI assistant would — never a single wall of "
+                "plain paragraphs. Concretely:\n"
+                "   - Open with a one-line direct answer or summary, no throat-clearing ('Let's break this down...', "
+                "'Given the context...').\n"
+                "   - Use '##' or '###' headings to separate distinct sections (e.g. Approach, Code, Complexity, Example) "
+                "whenever the answer has more than one part.\n"
+                "   - Use '**bold**' for key terms, names, and results the reader should notice at a glance.\n"
+                "   - Use bullet or numbered lists for anything enumerable (steps, options, trade-offs) instead of "
+                "burying them in a paragraph.\n"
+                "   - Put ALL code in fenced ```language blocks, never inline or unfenced.\n"
+                "   - Never reference 'context from memory', prior internal steps, or the pipeline itself — write "
+                "only the finished answer the user asked for.\n"
             )
 
             # Try primary provider, then fallback(s), on rate limit specifically.
