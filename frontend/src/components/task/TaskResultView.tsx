@@ -7,11 +7,11 @@ import {
   ChevronRight,
   ListChecks,
   Gauge,
-  Sparkles,
   Code2,
   Clipboard,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { FormattedOutput } from './CodeBlock';
+import { Markdown } from './Markdown';
 
 interface PlanStep {
   step_id?: string;
@@ -74,22 +74,14 @@ function isRecognizedShape(result: unknown): result is TaskResult {
 }
 
 export default function TaskResultView({ result }: TaskResultViewProps) {
-  const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>(() => {
-    if (!result || typeof result !== 'object') return {};
-    const r = result as TaskResult;
-    const initial: Record<number, boolean> = {};
-    (r.step_results ?? []).forEach((step, idx) => {
-      const hasCode = !!step.output && /```/.test(step.output);
-      if (hasCode || step.error) initial[idx] = true;
-    });
-    return initial;
-  });
+  const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({});
   const [showRawJson, setShowRawJson] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
   if (!result) {
     return (
-      <div className="p-8 text-center text-muted text-sm">
+      <div className="py-8 text-center text-muted text-sm">
         No result data available for this task.
       </div>
     );
@@ -108,7 +100,7 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
   // Unknown shape — fall back to a labeled raw viewer rather than guessing.
   if (!isRecognizedShape(result)) {
     return (
-      <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[500px]">
+      <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[500px] rounded-lg">
         <pre className="text-on-dark">{JSON.stringify(result, null, 2)}</pre>
       </div>
     );
@@ -127,209 +119,239 @@ export default function TaskResultView({ result }: TaskResultViewProps) {
     return step.status || 'unknown';
   };
 
+  // The actual deliverable — what the person asked for, in order. Falls
+  // back to the step's own summary if it has no output text, and to the
+  // top-level validation summary if there's no step content at all.
+  const outputBlocks = step_results
+    .map((step) => step.output || step.summary || '')
+    .filter((text) => text.trim().length > 0);
+  if (outputBlocks.length === 0 && summary) outputBlocks.push(summary);
+
   return (
-    <div className="divide-y divide-hairline-on-dark">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-2 text-xs text-muted-strong">
-          <ListChecks className="w-3.5 h-3.5" />
-          {steps_completed ?? step_results.length} step{(steps_completed ?? step_results.length) === 1 ? '' : 's'} completed
+    <div>
+      {/* ── The answer — blended directly on the page, no boxes ── */}
+      {outputBlocks.length > 0 ? (
+        <div>
+          {outputBlocks.map((text, idx) => (
+            <div key={idx} className={idx > 0 ? 'mt-6 pt-6 border-t border-white/[0.06]' : ''}>
+              <Markdown text={text} />
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowRawJson((v) => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            {showRawJson ? 'Hide raw JSON' : 'View raw JSON'}
-          </button>
-          <button
-            onClick={copyJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
-          >
-            {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-trading-up" /> : <Clipboard className="w-3.5 h-3.5" />}
-            {copied ? 'Copied!' : 'Copy JSON'}
-          </button>
-        </div>
-      </div>
-
-      {showRawJson && (
-        <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[400px]">
-          <pre className="text-on-dark">{JSON.stringify(result, null, 2)}</pre>
-        </div>
+      ) : (
+        <p className="text-sm text-muted">No output was produced for this task.</p>
       )}
 
-      {/* Summary */}
-      {summary && (
-        <div className="p-5">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-sm bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider mb-1">Summary</p>
-              <p className="text-sm text-on-dark leading-relaxed whitespace-pre-wrap">{summary}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Everything else — collapsed by default ── */}
+      <div className="mt-8 pt-5 border-t border-white/[0.06]">
+        <button
+          onClick={() => setShowDetails((v) => !v)}
+          className="flex items-center gap-2 text-xs font-medium text-[#848e9c] hover:text-[#eaecef] transition-colors"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Execution details
+          {showDetails ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </button>
 
-      {/* Validation */}
-      {validation && (
-        <div className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border ${
-                validation.passed ? 'bg-trading-up/10 border-trading-up/20' : 'bg-primary/10 border-primary/20'
-              }`}
-            >
-              {validation.passed ? (
-                <CheckCircle2 className="w-4 h-4 text-trading-up" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 text-primary" />
-              )}
+        {showDetails && (
+          <div className="mt-4 divide-y divide-hairline-on-dark rounded-lg border border-hairline-on-dark overflow-hidden">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-strong">
+                <ListChecks className="w-3.5 h-3.5" />
+                {steps_completed ?? step_results.length} step{(steps_completed ?? step_results.length) === 1 ? '' : 's'} completed
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowRawJson((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
+                >
+                  <Code2 className="w-3.5 h-3.5" />
+                  {showRawJson ? 'Hide raw JSON' : 'View raw JSON'}
+                </button>
+                <button
+                  onClick={copyJson}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors bg-surface-elevated-dark hover:bg-surface-elevated-dark/70 text-on-dark"
+                >
+                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-trading-up" /> : <Clipboard className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied!' : 'Copy JSON'}
+                </button>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Validation</p>
-              <p className="text-sm font-semibold text-on-dark">
-                {validation.passed ? 'Passed' : 'Needs attention'}
-              </p>
-            </div>
-            {confidencePct != null && (
-              <div className="flex items-center gap-1.5 text-xs text-muted">
-                <Gauge className="w-3.5 h-3.5" />
-                {confidencePct}% confidence
+
+            {showRawJson && (
+              <div className="p-4 bg-canvas-dark font-mono text-xs overflow-x-auto max-h-[400px]">
+                <pre className="text-on-dark">{JSON.stringify(result, null, 2)}</pre>
               </div>
             )}
-          </div>
 
-          {validation.critique && (
-            <p className="text-sm text-muted leading-relaxed pl-11">{validation.critique}</p>
-          )}
-
-          {validation.failed_steps && validation.failed_steps.length > 0 && (
-            <div className="pl-11 mt-2 flex flex-wrap gap-1.5">
-              {validation.failed_steps.map((id) => (
-                <span
-                  key={id}
-                  className="px-2 py-0.5 rounded-sm bg-trading-down/10 text-trading-down text-[10px] font-mono border border-trading-down/20"
-                >
-                  {id}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Plan overview */}
-      {plan?.notes && (
-        <div className="p-5">
-          <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider mb-1">Plan Notes</p>
-          <p className="text-sm text-muted leading-relaxed">{plan.notes}</p>
-        </div>
-      )}
-
-      {/* Step results */}
-      {step_results.length > 0 && (
-        <div>
-          <div className="p-5 pb-2">
-            <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Step Results</p>
-          </div>
-          <div className="divide-y divide-hairline-on-dark">
-            {step_results.map((step, idx) => {
-              const status = getStepStatus(step);
-              const isExpanded = expandedSteps[idx];
-              const planStep = plan?.steps?.[idx];
-
-              return (
-                <div key={step.step_id ?? idx}>
+            {/* Validation */}
+            {validation && (
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-3">
                   <div
-                    className="px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:bg-surface-elevated-dark/50"
-                    onClick={() => toggleStep(idx)}
+                    className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border ${
+                      validation.passed ? 'bg-trading-up/10 border-trading-up/20' : 'bg-primary/10 border-primary/20'
+                    }`}
                   >
-                    {status === 'completed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-trading-up shrink-0" />
-                    ) : status === 'failed' ? (
-                      <XCircle className="w-4 h-4 text-trading-down shrink-0" />
+                    {validation.passed ? (
+                      <CheckCircle2 className="w-4 h-4 text-trading-up" />
                     ) : (
-                      <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-on-dark truncate">
-                        {step.description || planStep?.description || step.step_id || `Step ${idx + 1}`}
-                      </p>
-                      {step.tool_calls_used && step.tool_calls_used.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {step.tool_calls_used.map((tool) => (
-                            <span
-                              key={tool}
-                              className="px-1.5 py-0.5 rounded-sm bg-canvas-dark text-[10px] text-muted-strong border border-hairline-on-dark"
-                            >
-                              {tool}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {step.latency_ms != null && (
-                      <span className="text-[10px] text-muted-strong shrink-0">{step.latency_ms}ms</span>
-                    )}
-                    {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-muted shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-primary" />
                     )}
                   </div>
-
-                  {isExpanded && (
-                    <div className="px-5 pb-4 pl-12 space-y-3">
-                      {step.error && (
-                        <div className="p-3 rounded-md bg-trading-down/10 border border-trading-down/20">
-                          <p className="text-[10px] uppercase font-bold text-trading-down mb-1">Error</p>
-                          <p className="text-xs text-trading-down/80 font-mono whitespace-pre-wrap">{step.error}</p>
-                        </div>
-                      )}
-                      {step.output && (
-                        <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
-                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Output</p>
-                          <FormattedOutput text={step.output} />
-                        </div>
-                      )}
-                      {step.summary && step.summary !== step.output && (
-                        <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Agent Summary</p>
-                          <p className="text-xs text-on-dark whitespace-pre-wrap leading-relaxed">{step.summary}</p>
-                        </div>
-                      )}
-                      {step.trace && step.trace.length > 0 && (
-                        <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
-                          <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Trace</p>
-                          <div className="space-y-1">
-                            {step.trace
-                              .filter((line) => line.trim().length > 0)
-                              .map((line, i) => (
-                                <p key={i} className="text-[11px] text-muted font-mono">
-                                  {line}
-                                </p>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                      {step.tokens_used && (
-                        <div className="flex gap-4 text-[10px] text-muted">
-                          {step.tokens_used.in != null && <span>Tokens in: {step.tokens_used.in}</span>}
-                          {step.tokens_used.out != null && <span>Tokens out: {step.tokens_used.out}</span>}
-                        </div>
-                      )}
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Validation</p>
+                    <p className="text-sm font-semibold text-on-dark">
+                      {validation.passed ? 'Passed' : 'Needs attention'}
+                    </p>
+                  </div>
+                  {confidencePct != null && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <Gauge className="w-3.5 h-3.5" />
+                      {confidencePct}% confidence
                     </div>
                   )}
                 </div>
-              );
-            })}
+
+                {validation.summary && (
+                  <p className="text-sm text-muted leading-relaxed pl-11" style={{ lineHeight: '1.6' }}>
+                    {validation.summary}
+                  </p>
+                )}
+
+                {validation.critique && (
+                  <p className="text-sm text-muted leading-relaxed pl-11 mt-1" style={{ lineHeight: '1.6' }}>
+                    {validation.critique}
+                  </p>
+                )}
+
+                {validation.failed_steps && validation.failed_steps.length > 0 && (
+                  <div className="pl-11 mt-2 flex flex-wrap gap-1.5">
+                    {validation.failed_steps.map((id) => (
+                      <span
+                        key={id}
+                        className="px-2 py-0.5 rounded-sm bg-trading-down/10 text-trading-down text-[10px] font-mono border border-trading-down/20"
+                      >
+                        {id}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Plan overview */}
+            {plan?.notes && (
+              <div className="p-5">
+                <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider mb-1">Plan Notes</p>
+                <p className="text-sm text-muted leading-relaxed" style={{ lineHeight: '1.6' }}>{plan.notes}</p>
+              </div>
+            )}
+
+            {/* Step results */}
+            {step_results.length > 0 && (
+              <div>
+                <div className="p-5 pb-2">
+                  <p className="text-[10px] uppercase font-bold text-muted-strong tracking-wider">Step Results</p>
+                </div>
+                <div className="divide-y divide-hairline-on-dark">
+                  {step_results.map((step, idx) => {
+                    const status = getStepStatus(step);
+                    const isExpanded = expandedSteps[idx];
+                    const planStep = plan?.steps?.[idx];
+
+                    return (
+                      <div key={step.step_id ?? idx}>
+                        <div
+                          className="px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:bg-surface-elevated-dark/50"
+                          onClick={() => toggleStep(idx)}
+                        >
+                          {status === 'completed' ? (
+                            <CheckCircle2 className="w-4 h-4 text-trading-up shrink-0" />
+                          ) : status === 'failed' ? (
+                            <XCircle className="w-4 h-4 text-trading-down shrink-0" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-on-dark truncate">
+                              {step.description || planStep?.description || step.step_id || `Step ${idx + 1}`}
+                            </p>
+                            {step.tool_calls_used && step.tool_calls_used.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {step.tool_calls_used.map((tool) => (
+                                  <span
+                                    key={tool}
+                                    className="px-1.5 py-0.5 rounded-sm bg-canvas-dark text-[10px] text-muted-strong border border-hairline-on-dark"
+                                  >
+                                    {tool}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {step.latency_ms != null && (
+                            <span className="text-[10px] text-muted-strong shrink-0">{step.latency_ms}ms</span>
+                          )}
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-muted shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+                          )}
+                        </div>
+
+                        {isExpanded && (
+                          <div className="px-5 pb-4 pl-12 space-y-3">
+                            {step.error && (
+                              <div className="p-3 rounded-md bg-trading-down/10 border border-trading-down/20">
+                                <p className="text-[10px] uppercase font-bold text-trading-down mb-1">Error</p>
+                                <p className="text-xs text-trading-down/80 font-mono whitespace-pre-wrap">{step.error}</p>
+                              </div>
+                            )}
+                            {step.output && (
+                              <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
+                                <p className="text-[10px] uppercase font-bold text-muted-strong mb-2">Output</p>
+                                <Markdown text={step.output} />
+                              </div>
+                            )}
+                            {step.summary && step.summary !== step.output && (
+                              <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+                                <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Agent Summary</p>
+                                <p className="text-xs text-on-dark whitespace-pre-wrap leading-relaxed">{step.summary}</p>
+                              </div>
+                            )}
+                            {step.trace && step.trace.length > 0 && (
+                              <div className="p-3 rounded-md bg-canvas-dark border border-hairline-on-dark">
+                                <p className="text-[10px] uppercase font-bold text-muted-strong mb-1">Trace</p>
+                                <div className="space-y-1">
+                                  {step.trace
+                                    .filter((line) => line.trim().length > 0)
+                                    .map((line, i) => (
+                                      <p key={i} className="text-[11px] text-muted font-mono">
+                                        {line}
+                                      </p>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                            {step.tokens_used && (
+                              <div className="flex gap-4 text-[10px] text-muted">
+                                {step.tokens_used.in != null && <span>Tokens in: {step.tokens_used.in}</span>}
+                                {step.tokens_used.out != null && <span>Tokens out: {step.tokens_used.out}</span>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
