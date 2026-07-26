@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getTasks } from '../../api/tasks';
 import { TaskStatus } from '../../types/task';
 import {
-  CheckSquare,
+  LayoutDashboard,
+  Plus,
   Clock,
   Terminal,
   Settings,
@@ -16,10 +17,11 @@ import {
 import { useState, useEffect } from 'react';
 
 const navItems = [
-  { to: '/tasks',   label: 'Tasks',    icon: CheckSquare },
-  { to: '/history', label: 'History',  icon: Clock },
-  { to: '/logs',    label: 'Logs',     icon: Terminal },
-  { to: '/settings',label: 'Settings', icon: Settings },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/tasks/new',  label: 'New Task',  icon: Plus },
+  { to: '/history',    label: 'History',   icon: Clock },
+  { to: '/logs',       label: 'Logs',      icon: Terminal },
+  { to: '/settings',   label: 'Settings',  icon: Settings },
 ];
 
 const adminItems = [

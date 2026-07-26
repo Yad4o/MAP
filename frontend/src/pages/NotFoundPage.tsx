@@ -43,7 +43,7 @@ export default function NotFoundPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              to="/tasks"
+              to="/dashboard"
               className="btn-wise-primary inline-flex items-center gap-2 w-full sm:w-auto justify-center"
               style={{ fontSize: '14px', padding: '11px 22px' }}
             >
