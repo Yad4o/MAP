@@ -458,8 +458,8 @@
   }
 
   body.theme-dark .wise-sidebar {
-    background: #0e1117;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: #191a1d;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .wise-nav-link {
@@ -486,28 +486,19 @@
   }
 
   body.theme-dark .wise-nav-link {
-    color: #8b949e;
+    color: #a6a7ab;
   }
   body.theme-dark .wise-nav-link:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #eaecef;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f2f2f0;
   }
   body.theme-dark .wise-nav-link.active {
-    background: rgba(159, 232, 112, 0.15);
-    color: #9fe870;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f2f2f0;
   }
 
-  .wise-nav-link.active::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 20px;
-    background: #9fe870;
-    border-radius: 0 3px 3px 0;
-  }
+  /* Claude-style active state has no accent bar — the subtle fill above is
+     the only indicator, matching the reference sidebar. */
 
   /* ── Utility  ─────────────────────────────────────────────────────────── */
 
