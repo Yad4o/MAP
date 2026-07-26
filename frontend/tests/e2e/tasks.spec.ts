@@ -57,7 +57,7 @@ test.describe('Tasks', () => {
     await expect(page.getByText('Tell me a bit more about what you need done.')).toBeVisible();
   });
 
-  test('submitting valid task shows it in the list', async ({ page }) => {
+  test('submitting valid task shows the task detail page', async ({ page }) => {
     const newTask = {
       id: 101,
       title: 'New Automation Task',
@@ -74,14 +74,19 @@ test.describe('Tasks', () => {
         await route.fulfill({ status: 200, body: JSON.stringify([newTask]) });
       }
     });
+    // Task creation now routes straight to the detail page, which fetches
+    // the full task (with `steps`) rather than the list-shaped payload above.
+    await page.route(/\/api\/v1\/tasks\/101$/, async (route) => {
+      await route.fulfill({ status: 200, body: JSON.stringify({ ...newTask, steps: [] }) });
+    });
 
     await page.goto('/tasks/new');
     await page.locator('textarea').fill('New Automation Task');
     await page.getByRole('button', { name: 'Create task' }).click();
 
-    await page.waitForURL('/dashboard');
-    await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByRole('heading', { name: 'New Automation Task' })).toBeVisible({ timeout: 10000 });
+    await page.waitForURL(/\/tasks\/101$/);
+    await expect(page).toHaveURL(/\/tasks\/101$/);
+    await expect(page.locator('h1')).toHaveText('New Automation Task', { timeout: 10000 });
   });
 
   test('clicking a task card opens detail page', async ({ page }) => {
