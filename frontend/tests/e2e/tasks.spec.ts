@@ -26,7 +26,7 @@ test.describe('Tasks', () => {
       await route.fulfill({ status: 200, body: JSON.stringify([]) });
     });
 
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
     await expect(page.getByText('No tasks yet')).toBeVisible();
   });
 
@@ -35,7 +35,7 @@ test.describe('Tasks', () => {
       await route.fulfill({ status: 200, body: JSON.stringify([]) });
     });
 
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
     await page.click('#create-task-btn');
     await page.waitForURL(/\/tasks\/new/);
     // TaskCreatePage's h1 is now a dynamic time-of-day greeting (e.g. "Good
@@ -79,8 +79,8 @@ test.describe('Tasks', () => {
     await page.locator('textarea').fill('New Automation Task');
     await page.getByRole('button', { name: 'Create task' }).click();
 
-    await page.waitForURL('/tasks');
-    await expect(page).toHaveURL(/\/tasks$/);
+    await page.waitForURL('/dashboard');
+    await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole('heading', { name: 'New Automation Task' })).toBeVisible({ timeout: 10000 });
   });
 
@@ -101,7 +101,7 @@ test.describe('Tasks', () => {
       await route.fulfill({ status: 200, body: JSON.stringify([task]) });
     });
 
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
     // More robust selector for the link
     const viewButton = page.getByRole('link', { name: /view/i }).first();
     await expect(viewButton).toBeVisible();
@@ -126,7 +126,7 @@ test.describe('Tasks', () => {
       await route.fulfill({ status: 200, body: JSON.stringify(tasks) });
     });
 
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
 
     // Badges use inline styles (cfg.badgeBg/cfg.badgeText), not Tailwind
     // color utility classes, and "Pending"/"Completed" also appear as
