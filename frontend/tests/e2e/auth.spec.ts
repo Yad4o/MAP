@@ -89,7 +89,7 @@ test.describe('Authentication', () => {
       await route.fulfill({ status: 200, body: JSON.stringify([]) });
     });
 
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
     await page.click('button:has-text("Sign Out")');
 
     await expect(page).toHaveURL(/\/login/);

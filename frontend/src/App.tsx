@@ -32,7 +32,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const role = useAuthStore(state => state.user?.role)
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (role !== 'ADMIN' && role !== 'SYSTEM') return <Navigate to="/tasks" replace />
+  if (role !== 'ADMIN' && role !== 'SYSTEM') return <Navigate to="/dashboard" replace />
 
   return <>{children}</>
 }
@@ -60,7 +60,8 @@ export default function App() {
 
         {/* All authenticated routes are rendered inside the AppShell layout */}
         <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-          <Route path="/tasks" element={<TaskListPage />} />
+          <Route path="/dashboard" element={<TaskListPage />} />
+          <Route path="/tasks" element={<Navigate to="/dashboard" replace />} />
           <Route path="/tasks/new" element={<TaskCreatePage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />

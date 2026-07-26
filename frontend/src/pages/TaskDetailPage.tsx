@@ -241,7 +241,7 @@ export default function TaskDetailPage() {
         <p className="text-sm mb-8" style={{ color: '#848e9c', lineHeight: '1.6' }}>
           We couldn't retrieve the details for this task. It may have been deleted.
         </p>
-        <button onClick={() => navigate('/tasks')} className="btn-wise-primary w-full max-w-xs">
+        <button onClick={() => navigate('/dashboard')} className="btn-wise-primary w-full max-w-xs">
           Return to Dashboard
         </button>
       </div>
@@ -743,18 +743,21 @@ export default function TaskDetailPage() {
 
       {/* ── Back link ── */}
       <button
-        onClick={() => navigate('/tasks')}
+        onClick={() => navigate('/dashboard')}
         className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
         style={{ color: '#848e9c' }}
         onMouseEnter={e => (e.currentTarget.style.color = '#eaecef')}
         onMouseLeave={e => (e.currentTarget.style.color = '#848e9c')}
       >
         <ArrowLeft size={15} />
-        All tasks
+        Dashboard
       </button>
 
-      {/* ── Header ── */}
-      <section className="wise-card-dark-surface" style={{ padding: '24px 28px' }}>
+      {/* ── Header — blended directly on the page, no card chrome ── */}
+      <section
+        className="pb-6"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+      >
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-3 flex-1 min-w-0">
             {/* Status + priority + type + date + id — all merged into one row */}

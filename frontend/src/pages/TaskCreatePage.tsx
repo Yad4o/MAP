@@ -79,7 +79,7 @@ export default function TaskCreatePage() {
     mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      navigate('/tasks');
+      navigate('/dashboard');
     },
   });
 

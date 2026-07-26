@@ -59,13 +59,14 @@ test.describe('Navigation', () => {
     { label: 'Logs',    url: /\/logs/ },
     { label: 'Settings', url: /\/settings/ },
     { label: 'Admin',  url: /\/admin/ },
-    { label: 'Tasks',  url: /\/tasks/ },
+    { label: 'Dashboard', url: /\/dashboard/ },
+    { label: 'New Task',  url: /\/tasks\/new/ },
   ];
 
   for (const item of navItems) {
     test(`sidebar link "${item.label}" navigates to correct page`, async ({ page }) => {
       await setupAdminSession(page);
-      await page.goto('/tasks');
+      await page.goto('/dashboard');
 
       // Wait for auth to hydrate — the Admin link is only rendered when role=ADMIN
       await expect(
@@ -83,12 +84,12 @@ test.describe('Navigation', () => {
 
   test('browser back button works correctly', async ({ page }) => {
     await setupAdminSession(page);
-    await page.goto('/tasks');
+    await page.goto('/dashboard');
     await page.click('nav a:has-text("History")');
     await expect(page).toHaveURL(/\/history/);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/tasks/);
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test('unknown route shows 404 page', async ({ page }) => {
@@ -100,6 +101,6 @@ test.describe('Navigation', () => {
 
     // Test return home button
     await page.click('text=Return Home');
-    await expect(page).toHaveURL(/\/tasks/);
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 });

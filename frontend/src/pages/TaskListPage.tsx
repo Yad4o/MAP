@@ -328,8 +328,11 @@ export default function TaskListPage() {
   return (
     <div className="space-y-6 animate-wise-fade-up">
 
-      {/* ── Welcome banner ── */}
-      <div className="wise-card-dark-surface flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
+      {/* ── Welcome banner — blended directly on the page, no card chrome ── */}
+      <div
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 pb-6"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+      >
         <div>
           <p
             className="text-[11px] font-bold uppercase tracking-widest mb-2"
@@ -363,11 +366,20 @@ export default function TaskListPage() {
         </Link>
       </div>
 
-      {/* ── Stats row ── */}
+      {/* ── Stats row — blended directly on the page, divided not boxed ── */}
       {total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          {stats.map(s => (
-            <div key={s.label} className="wise-card-dark-surface flex items-center gap-4 py-5">
+        <div
+          className="grid grid-cols-2 sm:grid-cols-5 pb-6"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className="flex items-center gap-4 py-1 px-4 sm:px-5"
+              style={{
+                borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: s.dotBg }}
@@ -439,8 +451,8 @@ export default function TaskListPage() {
         </div>
       )}
 
-      {/* ── How MAP Works ── */}
-      <div className="wise-card-dark-surface mt-6">
+      {/* ── How MAP Works — blended directly on the page ── */}
+      <div className="mt-6 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <p
           className="text-[11px] font-bold uppercase tracking-widest mb-5"
           style={{ color: '#848e9c' }}
