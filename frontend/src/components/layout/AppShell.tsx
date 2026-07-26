@@ -13,6 +13,8 @@ import {
   Menu,
   X,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -42,6 +44,17 @@ export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('map-sidebar-collapsed') === '1'
+  );
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('map-sidebar-collapsed', next ? '1' : '0');
+      return next;
+    });
+  };
 
   const { data: tasks } = useQuery({ queryKey: ['tasks'], queryFn: getTasks });
   const recentTasks = [...(tasks ?? [])]
@@ -63,69 +76,99 @@ export default function AppShell() {
 
   const sidebarContent = (
     <>
-      {/* Logo */}
-      <div className="h-[72px] flex items-center px-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#9fe870' }}>
+      {/* Logo + collapse toggle */}
+      <div
+        className={`flex-shrink-0 flex items-center ${collapsed ? 'flex-col justify-center py-3 px-2' : 'h-[64px] justify-between px-4'}`}
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        {!collapsed && (
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/map-logo.png"
-              alt="MAP"
-              className="w-5 h-5 object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }}
+              src="/map-icon.png"
+              alt=""
+              aria-hidden="true"
+              className="w-7 h-7 object-contain flex-shrink-0"
             />
-            <span className="text-sm font-black text-[#0e0f0c] hidden [img:not([style*='none'])~&]:hidden">M</span>
+            <div className="min-w-0">
+              <span
+                className="font-display font-black text-[15px] text-[#eaecef] tracking-tight block truncate"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
+              >
+                MAP Platform
+              </span>
+              <p className="text-[10px] text-[#848e9c] font-semibold uppercase tracking-widest leading-none mt-0.5">
+                Multi-Agent
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="font-display font-black text-[15px] text-[#eaecef] tracking-tight" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              MAP Platform
-            </span>
-            <p className="text-[10px] text-[#848e9c] font-semibold uppercase tracking-widest leading-none mt-0.5">
-              Multi-Agent
-            </p>
-          </div>
-        </div>
+        )}
+
+        {collapsed && (
+          <img
+            src="/map-icon.png"
+            alt=""
+            aria-hidden="true"
+            className="w-6 h-6 object-contain flex-shrink-0 mb-2"
+          />
+        )}
+
+        {/* Collapse toggle — desktop only, mirrors the Claude-style rail control */}
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-[#848e9c] hover:bg-white/[0.08] hover:text-[#eaecef] transition-colors flex-shrink-0"
+        >
+          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1">
-        <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
-          Navigation
-        </p>
+      <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
+        {!collapsed && (
+          <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
+            Navigation
+          </p>
+        )}
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={navLinkClass}
             onClick={() => setSidebarOpen(false)}
+            title={collapsed ? item.label : undefined}
+            style={collapsed ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : undefined}
           >
             <item.icon size={17} className="flex-shrink-0" />
-            <span>{item.label}</span>
+            {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
 
         {isAdmin && (
           <>
             <div className="my-4 mx-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
-            <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
-              Administration
-            </p>
+            {!collapsed && (
+              <p className="px-4 mb-3 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
+                Administration
+              </p>
+            )}
             {adminItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={navLinkClass}
                 onClick={() => setSidebarOpen(false)}
+                title={collapsed ? item.label : undefined}
+                style={collapsed ? { justifyContent: 'center', paddingLeft: 0, paddingRight: 0 } : undefined}
               >
                 <item.icon size={17} className="flex-shrink-0" />
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </NavLink>
             ))}
           </>
         )}
 
-        {recentTasks.length > 0 && (
+        {!collapsed && recentTasks.length > 0 && (
           <>
             <div className="my-4 mx-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
             <p className="px-4 mb-2 text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">
@@ -154,34 +197,46 @@ export default function AppShell() {
       </nav>
 
       {/* User footer */}
-      <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className={`p-2 flex-shrink-0 ${collapsed ? '' : 'p-3'}`} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <button
           onClick={() => { navigate('/settings'); setSidebarOpen(false); }}
-          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors duration-150 group hover:bg-[#1e232a]"
+          title={collapsed ? 'Settings' : undefined}
+          className={`w-full flex items-center gap-3 rounded-xl transition-colors duration-150 group hover:bg-white/[0.06] ${
+            collapsed ? 'justify-center py-2' : 'px-3 py-3'
+          }`}
         >
           {/* Avatar */}
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-[#0e0f0c] flex-shrink-0"
-            style={{ background: '#9fe870' }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#f2f2f0] flex-shrink-0"
+            style={{ background: '#3a3b3f' }}
           >
             {initials}
           </div>
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-semibold text-[#eaecef] truncate">
-              {user?.username ?? 'User'}
-            </p>
-            <p className="text-[11px] text-[#848e9c] truncate capitalize">{user?.tier ?? 'free'} plan</p>
-          </div>
-          <Settings size={14} className="text-[#848e9c] group-hover:text-[#eaecef] transition-colors flex-shrink-0" />
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold text-[#eaecef] truncate">
+                  {user?.username ?? 'User'}
+                </p>
+                <p className="text-[11px] text-[#848e9c] truncate capitalize">{user?.tier ?? 'free'} plan</p>
+              </div>
+              <Settings size={14} className="text-[#848e9c] group-hover:text-[#eaecef] transition-colors flex-shrink-0" />
+            </>
+          )}
         </button>
 
         {/* Logout */}
         <button
           onClick={() => { logout(); navigate('/login'); }}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors duration-150 mt-1 group hover:bg-[#3e1414]"
+          title={collapsed ? 'Sign out' : undefined}
+          className={`w-full flex items-center gap-3 rounded-xl transition-colors duration-150 mt-1 group hover:bg-[#3e1414] ${
+            collapsed ? 'justify-center py-2' : 'px-3 py-2'
+          }`}
         >
           <LogOut size={15} className="text-[#848e9c] group-hover:text-[#f85149] transition-colors flex-shrink-0" />
-          <span className="text-sm font-semibold text-[#848e9c] group-hover:text-[#f85149] transition-colors">Sign out</span>
+          {!collapsed && (
+            <span className="text-sm font-semibold text-[#848e9c] group-hover:text-[#f85149] transition-colors">Sign out</span>
+          )}
         </button>
       </div>
     </>
@@ -194,17 +249,15 @@ export default function AppShell() {
       {/* ── Mobile header ── */}
       <div
         className="lg:hidden fixed top-0 left-0 right-0 h-14 flex items-center justify-between px-4 z-40"
-        style={{ background: '#0e1117', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ background: '#191a1d', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#9fe870' }}>
-            <span className="text-xs font-black text-[#0e0f0c]">M</span>
-          </div>
+          <img src="/map-icon.png" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
           <span className="text-sm font-black text-[#eaecef]" style={{ fontFamily: 'Manrope, sans-serif' }}>MAP</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg text-[#848e9c] hover:bg-[#1e232a] transition-colors"
+          className="p-2 rounded-lg text-[#848e9c] hover:bg-white/[0.08] transition-colors"
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -221,9 +274,9 @@ export default function AppShell() {
 
       {/* ── Sidebar ── */}
       <aside
-        className={`fixed lg:static z-50 top-0 left-0 h-full w-[240px] flex-shrink-0 flex flex-col transition-transform duration-300 wise-sidebar ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed lg:static z-50 top-0 left-0 h-full flex-shrink-0 flex flex-col transition-[transform,width] duration-200 wise-sidebar w-[240px] ${
+          collapsed ? 'lg:w-[72px]' : 'lg:w-[240px]'
+        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {sidebarContent}
       </aside>
