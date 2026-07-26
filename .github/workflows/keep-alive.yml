@@ -1,0 +1,37 @@
+name: Keep Render backend awake
+
+# Render's free plan spins the web service down after 15 minutes of
+# inactivity, and the next request pays a 30-50s cold-start. Pinging
+# /health every 10 minutes keeps it under that threshold so real users
+# never hit a cold start.
+#
+# Runs on GitHub-hosted runners, which are free/unmetered for public
+# repos, so this costs nothing.
+
+on:
+  schedule:
+    # GitHub's scheduler isn't second-precise and can lag a few minutes
+    # under load, so 10 min gives comfortable headroom under Render's
+    # 15 min timeout rather than cutting it close at 14.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {} # manual "Run workflow" button for on-demand pings
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          url="https://map-api-npf8.onrender.com/health"
+          # Up to 3 attempts, 20s connect/max time each — covers the case
+          # where this ping itself is what wakes a sleeping instance.
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || echo "000")
+            echo "Attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::warning::map-api /health did not return 200 after 3 attempts"
+          exit 1
