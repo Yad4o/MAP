@@ -15,7 +15,6 @@ import { ArrowLeft, Loader2, MailCheck } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
-import { AuthVisualPanel } from '../components/auth/AuthVisualPanel';
 import { AuthLiveField } from '../components/auth/AuthLiveField';
 
 const schema = z.object({
@@ -59,11 +58,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">
-      <AuthVisualPanel
-        variant="login"
-        tagline="Plan, execute, and validate work across a team of specialized agents — memory kept, nothing repeated."
-      />
-
       <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
         <DotGrid />
         <AuthLiveField />
