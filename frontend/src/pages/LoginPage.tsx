@@ -7,7 +7,6 @@ import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getApiErrorMessage, isNetworkError } from '../lib/errors';
 import { toast } from '../store/toastStore';
-import { AuthVisualPanel } from '../components/auth/AuthVisualPanel';
 import { BASE_URL } from '../api/client';
 import '../components/landing/landing.css';
 
@@ -49,11 +48,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      <AuthVisualPanel
-        variant="login"
-        tagline="Plan, execute, and validate work across a team of specialized agents."
-      />
-
       <section className="hero-v2 auth-v2 relative flex-1">
         <div className="hero-v2__bg" aria-hidden="true">
           <div className="hero-v2__glow" />
