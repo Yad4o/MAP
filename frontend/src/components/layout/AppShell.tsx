@@ -19,11 +19,11 @@ import {
 import { useState, useEffect } from 'react';
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tasks/new',  label: 'New Task',  icon: Plus },
   { to: '/history',    label: 'History',   icon: Clock },
   { to: '/logs',       label: 'Logs',      icon: Terminal },
   { to: '/settings',   label: 'Settings',  icon: Settings },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
 const adminItems = [
