@@ -61,6 +61,9 @@ class Task(Base):
 
     # ── Relationships ─────────────────────────────────────────
     steps: Mapped[list["TaskStep"]] = relationship("TaskStep", back_populates="task", cascade="all, delete-orphan")
+    messages: Mapped[list["TaskMessage"]] = relationship(
+        "TaskMessage", back_populates="task", cascade="all, delete-orphan", order_by="TaskMessage.created_at"
+    )
     user: Mapped["User"] = relationship("User", back_populates="tasks")
 
     def __repr__(self) -> str:
@@ -110,3 +113,39 @@ class TaskStep(Base):
 
     def __repr__(self) -> str:
         return f"<TaskStep task_id={self.task_id} order={self.order} title={self.title[:30]}>"
+
+
+class TaskMessage(Base):
+    """
+    A single turn in a task's follow-up conversation thread.
+
+    Separate from TaskStep (the internal agent execution trace) — this is
+    the chat-facing log: what the user asked and what the agent answered,
+    across however many follow-up turns a task accumulates.
+    """
+    __tablename__ = "task_messages"
+
+    # ── Primary Key ───────────────────────────────────────────
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+
+    # ── Foreign Key ────────────────────────────────────────────
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # ── Message Content ──────────────────────────────────────────
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" | "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # ── Timestamps ────────────────────────────────────────────
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # ── Relationships ─────────────────────────────────────────
+    task: Mapped["Task"] = relationship("Task", back_populates="messages")
+
+    def __repr__(self) -> str:
+        return f"<TaskMessage task_id={self.task_id} role={self.role}>"
