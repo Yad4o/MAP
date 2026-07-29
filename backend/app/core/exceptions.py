@@ -59,6 +59,17 @@ class TaskStateTransitionError(Exception):
         self.new_status = new_status
 
 
+class TaskNotContinuableError(Exception):
+    """Raised when a follow-up message is sent to a task not in a continuable state."""
+
+    def __init__(self, current_status):
+        super().__init__(
+            f"Cannot continue a task with status '{current_status}'. "
+            f"Only COMPLETED or FAILED tasks accept follow-up messages."
+        )
+        self.current_status = current_status
+
+
 class EmailSendError(Exception):
     """Raised when a transactional email fails to send via Resend."""
 
