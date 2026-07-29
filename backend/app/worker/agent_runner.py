@@ -42,11 +42,12 @@ class AgentRunner:
             sys.path.insert(0, backend_root)
 
         from app.db.base import AsyncSessionLocal
-        from app.db.repositories.task_repo import TaskRepository
+        from app.db.repositories.task_repo import TaskRepository, TaskMessageRepository
         from agents.controller.agent_controller import AgentController
         
         async with AsyncSessionLocal() as session:
             task_repo = TaskRepository(session)
+            message_repo = TaskMessageRepository(session)
             
             # Fetch task from DB
             task = await task_repo.get_by_id(self.task_id)
@@ -57,13 +58,21 @@ class AgentRunner:
             # Update status to PROCESSING
             task.status = "PROCESSING"
             await session.commit()
-            
+
+            # Follow-up thread, if any. Empty on a task's first run — a new
+            # task has no messages yet, so effective_description falls back
+            # to the plain task.description below, unchanged from before.
+            messages = await message_repo.list_by_task(self.task_id)
+            effective_description = self._build_effective_description(
+                task.description, task.result, messages
+            )
+
             # Create AgentController(task_id, description, config).
             # Task.config is a verified JSON column from the Phase 2 schema (task.py line 44).
             # getattr guards against any future model drift that drops the column.
             controller = AgentController(
                 task_id=task.id,
-                task_description=task.description,
+                task_description=effective_description,
                 config=getattr(task, "config", None),
             )
             
@@ -73,6 +82,50 @@ class AgentRunner:
             task.status = result.get("status", "COMPLETED").upper()
             task.result = result
             await session.commit()
+
+            # Log the agent's reply on the thread so the *next* follow-up
+            # (if any) sees it as prior context. Only relevant once a
+            # thread exists — the initial run has nothing to reply to yet.
+            if messages:
+                reply = result.get("summary") or result.get("error") or "(no summary produced)"
+                await message_repo.create(task_id=self.task_id, role="assistant", content=reply)
             
             logger.info(f"AgentRunner: task {self.task_id} completed with status {result.get('status')}")
             return result
+
+    @staticmethod
+    def _build_effective_description(
+        original_description: str,
+        prior_result: dict | None,
+        messages: list,
+    ) -> str:
+        """
+        Fold a task's follow-up conversation into a single description string
+        for the Planner — the one place the whole pipeline reads task intent
+        from, so this is the only integration point continuation needs.
+
+        No-op (returns the plain description) when there's no thread yet,
+        which is every task's first run.
+        """
+        if not messages:
+            return original_description
+
+        parts = [f"Original task:\n{original_description}"]
+
+        if prior_result:
+            prior_summary = prior_result.get("summary") or prior_result.get("error")
+            if prior_summary:
+                parts.append(f"Previous outcome:\n{prior_summary}")
+
+        thread_lines = []
+        for m in messages:
+            speaker = "User" if m.role == "user" else "Assistant"
+            thread_lines.append(f"{speaker}: {m.content}")
+        parts.append("Follow-up conversation so far:\n" + "\n".join(thread_lines))
+
+        parts.append(
+            "Treat the most recent User message above as the current request. "
+            "Stay consistent with what was already done rather than starting over."
+        )
+
+        return "\n\n".join(parts)
