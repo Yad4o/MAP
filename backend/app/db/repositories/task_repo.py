@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, update, func
 from sqlalchemy.orm import selectinload
 
-from app.db.models.task import Task, TaskStep
+from app.db.models.task import Task, TaskStep, TaskMessage
 from app.schemas.task import TaskStatus
 from app.db.repositories.protocols import TaskRepositoryProtocol
 
@@ -262,3 +262,24 @@ class TaskStepRepository:
         await self.db.delete(step)
         await self.db.commit()
         return True
+
+
+class TaskMessageRepository:
+    """Data access for a task's follow-up conversation thread."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create(self, task_id: uuid.UUID, role: str, content: str) -> TaskMessage:
+        """Append a message to a task's thread."""
+        message = TaskMessage(task_id=task_id, role=role, content=content)
+        self.db.add(message)
+        await self.db.commit()
+        await self.db.refresh(message)
+        return message
+
+    async def list_by_task(self, task_id: uuid.UUID) -> list[TaskMessage]:
+        """List all messages for a task, oldest first."""
+        query = select(TaskMessage).where(TaskMessage.task_id == task_id).order_by(TaskMessage.created_at)
+        result = await self.db.execute(query)
+        return result.scalars().all()
