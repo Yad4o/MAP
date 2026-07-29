@@ -8,10 +8,13 @@ import uuid
 
 from app.db.base import get_db
 from app.dependencies import get_current_user
-from app.schemas.task import TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskDetailRead, TaskStatusResponse
+from app.schemas.task import (
+    TaskCreateRequest, TaskUpdateRequest, TaskRead, TaskDetailRead, TaskStatusResponse,
+    TaskMessageCreateRequest, TaskMessageRead,
+)
 from app.services.task_service import TaskService
-from app.db.repositories.task_repo import TaskRepository
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
+from app.db.repositories.task_repo import TaskRepository, TaskMessageRepository
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError, TaskNotContinuableError
 from app.worker.tasks import process_task
 
 
@@ -21,7 +24,8 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 def get_task_service(db: AsyncSession = Depends(get_db)) -> TaskService:
     """Dependency injection for task service."""
     repo = TaskRepository(db)
-    return TaskService(repo)
+    message_repo = TaskMessageRepository(db)
+    return TaskService(repo, message_repo)
 
 
 @router.post("", response_model=TaskRead, status_code=status.HTTP_202_ACCEPTED)
@@ -74,6 +78,50 @@ async def get_task_status(
     """Get the status of a specific task (lightweight endpoint)."""
     try:
         return await task_service.get_task_status(task_id, current_user.id)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+
+
+@router.post("/{task_id}/messages", response_model=TaskRead, status_code=status.HTTP_202_ACCEPTED)
+async def add_task_message(
+    task_id: uuid.UUID,
+    message_data: TaskMessageCreateRequest,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """
+    Send a follow-up message to a completed/failed task.
+
+    Records the message on the task's thread and re-queues the task so the
+    worker can pick it back up with full conversation context, instead of
+    the caller having to start a brand new task from scratch.
+    """
+    try:
+        task = await task_service.add_message(task_id, current_user.id, message_data.content)
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+    except TaskNotContinuableError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Same dispatch pattern as create_task — small countdown in dev mode so
+    # the DB transaction (message insert + status flip) is committed before
+    # the worker reads it.
+    from app.config import settings
+    countdown = 1 if settings.is_development else 0
+    process_task.apply_async(args=[str(task_id)], countdown=countdown)
+
+    return task
+
+
+@router.get("/{task_id}/messages", response_model=list[TaskMessageRead])
+async def list_task_messages(
+    task_id: uuid.UUID,
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service)
+):
+    """Get the full follow-up conversation thread for a task."""
+    try:
+        return await task_service.list_messages(task_id, current_user.id)
     except (TaskNotFoundError, TaskOwnershipError):
         raise HTTPException(status_code=404, detail="Task not found")
 
