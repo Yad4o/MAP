@@ -51,6 +51,11 @@ class StepStatus(str, Enum):
     SKIPPED   = "SKIPPED"
 
 
+class MessageRole(str, Enum):
+    USER      = "user"
+    ASSISTANT = "assistant"
+
+
 # ── Requests ──────────────────────────────────────────────────
 
 class TaskCreateRequest(BaseModel):
@@ -65,6 +70,11 @@ class TaskUpdateRequest(BaseModel):
     description: str | None = None
     priority: int | None = Field(None, ge=1, le=10)
     config: dict[str, Any] | None = None
+
+
+class TaskMessageCreateRequest(BaseModel):
+    """A follow-up message sent to a completed/failed task."""
+    content: str = Field(..., min_length=1, max_length=10000)
 
 
 class TaskListParams(BaseModel):
@@ -114,6 +124,16 @@ class TaskStepResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
 
+class TaskMessageRead(BaseModel):
+    id: UUID
+    task_id: UUID
+    role: MessageRole
+    content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskRead(BaseModel):
     """Task schema for service layer - includes user_id for ownership validation."""
     id: UUID
@@ -138,6 +158,7 @@ class TaskRead(BaseModel):
 class TaskDetailRead(TaskRead):
     """Task detail schema including execution steps."""
     steps: list[StepRead] = []
+    messages: list[TaskMessageRead] = []
 
 
 
@@ -164,6 +185,7 @@ class TaskDetailResponse(TaskResponse):
     result: dict[str, Any] | None
     error: dict[str, Any] | None
     steps: list[TaskStepResponse] = []
+    messages: list[TaskMessageRead] = []
 
 
 class TaskStatusResponse(BaseModel):
