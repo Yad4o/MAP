@@ -11,15 +11,22 @@ from typing import Any, List
 import uuid
 
 from app.db.repositories.protocols import TaskRepositoryProtocol
-from app.schemas.task import TaskRead, TaskDetailRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus, TaskStatusResponse
-from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError
+from app.schemas.task import (
+    TaskRead, TaskDetailRead, TaskCreateRequest, TaskUpdateRequest, TaskStatus,
+    TaskStatusResponse, TaskMessageRead, MessageRole,
+)
+from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError, TaskNotContinuableError
 
 
 class TaskService:
     """Service layer for task operations with repository injection."""
 
-    def __init__(self, repo: TaskRepositoryProtocol):
+    def __init__(self, repo: TaskRepositoryProtocol, message_repo: Any = None):
         self.repo = repo
+        # Optional: only required for the follow-up conversation endpoints
+        # (add_message / list_messages). Kept optional so existing callers
+        # that construct TaskService(repo) without a message repo don't break.
+        self.message_repo = message_repo
 
     async def create_task(self, user_id: uuid.UUID, data: TaskCreateRequest) -> TaskRead:
         """Create a new task for a user."""
@@ -138,6 +145,49 @@ class TaskService:
         # Must be terminal state
         current_status = TaskStatus(existing.status) if isinstance(existing.status, str) else existing.status
         raise TaskStateTransitionError(current_status, TaskStatus.CANCELLED)
+
+    async def add_message(self, task_id: uuid.UUID, user_id: uuid.UUID, content: str) -> TaskRead:
+        """
+        Append a follow-up user message to a task and re-queue it for continuation.
+
+        Only allowed once the task has finished a run (COMPLETED or FAILED) —
+        while it's still PENDING/PROCESSING/RETRYING there's nothing to
+        follow up on yet, and CANCELLED tasks should be retried, not messaged.
+        The worker picks the PENDING status back up and hydrates the agent's
+        state with the full message thread instead of starting cold.
+        """
+        if self.message_repo is None:
+            raise RuntimeError("TaskService.message_repo was not provided")
+
+        task = await self.repo.get(task_id)
+        if not task:
+            raise TaskNotFoundError(task_id)
+
+        self._verify_ownership(task, user_id)
+
+        current_status = TaskStatus(task.status) if isinstance(task.status, str) else task.status
+        if current_status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
+            raise TaskNotContinuableError(current_status)
+
+        await self.message_repo.create(task_id=task_id, role=MessageRole.USER.value, content=content)
+        await self.repo.update_status(task_id, TaskStatus.PENDING)
+
+        updated_task = await self.repo.get(task_id)
+        return TaskRead.model_validate(updated_task, from_attributes=True)
+
+    async def list_messages(self, task_id: uuid.UUID, user_id: uuid.UUID) -> List[TaskMessageRead]:
+        """List the full follow-up conversation thread for a task."""
+        if self.message_repo is None:
+            raise RuntimeError("TaskService.message_repo was not provided")
+
+        task = await self.repo.get(task_id)
+        if not task:
+            raise TaskNotFoundError(task_id)
+
+        self._verify_ownership(task, user_id)
+
+        messages = await self.message_repo.list_by_task(task_id)
+        return [TaskMessageRead.model_validate(m, from_attributes=True) for m in messages]
 
     def _verify_ownership(self, task: Any, user_id: uuid.UUID) -> None:
         """Helper to verify task ownership."""
