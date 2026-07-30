@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(default="")
     GEMINI_API_KEY: str = Field(default="")
     GROQ_API_KEY: str = Field(default="")
+    GROQ_API_KEY_SECONDARY: str = Field(default="")
     GROQ_BASE_URL: str = Field(default="https://api.groq.com/openai/v1")
     PRIMARY_AI_PROVIDER: str = Field(default="openai")
     DEFAULT_MODEL: str = Field(default="gpt-4o")

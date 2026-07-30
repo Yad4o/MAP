@@ -105,6 +105,46 @@ class TestResolveCredentials:
             llm_provider.resolve_credentials(provider="not-a-real-provider")
 
 
+class TestResolveCredentialsWithFallback:
+    def test_secondary_groq_key_is_first_fallback_candidate(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_primary")
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY_SECONDARY", "gsk_secondary")
+        monkeypatch.setattr(llm_provider.settings, "OPENAI_API_KEY", "sk-platform-openai")
+
+        candidates = llm_provider.resolve_credentials_with_fallback()
+
+        assert [c.provider for c in candidates] == ["groq", "groq", "openai"]
+        assert candidates[0].api_key == "gsk_primary"
+        assert candidates[1].api_key == "gsk_secondary"
+        assert candidates[1].is_byok is False
+
+    def test_no_secondary_groq_key_skips_straight_to_openai(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_primary")
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY_SECONDARY", "")
+        monkeypatch.setattr(llm_provider.settings, "OPENAI_API_KEY", "sk-platform-openai")
+
+        candidates = llm_provider.resolve_credentials_with_fallback()
+
+        assert [c.provider for c in candidates] == ["groq", "openai"]
+
+    def test_secondary_groq_key_not_used_when_primary_provider_isnt_groq(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY_SECONDARY", "gsk_secondary")
+        user = _user_with_key("anthropic", "sk-ant-users-own-key")
+
+        candidates = llm_provider.resolve_credentials_with_fallback(user=user, provider="anthropic")
+
+        assert all(c.api_key != "gsk_secondary" for c in candidates)
+
+    def test_primary_only_when_no_fallback_keys_configured(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_primary")
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY_SECONDARY", "")
+        monkeypatch.setattr(llm_provider.settings, "OPENAI_API_KEY", "")
+
+        candidates = llm_provider.resolve_credentials_with_fallback()
+
+        assert [c.provider for c in candidates] == ["groq"]
+
+
 class TestBuildChatModel:
     def test_openai_compatible_provider_builds_chat_openai(self, monkeypatch):
         monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_test")

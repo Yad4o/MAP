@@ -85,6 +85,12 @@ class AgentRunner:
 
             task.status = result.get("status", "COMPLETED").upper()
             task.result = result
+            if task.status == "FAILED":
+                err_msg = result.get("error") or result.get("summary") or "Task failed with no error detail."
+                task.error = {
+                    "type": "RateLimitError" if ("429" in err_msg or "rate limit" in err_msg.lower()) else "PipelineError",
+                    "message": err_msg,
+                }
             await session.commit()
 
             logger.info(f"AgentRunner: task {self.task_id} completed with status {result.get('status')}")
