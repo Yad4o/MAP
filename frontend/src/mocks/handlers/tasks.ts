@@ -5,6 +5,8 @@ import {
   TaskUpdate, 
   TaskStatus, 
   TaskDetailResponse,
+  TaskMessage,
+  MessageRole,
   StepType,
   StepStatus
 } from '../../types/task'
@@ -48,6 +50,10 @@ let mockTasks: Task[] = [
 ]
 
 let nextId = 1000
+
+// Follow-up conversation thread per task, keyed by task id (string)
+let mockMessages: Record<string, TaskMessage[]> = {}
+let nextMessageId = 1
 
 // Request counts for stateful status polling
 let statusRequestCounts: Record<string | number, number> = {}
@@ -139,7 +145,8 @@ export const taskHandlers = [
           input_payload: { plan: ['Research', 'Execute', 'Verify'], current_step: 'Execute' },
           output_payload: { code: 'console.log("hello world")' }
         }
-      ]
+      ],
+      messages: mockMessages[String(task.id)] || [],
     }
     return HttpResponse.json<TaskDetailResponse>(detail)
   }),
@@ -160,6 +167,58 @@ export const taskHandlers = [
     task.retry_count += 1
     delete statusRequestCounts[params.id as string]
     return HttpResponse.json(task)
+  }),
+
+  // POST /api/v1/tasks/:id/messages — send a follow-up, re-queue the task
+  http.post(`${API_BASE}/tasks/:id/messages`, async ({ params, request }) => {
+    const id = params.id as string
+    const task = mockTasks.find((t) => String(t.id) === id)
+    if (!task) return new HttpResponse(null, { status: 404 })
+
+    if (task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.FAILED) {
+      return HttpResponse.json(
+        { detail: `Cannot continue a task with status '${task.status}'.` },
+        { status: 400 },
+      )
+    }
+
+    const { content } = (await request.json()) as { content: string }
+    const thread = mockMessages[id] || (mockMessages[id] = [])
+    thread.push({
+      id: `msg-${nextMessageId++}`,
+      task_id: task.id,
+      role: MessageRole.USER,
+      content,
+      created_at: new Date().toISOString(),
+    })
+
+    task.status = TaskStatus.PENDING
+    delete statusRequestCounts[id]
+
+    // Simulate the worker replying once polling brings status back to
+    // COMPLETED — matches AgentRunner logging an assistant message after
+    // each continuation run.
+    setTimeout(() => {
+      if (mockMessages[id]) {
+        mockMessages[id].push({
+          id: `msg-${nextMessageId++}`,
+          task_id: task.id,
+          role: MessageRole.ASSISTANT,
+          content: `Done — I took your follow-up ("${content}") into account and updated the result.`,
+          created_at: new Date().toISOString(),
+        })
+      }
+    }, 3000)
+
+    return HttpResponse.json<Task>(task, { status: 202 })
+  }),
+
+  // GET /api/v1/tasks/:id/messages — full follow-up thread
+  http.get(`${API_BASE}/tasks/:id/messages`, ({ params }) => {
+    const id = params.id as string
+    const task = mockTasks.find((t) => String(t.id) === id)
+    if (!task) return new HttpResponse(null, { status: 404 })
+    return HttpResponse.json<TaskMessage[]>(mockMessages[id] || [])
   }),
 
   // PUT /api/v1/tasks/:id — update a task
