@@ -123,6 +123,9 @@ class AgentRunner:
             "task_id": str(task.id),
             "result": task.result,
             "note": "follow-up answered directly, prior result untouched",
+            # Tells the Celery wrapper (app/worker/tasks.py) not to persist
+            # this wrapper dict over task.result — see the note there.
+            "skip_result_persist": True,
         }
 
     @staticmethod
