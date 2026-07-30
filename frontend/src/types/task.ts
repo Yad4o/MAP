@@ -24,6 +24,19 @@ export enum StepStatus {
   SKIPPED = 'SKIPPED'
 }
 
+export enum MessageRole {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+}
+
+export interface TaskMessage {
+  id: string;
+  task_id: string | number;
+  role: MessageRole;
+  content: string;
+  created_at: string;
+}
+
 export interface TaskError {
   type: string;
   message: string;
@@ -67,6 +80,7 @@ export interface Task {
 
 export interface TaskDetailResponse extends Task {
   steps: TaskStepResponse[];
+  messages?: TaskMessage[];
 }
 
 export interface TaskStatusResponse {
