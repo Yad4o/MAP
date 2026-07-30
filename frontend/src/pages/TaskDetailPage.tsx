@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTaskDetail } from '../hooks/usePollTaskStatus';
-import { cancelTask, retryTask } from '../api/tasks';
+import { cancelTask, retryTask, sendTaskMessage } from '../api/tasks';
 import { TaskStatus, StepStatus, StepType } from '../types/task';
 import {
   CheckCircle2,
@@ -41,6 +41,7 @@ import {
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
 import TaskResultView from '../components/task/TaskResultView';
+import TaskConversation from '../components/task/TaskConversation';
 
 /* ── Status + priority helpers ─────────────────────────────────────────── */
 const getStatusStyle = (status: TaskStatus) => {
@@ -188,6 +189,17 @@ export default function TaskDetailPage() {
   const retryMutation = useMutation({
     mutationFn: () => retryTask(id!),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
+    },
+  });
+
+  const messageMutation = useMutation({
+    mutationFn: (content: string) => sendTaskMessage(id!, content),
+    onSuccess: () => {
+      // Status flips back to PENDING server-side — invalidating here makes
+      // useTaskDetail refetch, see the non-terminal status, and resume
+      // polling on its own (usePollTaskStatus.ts already handles that).
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
       queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
     },
@@ -974,6 +986,15 @@ export default function TaskDetailPage() {
         )}
 
       </div>
+
+      {/* ── Follow-up conversation — only shows once there's a thread or the
+           task has finished a run and can accept a follow-up ── */}
+      <TaskConversation
+        status={task.status}
+        messages={task.messages || []}
+        onSend={content => messageMutation.mutate(content)}
+        isSending={messageMutation.isPending}
+      />
 
       {/* ── Panels — opened only via the icon buttons above ── */}
       {activePanel === 'steps' && (
