@@ -289,7 +289,16 @@ export default function TaskDetailPage() {
   const getStepResult = (step: typeof task.steps[0]): StepResult | null => {
     const payload = step.output_payload as Record<string, unknown> | undefined;
     if (!payload) return null;
-    return (payload.step_result as StepResult) ?? (payload.plan as StepResult) ?? null;
+    if (payload.step_result) return payload.step_result as StepResult;
+    if (payload.plan) return payload.plan as StepResult;
+    // ExecutorAgent's payload isn't nested under a "step_result" key — the
+    // fields (status, step_id, summary, output, trace, tokens_used...) sit
+    // directly on the payload. Recognize that shape instead of falling
+    // through to null, which was silently forcing the raw-JSON view for
+    // every EXECUTE step.
+    const looksLikeStepResult =
+      'output' in payload || 'summary' in payload || 'trace' in payload || 'step_id' in payload;
+    return looksLikeStepResult ? (payload as StepResult) : null;
   };
 
   const getPromptText = (sr: StepResult): string => {
