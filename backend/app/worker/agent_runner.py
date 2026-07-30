@@ -78,15 +78,45 @@ class AgentRunner:
             
             # Return await controller.run_pipeline()
             result = await controller.run_pipeline()
-            
-            task.status = result.get("status", "COMPLETED").upper()
+            new_status = result.get("status", "COMPLETED").upper()
+
+            is_continuation = bool(messages)
+
+            # A follow-up that fails should never destroy a previously good
+            # result. Keep the last good result + COMPLETED status, and log
+            # the failure as an assistant message instead of clobbering
+            # task.result/task.status with the failed run's garbage.
+            if is_continuation and new_status == "FAILED" and task.result:
+                task.status = "COMPLETED"
+                await session.commit()
+
+                failure_note = (
+                    result.get("error")
+                    or "I couldn't complete that follow-up. The result above is still the last good one."
+                )
+                await message_repo.create(
+                    task_id=self.task_id,
+                    role="assistant",
+                    content=f"⚠️ Follow-up failed: {failure_note}",
+                )
+                logger.warning(
+                    f"AgentRunner: continuation for task {self.task_id} failed; preserving prior result"
+                )
+                return {
+                    "status": "COMPLETED",
+                    "task_id": str(self.task_id),
+                    "result": task.result,
+                    "note": "follow-up failed, prior result preserved",
+                }
+
+            task.status = new_status
             task.result = result
             await session.commit()
 
             # Log the agent's reply on the thread so the *next* follow-up
             # (if any) sees it as prior context. Only relevant once a
             # thread exists — the initial run has nothing to reply to yet.
-            if messages:
+            if is_continuation:
                 reply = result.get("summary") or result.get("error") or "(no summary produced)"
                 await message_repo.create(task_id=self.task_id, role="assistant", content=reply)
             
@@ -106,26 +136,38 @@ class AgentRunner:
 
         No-op (returns the plain description) when there's no thread yet,
         which is every task's first run.
+
+        IMPORTANT: this is framed as reference material, not as something
+        to fetch. An earlier version of this prompt caused the Planner to
+        generate bogus steps like "retrieve previous version details from
+        memory" — it read "previous outcome" as an instruction to go look
+        something up, instead of context already handed to it. The wording
+        below is deliberately explicit that the prior result is already
+        provided in full and the plan should only cover the new request.
         """
         if not messages:
             return original_description
 
-        parts = [f"Original task:\n{original_description}"]
+        parts = [
+            "This is a FOLLOW-UP on a task that already ran. Everything below "
+            "under 'Background' is reference material already available to "
+            "you — do NOT create a step to retrieve, look up, or fetch any "
+            "of it from memory or anywhere else. Only plan steps for the "
+            "NEW request at the bottom.",
+            f"Background — original task:\n{original_description}",
+        ]
 
         if prior_result:
             prior_summary = prior_result.get("summary") or prior_result.get("error")
             if prior_summary:
-                parts.append(f"Previous outcome:\n{prior_summary}")
+                parts.append(f"Background — result from the last run:\n{prior_summary}")
 
-        thread_lines = []
-        for m in messages:
-            speaker = "User" if m.role == "user" else "Assistant"
-            thread_lines.append(f"{speaker}: {m.content}")
-        parts.append("Follow-up conversation so far:\n" + "\n".join(thread_lines))
+        thread_lines = [f"{'User' if m.role == 'user' else 'Assistant'}: {m.content}" for m in messages]
+        parts.append("Background — conversation so far:\n" + "\n".join(thread_lines))
 
         parts.append(
-            "Treat the most recent User message above as the current request. "
-            "Stay consistent with what was already done rather than starting over."
+            "NEW REQUEST — plan only for this: "
+            + (messages[-1].content if messages else original_description)
         )
 
         return "\n\n".join(parts)
