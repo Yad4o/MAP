@@ -64,6 +64,14 @@ async def _run_agent_task(task_id: str):
             
             if final_status == "FAILED":
                 await repo.set_error(tid, result)
+            elif result.get("skip_result_persist"):
+                # Follow-up turns return a {status, task_id, result, note}
+                # wrapper around the *original* task.result rather than a
+                # new pipeline result — AgentRunner already left task.result
+                # untouched in the DB, so writing this wrapper back would
+                # bury the real plan/step_results/validation shape one level
+                # deeper and break the frontend's result rendering.
+                pass
             else:
                 await repo.set_result(tid, result)
                 

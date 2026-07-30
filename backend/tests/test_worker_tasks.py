@@ -51,6 +51,32 @@ def test_process_task_sets_processing_then_completed(mock_session, mock_repo, mo
     mock_repo.set_result.assert_called_once_with(tid, {"result": "ok"})
     mock_repo.update_status.assert_any_call(tid, TaskStatus.COMPLETED)
 
+def test_process_task_followup_does_not_overwrite_result(mock_session, mock_repo, mock_agent_runner):
+    """
+    Regression test: a follow-up turn's return value from AgentRunner.run()
+    is a {status, task_id, result, note, skip_result_persist} wrapper around
+    the *original* task.result, not a new pipeline result. The Celery
+    wrapper must not persist this wrapper dict via set_result — doing so
+    buries the real plan/step_results/validation shape one level deeper
+    (under "result") and breaks the frontend's recognized-shape check,
+    which is the "output disappears, only raw JSON shows" bug.
+    """
+    task_id = str(uuid.uuid4())
+    original_result = {"status": "COMPLETED", "plan": {}, "step_results": [], "validation": {}}
+    mock_agent_runner.run.return_value = {
+        "status": "COMPLETED",
+        "task_id": task_id,
+        "result": original_result,
+        "note": "follow-up answered directly, prior result untouched",
+        "skip_result_persist": True,
+    }
+
+    process_task.apply(args=[task_id])
+
+    tid = uuid.UUID(task_id)
+    mock_repo.set_result.assert_not_called()
+    mock_repo.update_status.assert_any_call(tid, TaskStatus.COMPLETED)
+
 def test_process_task_sets_failed_on_agent_error(mock_session, mock_repo, mock_agent_runner):
     """Verify status is set to FAILED if AgentRunner fails."""
     task_id = str(uuid.uuid4())
