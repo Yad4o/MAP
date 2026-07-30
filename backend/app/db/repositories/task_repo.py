@@ -43,12 +43,12 @@ class TaskRepository(TaskRepositoryProtocol):
         return task
 
     async def get_by_id(self, task_id: uuid.UUID) -> Task | None:
-        query = select(Task).options(selectinload(Task.steps)).where(Task.id == task_id)
+        query = select(Task).options(selectinload(Task.steps), selectinload(Task.messages)).where(Task.id == task_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def get_by_id_and_user(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
-        query = select(Task).options(selectinload(Task.steps)).where(Task.id == task_id, Task.user_id == user_id)
+        query = select(Task).options(selectinload(Task.steps), selectinload(Task.messages)).where(Task.id == task_id, Task.user_id == user_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
