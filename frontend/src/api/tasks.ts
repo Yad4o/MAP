@@ -4,7 +4,8 @@ import {
   TaskCreate, 
   TaskUpdate, 
   TaskStatusResponse, 
-  TaskDetailResponse 
+  TaskDetailResponse,
+  TaskMessage,
 } from '../types/task';
 
 export const getTasks = async (): Promise<Task[]> => {
@@ -42,5 +43,17 @@ export const cancelTask = async (id: string | number): Promise<void> => {
 
 export const retryTask = async (id: string | number): Promise<Task> => {
   const { data } = await apiClient.post<Task>(`/tasks/${id}/retry`, {}, { timeout: 60000 });
+  return data;
+};
+
+/** Send a follow-up message to a completed/failed task — re-queues it
+ *  for the agent to pick back up with the full conversation as context. */
+export const sendTaskMessage = async (id: string | number, content: string): Promise<Task> => {
+  const { data } = await apiClient.post<Task>(`/tasks/${id}/messages`, { content }, { timeout: 60000 });
+  return data;
+};
+
+export const getTaskMessages = async (id: string | number): Promise<TaskMessage[]> => {
+  const { data } = await apiClient.get<TaskMessage[]>(`/tasks/${id}/messages`);
   return data;
 };
