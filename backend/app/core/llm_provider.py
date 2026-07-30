@@ -184,6 +184,12 @@ def resolve_credentials_with_fallback(
     primary = resolve_credentials(user=user, provider=provider)
     candidates = [primary]
 
+    # Same-provider fallback: a second Groq key on a separate TPD quota.
+    # This has to come before the cross-provider fallback_order loop below —
+    # it's the cheapest/fastest recovery and doesn't change the model.
+    if primary.provider == "groq" and settings.GROQ_API_KEY_SECONDARY:
+        candidates.append(_credentials("groq", settings.GROQ_API_KEY_SECONDARY, is_byok=False))
+
     fallback_order = ["groq", "openai"]
     for fb_provider in fallback_order:
         if fb_provider == primary.provider:
