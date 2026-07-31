@@ -80,27 +80,29 @@ export default function TaskConversation({ status, messages, onSend, isSending }
       </div>
 
       {messages.length > 0 && (
-        <div className="space-y-3">
-          {messages.map(m => (
-            <div key={m.id} className={`flex ${m.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className="max-w-[85%] rounded-2xl px-4 py-3"
-                style={
-                  m.role === MessageRole.USER
-                    ? { background: '#123820', color: '#eaecef' }
-                    : { background: '#1e232a', color: '#eaecef', border: '1px solid rgba(255,255,255,0.06)' }
-                }
-              >
-                {m.role === MessageRole.ASSISTANT ? (
-                  <Markdown text={m.content} />
-                ) : (
+        <div className="space-y-5">
+          {messages.map(m =>
+            m.role === MessageRole.USER ? (
+              // The person's own follow-up — kept as a right-aligned pill so
+              // it's easy to tell your prompt apart from the reply.
+              <div key={m.id} className="flex justify-end">
+                <div
+                  className="max-w-[85%] rounded-2xl px-4 py-3"
+                  style={{ background: '#123820', color: '#eaecef' }}
+                >
                   <p className="text-[15px] whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>
                     {m.content}
                   </p>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            ) : (
+              // The reply — blended directly on the page, same as the main
+              // task result. No box/border, real markdown headers/bold/lists.
+              <div key={m.id} className="pt-1 border-t border-white/[0.06] first:border-t-0 first:pt-0">
+                <Markdown text={m.content} />
+              </div>
+            ),
+          )}
           <div ref={bottomRef} />
         </div>
       )}
@@ -144,3 +146,4 @@ export default function TaskConversation({ status, messages, onSend, isSending }
     </section>
   );
 }
+
