@@ -172,6 +172,16 @@ export default function TaskDetailPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
 
+  // Keeps the last completed result on screen while a follow-up re-runs the
+  // task. task.result gets cleared server-side as soon as status flips to
+  // PENDING/PROCESSING, which was making the whole output disappear and then
+  // pop back in once the re-run finished — this keeps it visible (dimmed)
+  // the whole time instead.
+  const [lastResult, setLastResult] = useState<NonNullable<typeof task>['result'] | null>(null);
+  useEffect(() => {
+    if (task?.result) setLastResult(task.result);
+  }, [task?.result]);
+
   const copyToClipboard = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
@@ -390,7 +400,9 @@ export default function TaskDetailPage() {
   };
 
   const isRunning =
-    task.status === TaskStatus.PROCESSING || task.status === TaskStatus.RETRYING;
+    task.status === TaskStatus.PENDING ||
+    task.status === TaskStatus.PROCESSING ||
+    task.status === TaskStatus.RETRYING;
 
   // Compact live-progress strip — small status icon per real step (planner →
   // executor → analyzer → …), in order, instead of the previous fake 65%
@@ -933,10 +945,15 @@ export default function TaskDetailPage() {
         {/* Live step strip (running) — small icons only, grows as real steps land */}
         {isRunning && stepProgressStrip}
 
-        {/* Result (completed) — blended directly on the page, no card/header chrome */}
-        {task.status === TaskStatus.COMPLETED && (
-          <section className="pt-2">
-            <TaskResultView result={task.result} />
+        {/* Result — blended directly on the page, no card/header chrome.
+             Stays visible (dimmed) while a follow-up re-runs the task instead
+             of unmounting and popping back in once it re-completes. */}
+        {(task.status === TaskStatus.COMPLETED || (isRunning && lastResult)) && (
+          <section
+            className="pt-2 transition-opacity duration-300"
+            style={isRunning ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+          >
+            <TaskResultView result={task.status === TaskStatus.COMPLETED ? task.result : lastResult} />
           </section>
         )}
 
@@ -1034,3 +1051,4 @@ export default function TaskDetailPage() {
     </div>
   );
 }
+
