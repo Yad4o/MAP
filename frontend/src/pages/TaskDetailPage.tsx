@@ -35,7 +35,6 @@ import {
   BrainCircuit,
   Wrench,
   X,
-  Flag,
   Tag,
 } from 'lucide-react';
 import AgentFlowChart from '../components/task/AgentFlowChart';
@@ -67,13 +66,6 @@ const getStepStyle = (status: StepStatus) => {
     default:                   return { bg: '#123820', color: '#7ee787', icon: Cpu,          spinning: true  };
   }
 };
-
-const getPriorityStyle = (p: number) =>
-  p >= 7
-    ? { label: `P${p} · High`, color: '#f85149', bg: '#3e1414' }
-    : p >= 4
-    ? { label: `P${p} · Med`, color: '#ffd11a', bg: '#362a08' }
-    : { label: `P${p} · Low`, color: '#8b949e', bg: '#1e232a' };
 
 /* Two strings are "the same" for our purposes if they match once whitespace
    and case differences are ignored — that's what shows up as duplicated text. */
@@ -272,7 +264,6 @@ export default function TaskDetailPage() {
 
   const sStyle = getStatusStyle(task.status);
   const StatusIcon = sStyle.icon;
-  const pStyle = getPriorityStyle(task.priority);
   const showDescription = !!task.description && normalize(task.description) !== normalize(task.title);
 
   const toggleStep = (stepId: string) =>
@@ -852,13 +843,6 @@ export default function TaskDetailPage() {
                 />
                 {task.status}
               </span>
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
-                style={{ background: pStyle.bg, color: pStyle.color }}
-              >
-                <Flag className="w-3 h-3" />
-                {pStyle.label}
-              </span>
               {task.task_type && (
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold capitalize"
@@ -873,12 +857,6 @@ export default function TaskDetailPage() {
                 {new Date(task.created_at).toLocaleDateString()}
                 {task.completed_at && ` · ${formatTime(Math.floor((new Date(task.completed_at).getTime() - new Date(task.created_at).getTime()) / 1000))} total`}
               </span>
-              <code
-                className="text-[11px] font-mono px-2 py-0.5 rounded-md"
-                style={{ background: '#1e232a', color: '#eaecef' }}
-              >
-                #{task.id}
-              </code>
             </div>
 
             {/* Title */}
@@ -891,13 +869,6 @@ export default function TaskDetailPage() {
             >
               {task.title}
             </h1>
-
-            {/* Description — only shown when it actually adds information beyond the title */}
-            {showDescription && (
-              <p className="text-sm max-w-2xl" style={{ color: '#848e9c', lineHeight: '1.6' }}>
-                {task.description}
-              </p>
-            )}
           </div>
 
           {/* Action buttons */}
@@ -1051,4 +1022,5 @@ export default function TaskDetailPage() {
     </div>
   );
 }
+
 
