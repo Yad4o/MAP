@@ -116,9 +116,10 @@ test.describe('Tasks', () => {
       viewButton.click()
     ]);
 
-    // Check for unique content on the detail page
+    // Check for unique content on the detail page. The description is no
+    // longer rendered in the header (it always duplicated the title), so
+    // the title itself is the signal we landed on the right task.
     await expect(page.locator('h1')).toHaveText('Task to View', { timeout: 15000 });
-    await expect(page.getByText('View this task')).toBeVisible();
   });
 
   test('task status badge shows correct color', async ({ page }) => {
@@ -149,3 +150,4 @@ test.describe('Tasks', () => {
     await expect(completedBadge).toHaveCSS('background-color', 'rgb(18, 56, 32)'); // #123820
   });
 });
+
