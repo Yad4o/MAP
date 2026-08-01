@@ -99,20 +99,18 @@ export default function Features() {
     <section
       id="features"
       ref={sectionRef}
+      className="landing-section"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
       }}
     >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         <div
+          className="split-grid"
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 60,
             alignItems: 'center',
           }}
         >
@@ -199,11 +197,8 @@ export default function Features() {
             >
               <div
                 ref={gridRef}
+                className="feature-cards-grid"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gridAutoRows: '110px',
-                  gap: 14,
                   transformStyle: 'preserve-3d',
                 }}
               >

@@ -10,13 +10,7 @@ export default function Footer() {
       }}
     >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: 40,
-          }}
-        >
+        <div className="footer-grid">
           {/* Left: brand */}
           <div>
             <div
@@ -99,13 +93,11 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div
+          className="footer-bottom"
           style={{
             marginTop: 60,
             paddingTop: 24,
             borderTop: '1px solid rgba(245, 243, 238, 0.06)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
           }}
         >
           <span style={{ fontSize: 12, color: 'rgba(245, 243, 238, 0.25)' }}>
