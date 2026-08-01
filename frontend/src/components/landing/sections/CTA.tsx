@@ -7,10 +7,10 @@ export default function CTA({ onGetStarted, onLogin }: CTAProps) {
   return (
     <section
       id="cta"
+      className="landing-section--cta"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '160px 40px',
         textAlign: 'center',
         position: 'relative',
         zIndex: 2,
