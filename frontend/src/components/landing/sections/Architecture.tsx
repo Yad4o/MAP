@@ -11,10 +11,10 @@ export default function Architecture() {
   return (
     <section
       id="architecture"
+      className="landing-section"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
       }}
@@ -22,10 +22,8 @@ export default function Architecture() {
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         <div
           data-animate
+          className="split-grid"
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 60,
             alignItems: 'center',
           }}
         >
@@ -80,10 +78,8 @@ export default function Architecture() {
             {/* Tech stack grid */}
             <div
               data-animate-child
+              className="tech-stack-grid"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 24,
                 marginTop: 48,
               }}
             >
@@ -117,12 +113,12 @@ export default function Architecture() {
           {/* Right: diagram — blended straight into the section bg, no framed image */}
           <div
             data-animate-child
+            className="diagram-wrap"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
-              minHeight: 560,
             }}
           >
             {/* Ambient wash — same gold as the diagram traces, spread wide so it reads as part of the page, not a halo behind a card */}
