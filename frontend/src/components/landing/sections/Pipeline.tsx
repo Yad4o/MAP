@@ -153,10 +153,10 @@ export default function Pipeline() {
   return (
     <section
       id="pipeline"
+      className="landing-section"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
       }}
@@ -165,10 +165,8 @@ export default function Pipeline() {
         {/* Two-column layout */}
         <div
           data-animate
+          className="split-grid split-grid--pipeline"
           style={{
-            display: 'grid',
-            gridTemplateColumns: '55% 45%',
-            gap: 60,
             alignItems: 'center',
           }}
         >
@@ -265,12 +263,12 @@ export default function Pipeline() {
           {/* Right: agent pipeline artwork — blended into the section bg, no framed image */}
           <div
             data-animate-child
+            className="diagram-wrap diagram-wrap--pipeline"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
-              minHeight: 500,
             }}
           >
             <div
@@ -398,10 +396,8 @@ export default function Pipeline() {
         {/* Stats */}
         <div
           data-stats
+          className="pipeline-stats-grid"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(6, 1fr)',
-            gap: 24,
             marginTop: 80,
           }}
         >
