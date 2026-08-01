@@ -60,10 +60,10 @@ export default function Fallback() {
     <section
       id="fallback"
       ref={sectionRef}
+      className="landing-section"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
         overflow: 'hidden',
@@ -186,19 +186,15 @@ export default function Fallback() {
           </button>
         </div>
 
-        {/* Distorted image */}
+        {/* Distorted image — flows below the text on mobile/tablet
+             (see .fallback-image), only becomes an absolute side overlay
+             once the viewport is wide enough for both to fit side by side. */}
         <img
           src="/images/img-fallback.jpg"
           alt="Fallback system visualization"
-          className="distort-image"
+          className="distort-image fallback-image"
           data-animate-child
           style={{
-            position: 'absolute',
-            right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 500,
-            height: 500,
             objectFit: 'cover',
             borderRadius: '50%',
             filter: 'url(#liquid-distort)',
