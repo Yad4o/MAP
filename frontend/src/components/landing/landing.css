@@ -1034,3 +1034,164 @@
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* =====================================================
+   Responsive section layout — Architecture/Pipeline/
+   Features/UseCases/Footer previously used fixed multi-
+   column CSS grids as inline styles with NO mobile
+   breakpoint at all, which squeezed 2-6 columns into
+   phone-width screens and made everything overlap/clip.
+   These classes replace those inline grid props and stack
+   to a single column on mobile, widening progressively.
+   ===================================================== */
+
+.landing-section {
+  padding: 72px 20px;
+}
+@media (min-width: 640px) {
+  .landing-section { padding: 100px 32px; }
+}
+@media (min-width: 1024px) {
+  .landing-section { padding: 140px 40px; }
+}
+
+.landing-section--cta {
+  padding: 88px 20px;
+}
+@media (min-width: 640px) {
+  .landing-section--cta { padding: 120px 32px; }
+}
+@media (min-width: 1024px) {
+  .landing-section--cta { padding: 160px 40px; }
+}
+
+/* Text + diagram split (Architecture / Features): stacked on mobile */
+.split-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 48px;
+}
+@media (min-width: 900px) {
+  .split-grid { grid-template-columns: 1fr 1fr; gap: 60px; }
+}
+
+/* Pipeline's split is 55/45 instead of 50/50 at desktop width */
+.split-grid--pipeline {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .split-grid--pipeline { grid-template-columns: 55% 45%; }
+}
+
+/* SVG diagram wrappers had a fixed minHeight (560/500px) that left a big
+   blank gap once the SVG itself scaled down on narrow screens. */
+.diagram-wrap {
+  min-height: 300px;
+}
+@media (min-width: 640px) {
+  .diagram-wrap { min-height: 420px; }
+}
+@media (min-width: 900px) {
+  .diagram-wrap { min-height: 560px; }
+}
+
+.diagram-wrap--pipeline {
+  min-height: 260px;
+}
+@media (min-width: 640px) {
+  .diagram-wrap--pipeline { min-height: 380px; }
+}
+@media (min-width: 900px) {
+  .diagram-wrap--pipeline { min-height: 500px; }
+}
+
+.tech-stack-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+@media (min-width: 420px) {
+  .tech-stack-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+}
+
+/* Features "card wall" — 4 columns at desktop was forcing sub-90px-wide
+   cards on phones, so title/subtitle text overlapped the card edges. */
+.feature-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 96px;
+  gap: 10px;
+}
+@media (min-width: 420px) {
+  .feature-cards-grid { grid-auto-rows: 110px; gap: 14px; }
+}
+@media (min-width: 640px) {
+  .feature-cards-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.pipeline-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+@media (min-width: 480px) {
+  .pipeline-stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+  .pipeline-stats-grid { grid-template-columns: repeat(6, 1fr); gap: 24px; }
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+@media (min-width: 640px) {
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
+}
+
+.footer-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .footer-bottom { flex-direction: row; justify-content: space-between; align-items: center; }
+}
+
+.usecases-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+@media (min-width: 640px) {
+  .usecases-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+}
+@media (min-width: 1024px) {
+  .usecases-grid { grid-template-columns: repeat(3, 1fr); gap: 32px; }
+}
+
+/* Fallback section's circular image was `position: absolute` directly on
+   top of the paragraph text on every screen below ~1100px wide — the main
+   overlap bug on mobile. It now flows in normal document order below the
+   text (small, centered) and only becomes an absolute side-by-side overlay
+   once the viewport is wide enough for both to fit without touching. */
+.fallback-image {
+  position: relative;
+  display: block;
+  margin: 40px auto 0;
+  width: min(320px, 78vw);
+  height: min(320px, 78vw);
+}
+@media (min-width: 1100px) {
+  .fallback-image {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    margin: 0;
+    width: 500px;
+    height: 500px;
+    transform: translateY(-50%);
+  }
+}
