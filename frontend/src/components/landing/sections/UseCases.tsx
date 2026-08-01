@@ -59,10 +59,10 @@ export default function UseCases() {
   return (
     <section
       id="usecases"
+      className="landing-section"
       style={{
         width: '100%',
         background: '#131417',
-        padding: '140px 40px',
         position: 'relative',
         zIndex: 2,
       }}
@@ -84,11 +84,7 @@ export default function UseCases() {
 
         <div
           data-usecases
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 32,
-          }}
+          className="usecases-grid"
         >
           {USE_CASES.map((uc, i) => (
             <div
