@@ -28,18 +28,18 @@ export default function Intro() {
       </div>
 
       <div className="intro-v2__content">
-        <span className="intro-v2__eyebrow">MULTI-AGENT AI AUTOMATION</span>
+        <span className="intro-v2__eyebrow">AI TASK AUTOMATION</span>
 
         <h1 className="intro-v2__headline">
-          One request in.
+          Tell it what you need done.
           <br />
-          A fleet of <span className="intro-v2__headline-accent">specialized AI agents</span> out —
-          not one overloaded prompt.
+          <span className="intro-v2__headline-accent">AI agents</span> plan it, do it,
+          and check it — automatically.
         </h1>
 
         <p className="intro-v2__subtext">
-          Every task gets its own role, tools, and fallback path — orchestrated,
-          observable, and built to survive production.
+          Type a task in plain English. MAP breaks it into steps, completes each one,
+          double-checks the result, and remembers it for next time.
         </p>
 
         <div className="intro-v2__pipeline" aria-hidden="true">
