@@ -12,10 +12,51 @@
 
 > A production-grade distributed system that automates complex, multi-step intelligent workflows by decomposing them into discrete subtasks executed by specialized AI agents.
 
----
+## Quick Start
+
+### Prerequisites
+
+- Docker Engine with Docker Compose
+- Git
+- API credentials for the AI provider(s) you plan to use
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/Yad4o/MAP.git
+cd MAP
+cp .env.example .env
+```
+
+Review `.env.example` before starting the stack. Keep `.env` local and never commit secrets.
+
+### 2. Start the application
+
+```bash
+docker compose up --build
+```
+
+The default local services are exposed through the ports defined in `docker-compose.yml`. Check that file for the current port mappings rather than relying on hard-coded defaults.
+
+### 3. Verify the backend
+
+```bash
+curl http://localhost:8000/health
+```
+
+A healthy instance returns JSON containing `"status": "ok"`. In development, the FastAPI docs are available at `/docs`.
+
+### 4. Run backend tests
+
+```bash
+pytest backend/tests
+```
+
+For code-quality checks, use the repository's configured tooling from the backend environment (for example, Ruff and pytest as specified in `backend/requirements.txt`).
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -64,7 +105,6 @@ MAP accepts high-level task requests — natural language descriptions of comple
 - **Multi-Modal Content Generation** — research audiences, generate copy variants, analyze compliance
 
 ---
-
 
 ## Architecture
 <img width="2257" height="1670" alt="image" src="https://github.com/user-attachments/assets/fc58a0be-18b4-4027-a799-8232d8020f42" />
@@ -321,383 +361,120 @@ CREATE INDEX idx_logs_task_id             ON logs(task_id) WHERE task_id IS NOT 
 | `POST` | `/api/v1/auth/register` | Create new user account |
 | `POST` | `/api/v1/auth/login` | Authenticate, receive JWT pair |
 | `POST` | `/api/v1/auth/refresh` | Rotate refresh token |
-| `POST` | `/api/v1/auth/logout` | Revoke session |
-| `GET` | `/api/v1/auth/me` | Current user profile |
+| `POST` | `/api/v1/auth/logout` | Revoke current refresh token |
 
 ### Tasks
+
 | Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/tasks` | Submit task → `202 Accepted` + `task_id` |
-| `GET` | `/api/v1/tasks` | Paginated task list with filters |
-| `GET` | `/api/v1/tasks/{id}` | Full task detail and result |
-| `GET` | `/api/v1/tasks/{id}/status` | Lightweight status poll |
-| `GET` | `/api/v1/tasks/{id}/steps` | All agent steps for a task |
-| `DELETE` | `/api/v1/tasks/{id}` | Cancel a pending task |
-| `POST` | `/api/v1/tasks/{id}/retry` | Manually retry a failed task |
-| `WS` | `/api/v1/tasks/{id}/ws` | WebSocket real-time stream |
+| `POST` | `/api/v1/tasks` | Create a task |
+| `GET` | `/api/v1/tasks/{task_id}` | Retrieve task state/results |
+| `POST` | `/api/v1/tasks/{task_id}/cancel` | Cancel a queued/running task |
+| `POST` | `/api/v1/tasks/{task_id}/retry` | Retry a failed task |
 
-### Agents
+### System
+
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/api/v1/agents` | List available agents |
-| `POST` | `/api/v1/agents/run` | Direct single-agent invocation (admin) |
-| `GET` | `/api/v1/agents/memory/search` | Semantic search user memory |
-| `DELETE` | `/api/v1/agents/memory` | Clear user's long-term memory |
+| `GET` | `/health` | Basic application health check |
 
-### Admin
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/v1/admin/users` | All users with filters |
-| `GET` | `/api/v1/admin/metrics` | System-wide performance metrics |
-| `GET` | `/api/v1/admin/workers` | Celery worker pool status |
-| `GET` | `/api/v1/admin/circuit-breakers` | AI provider circuit breaker state |
-| `POST` | `/api/v1/admin/circuit-breakers/reset` | Force-reset a circuit breaker |
-
-### Standard Error Response
-
-```json
-{
-  "error_code": "TASK_NOT_FOUND",
-  "message": "Task with id {task_id} not found for the current user.",
-  "request_id": "req_01HX9KBZYX3TNKP7Q2V4MWRCE",
-  "timestamp": "2025-01-15T14:30:22Z",
-  "details": {}
-}
-```
+For the complete generated API surface, run the backend in development mode and open `/docs`.
 
 ---
 
 ## Docker Setup
 
-### Containers
-
-| Container | Image | Port | Role |
-|---|---|---|---|
-| `map-backend` | python:3.12-slim | 8000 | FastAPI + uvicorn |
-| `map-worker` | python:3.12-slim | — | Celery worker pool (3 replicas) |
-| `map-frontend` | node:20-alpine | 3000 | React / Vite dev server |
-| `map-postgres` | postgres:16-alpine | 5432 | PostgreSQL database |
-| `map-redis` | redis:7.2-alpine | 6379 | Redis broker/cache |
-| `map-bentoml` | python:3.12-slim | 3001 | BentoML local LLM service |
-| `map-nginx` | nginx:1.26-alpine | 80/443 | Reverse proxy + TLS |
-| `map-flower` | python:3.12-slim | 5555 | Celery monitoring UI |
-
-### Quick Start
+The repository's Docker Compose file defines the local service topology. Use:
 
 ```bash
-# Copy and fill environment variables
-cp .env.example .env
-
-# Start all services
-docker compose up -d
-
-# Run database migrations
-docker compose exec backend alembic upgrade head
-
-# Seed development data (optional)
-docker compose exec backend python scripts/seed_data.py
-
-# View logs
-docker compose logs -f backend worker
+docker compose up --build
 ```
 
-### Service Communication
+To stop the stack:
 
-All services communicate over an internal `map-network` Docker bridge network. PostgreSQL, Redis, BentoML, and Flower are **not** exposed to the public internet — only Nginx (80/443) accepts external traffic.
+```bash
+docker compose down
+```
+
+When debugging a service, prefer its Compose logs:
+
+```bash
+docker compose logs -f <service>
+```
 
 ---
 
 ## BentoML Fallback
 
-The fallback service runs **Mistral-7B-Instruct-v0.3** (GGUF Q4_K_M, ~4.4 GB) and exposes an OpenAI-compatible API at `http://map-bentoml:3001/v1`. The Fallback Engine switches to it transparently — agent code uses the same client library in both paths.
-
-### Circuit Breaker States
-
-```
-  CLOSED ──(3 failures in 60s)──► OPEN ──(120s timeout)──► HALF_OPEN
-    ▲                                                           │
-    └──────────────(first success)──────────────────────────────┘
-```
-
-**Failure triggers:** HTTP 429, HTTP 503, connection timeout (>30s), malformed JSON response.
-
-**Fallback model options** (configurable via `FALLBACK_MODEL` env var):
-- `mistral-7b-instruct` (default)
-- `llama-3-8b-instruct`
-- `phi-3-mini-4k-instruct`
-- `qwen2-7b-instruct`
+MAP can route inference to a local BentoML service when the primary AI provider is unavailable. The fallback engine uses a circuit-breaker model with `CLOSED`, `OPEN`, and `HALF_OPEN` states.
 
 ---
 
 ## Frontend
 
-Built with **React 18 + TypeScript + Vite**. Key libraries: TanStack Query, Zustand, Tailwind CSS, Shadcn/ui, Recharts, React Flow, React Hook Form + Zod.
-
-### Pages
-
-| Route | Page | Description |
-|---|---|---|
-| `/login` | LoginPage | JWT auth, redirect on success |
-| `/tasks` | TaskListPage | Paginated list with status filters |
-| `/tasks/new` | TaskCreatePage | Multi-step submission wizard |
-| `/tasks/:id` | TaskDetailPage | Live status, step timeline, agent graph |
-| `/history` | HistoryPage | Archived tasks with export |
-| `/logs` | LogsPage | Real-time log stream viewer |
-| `/admin` | AdminPage | User management, metrics, workers |
-| `/settings` | SettingsPage | Profile, API keys, memory management |
-
-### Real-Time Updates
-
-- **React Query polling** — every 3 seconds on the task detail view
-- **WebSocket** — `useTaskStream` hook with automatic reconnection and exponential backoff; updates are merged directly into the React Query cache
-
-### Agent Trace Visualization
-
-React Flow graph rendered from `task_steps` data. Nodes are color-coded by agent (blue=planner, green=executor, orange=analyzer, purple=memory), animated as steps complete, and clickable for full input/output inspection.
+The frontend lives under `frontend/` and is a React + TypeScript application. Use the frontend package scripts for local development, unit tests, and production builds.
 
 ---
 
 ## Security
 
-| Layer | Implementation |
-|---|---|
-| **Passwords** | bcrypt, cost factor 12 |
-| **Access tokens** | RS256 JWT, 15-minute expiry |
-| **Refresh tokens** | 30-day opaque tokens, bcrypt-hashed in DB |
-| **Token revocation** | JTIs stored in Redis SET with matching TTL |
-| **Rate limiting** | Redis sliding window per user and per IP |
-| **CORS** | Strict origin whitelist, no wildcards in production |
-| **Input validation** | Pydantic v2 on all request bodies and query params |
-| **API key scoping** | Explicit scope lists enforced at middleware level |
-| **Secrets** | Environment variables only — never committed to VCS |
-| **Container security** | All containers run as non-root (UID 1000) |
-| **Network isolation** | Internal services unexposed via Docker network policy |
-| **User-provided AI keys (BYOK)** | Encrypted at rest (Fernet, keyed by `ENCRYPTION_KEY`), never logged or returned after creation — only a masked preview |
-
-### Bring Your Own Key (BYOK)
-
-By default, every AI call uses the platform's own key (Groq). A user can
-instead add their own key for Claude, OpenAI, or Gemini via
-`PUT /api/v1/provider-keys`, and it's used for their calls from then on —
-falling back to the platform default if they remove it. See
-`app/core/llm_provider.py` for the resolution logic and
-`app/api/v1/provider_keys.py` for the endpoints.
-
-```
-PUT    /api/v1/provider-keys           { "provider": "anthropic", "api_key": "sk-ant-..." }
-GET    /api/v1/provider-keys           -> [{ "provider": "anthropic", "masked_key": "******ab12", ... }]
-DELETE /api/v1/provider-keys/{provider}
-```
+- Never commit `.env`, provider credentials, private keys, or other secrets.
+- JWT access tokens are short-lived; refresh tokens are separately managed and revocable.
+- Production CORS is driven by `CORS_ALLOWED_ORIGINS`.
+- See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ---
 
 ## Logging & Monitoring
 
-### Log Schema
-
-Every log line is a JSON object:
-
-```json
-{
-  "timestamp": "2025-01-15T14:30:22.456789Z",
-  "level": "INFO",
-  "event": "agent_step_completed",
-  "logger": "map.agents.executor",
-  "task_id": "...",
-  "agent": "executor",
-  "model_used": "gemini-1.5-flash",
-  "tokens_in": 1847,
-  "tokens_out": 312,
-  "latency_ms": 2341,
-  "confidence": 0.92
-}
-```
-
-### Metrics (Prometheus + Grafana)
-
-- Task throughput — tasks/minute by status
-- Agent latency — P50/P95/P99 per agent type
-- LLM token usage and estimated cost
-- Queue depth per queue
-- Worker utilization
-- Error rates by type
-- Circuit breaker state history
-
-### Retry Strategy
-
-| Attempt | Delay |
-|---|---|
-| 1st retry | 30 seconds |
-| 2nd retry | 90 seconds |
-| 3rd retry | 270 seconds |
-| Max exceeded | Status → `FAILED`, user notified |
+The backend uses Python logging plus structured application logging. Celery/worker monitoring is supported through Flower when enabled in the deployment configuration.
 
 ---
 
 ## Folder Structure
 
-```
-map/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                 # FastAPI app factory
-│   │   ├── config.py               # Pydantic Settings
-│   │   ├── api/v1/                 # Route handlers (auth, tasks, agents, admin)
-│   │   ├── core/                   # security, rate_limiter, fallback_engine
-│   │   ├── db/
-│   │   │   ├── models/             # SQLAlchemy ORM models
-│   │   │   ├── repositories/       # CRUD repository pattern
-│   │   │   └── migrations/         # Alembic versions
-│   │   ├── schemas/                # Pydantic request/response schemas
-│   │   ├── services/               # Business logic layer
-│   │   └── worker/                 # Celery app and task definitions
-│   ├── tests/
-│   │   ├── conftest.py             # Shared test setup and fixtures
-│   │   ├── unit/                   # Unit tests for individual functions
-│   │   └── integration/            # Integration tests for full API endpoints
-│   ├── Dockerfile
-│   └── requirements.txt
-│
-├── agents/
-│   ├── controller/                 # Agent Controller (pipeline orchestrator)
-│   ├── planner/                    # PlanDocument generation
-│   ├── executor/
-│   │   └── tools/                  # web_search, code_interpreter, file_reader, api_call
-│   ├── analyzer/                   # Validation and confidence scoring
-│   ├── memory/                     # Vector store and embedding logic
-│   └── shared/                     # AgentMessage schema, base agent class
-│
-├── frontend/
-│   └── src/
-│       ├── api/                    # Axios client + typed API calls
-│       ├── components/             # UI, layout, task, agent components
-│       ├── hooks/                  # useTaskStream, useAuth, useAdmin
-│       ├── pages/                  # All route page components
-│       ├── store/                  # Zustand state slices
-│       └── types/                  # TypeScript definitions
-│
-├── bentoml/
-│   ├── service.py                  # BentoML service (OpenAI-compatible)
-│   ├── model_loader.py             # GGUF quantized model init
-│   └── bentofile.yaml
-│
-├── nginx/
-│   └── nginx.conf
-│
-├── .env.example
-├── docker-compose.yml
-├── docker-compose.dev.yml
-└── Makefile
+```text
+MAP/
+├── backend/          # FastAPI backend, agents, services, DB, tests
+├── frontend/         # React + TypeScript dashboard
+├── data/             # Local/application data assets
+├── docs/              # Project documentation
+├── docker-compose.yml # Local service orchestration
+├── render.yaml        # Render deployment configuration
+├── Makefile           # Common project commands
+└── .env.example       # Environment variable reference
 ```
 
 ---
 
 ## Development Plan
 
-| Phase | Focus | Milestones |
-|---|---|---|
-| **0** | Setup & Foundations | Repo, cloud services, DB schema, Alembic migrations, React scaffold, API keys |
-| **1** | Authentication System | JWT auth, user registration/login, sessions, protected routes, auth frontend |
-| **2** | Task System | Task CRUD, async processing, Redis queue integration, task list and detail pages |
-| **3** | Queue & Workers | Celery workers, Redis helpers, rate limiting, task status polling |
-| **4** | Agent Pipeline | Planner, Executor, Analyzer, Memory agents with LangGraph |
-| **5** | Fallback System | Circuit breaker, Fallback Engine, full Agent Controller pipeline |
-| **6** | Frontend Completion | Task detail with agent trace, admin page, logs page, settings page |
-| **7** | Docker & Testing | Multi-stage builds, Nginx, integration tests, Playwright E2E tests |
-| **8** | Final Polish | README, docstrings, seed data, error boundaries, UAT |
+See the repository issues and pull requests for the current implementation roadmap and work in progress.
 
 ---
 
 ## Team
 
-> All 5 members work as Full Stack AI Engineers — everyone contributes across backend, frontend, agents, and infrastructure equally. Responsibilities are divided by task and phase, not by specialization.
-
-| Member | Role |
-|---|---|
-| **Om** | Full Stack AI Engineer |
-| **Prajwal** | Full Stack AI Engineer |
-| **Neha** | Full Stack AI Engineer |
-| **Sanskruti** | Full Stack AI Engineer |
-| **Shravni** | Full Stack AI Engineer |
+See the repository's GitHub contributors and project history for current ownership and contribution activity.
 
 ---
 
 ## Environment Variables
 
-```env
-# Database (Neon PostgreSQL)
-DATABASE_URL=postgresql+asyncpg://user:password@host/map_db?ssl=require
-
-# Redis (Upstash)
-REDIS_URL=rediss://default:password@host:6379
-CELERY_BROKER_URL=rediss://default:password@host:6379
-CELERY_RESULT_BACKEND=rediss://default:password@host:6379
-
-# Auth (generate with scripts — see Phase 0 setup)
-JWT_PRIVATE_KEY=<RSA PEM>
-JWT_PUBLIC_KEY=<RSA PEM>
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
-JWT_REFRESH_TOKEN_EXPIRE_DAYS=30
-ENCRYPTION_KEY=<32-byte hex string>
-
-# AI Providers (free options — see Phase 0 setup)
-GEMINI_API_KEY=AIza...
-OPENAI_API_KEY=gsk_...         # put your Groq key here
-PRIMARY_AI_PROVIDER=gemini
-DEFAULT_MODEL=gemini-1.5-flash
-FALLBACK_MODEL=gemini-1.5-flash
-BENTOML_BASE_URL=https://api.groq.com/openai/v1
-
-# Agent Config
-PLANNER_TEMPERATURE=0.7
-EXECUTOR_TEMPERATURE=0.2
-ANALYZER_TEMPERATURE=0.1
-ANALYZER_CONFIDENCE_THRESHOLD=0.70
-EXECUTOR_MAX_ITERATIONS=10
-MAX_TASK_RETRY_COUNT=3
-
-# Rate Limiting
-RATE_LIMIT_FREE_RPM=100
-RATE_LIMIT_PRO_RPM=500
-RATE_LIMIT_ENTERPRISE_RPM=2000
-
-# App
-APP_ENV=development
-DEBUG=true
-LOG_LEVEL=INFO
-CORS_ALLOWED_ORIGINS=http://localhost:3000
-```
-
-See `.env.example` for the full list with descriptions.
+The complete environment variable surface is maintained in `.env.example` and validated centrally in `backend/app/config.py`.
 
 ---
 
 ## Advanced Features
 
-- **Streaming responses** — SSE endpoint at `GET /api/v1/tasks/{id}/stream` for progressive result rendering
-- **Role system** — `USER`, `ADMIN`, `SYSTEM` with per-endpoint enforcement
-- **Plugin tool system** — Implement `BaseTool`, drop into `agents/executor/tools/`, auto-registered at startup
-- **Document memory** — Upload PDFs, DOCX, CSV to personal knowledge base; auto-retrieved during task execution
-- **Voice input** — Web Speech API in frontend; optional Whisper API server-side transcription
-- **Agent visualization** — React Flow interactive execution graph with animated steps and clickable detail panels
+MAP includes agent orchestration, persistent task state, vector-backed memory, fallback inference, async workers, authentication, API-key support, logging, and deployment configuration. Refer to the corresponding source modules and the sections above for implementation details.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for
-branch naming, commit conventions, PR expectations, and how code review works
-on this repo. All contributors are expected to follow the
-[Code of Conduct](CODE_OF_CONDUCT.md).
-
-Found a security issue? Please don't open a public issue — see
-[SECURITY.md](SECURITY.md) for how to report it privately.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE) — see the LICENSE
-file for the full text.
-
----
-
-*MAP Technical Specification v2.0 — Built by the MAP Team*
+MAP is licensed under the MIT License. See [LICENSE](LICENSE).
