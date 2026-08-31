@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.core.db_logger import setup_database_logging
-from app.core.redis_client import close_redis, init_redis
+from app.core.redis_client import close_redis, get_redis, init_redis
 
 
 # Configure logging at application startup.
@@ -89,12 +89,18 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """Return a stable JSON response for unhandled application errors."""
+        """Return a stable JSON response for unhandled application errors.
+
+        The full exception is always logged server-side. The raw message is
+        only echoed back to the client outside production, since it can leak
+        internal details (DB URLs, file paths, third-party error bodies) to
+        anyone who manages to trigger a 500.
+        """
         logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error", "error": str(exc)},
-        )
+        content = {"detail": "Internal server error"}
+        if not settings.is_production:
+            content["error"] = str(exc)
+        return JSONResponse(status_code=500, content=content)
 
     # Routers.
     from app.api.v1.admin import router as admin_router
@@ -113,8 +119,34 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["system"])
     async def health():
-        """Return 200 when the application is running."""
-        return {"status": "ok", "env": settings.APP_ENV}
+        """Report app liveness plus real DB/Redis connectivity.
+
+        Still returns 200 with status="ok" for a plain liveness probe (so
+        existing consumers/uptime pings keep working unchanged), but now
+        also reports which dependency, if any, is actually down instead of
+        only confirming the process itself is running.
+        """
+        checks = {}
+
+        try:
+            from sqlalchemy import text
+
+            from app.db.base import engine
+
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            checks["database"] = "ok"
+        except Exception as exc:  # noqa: BLE001 - health check must not raise
+            checks["database"] = f"error: {exc}" if not settings.is_production else "error"
+
+        try:
+            redis = await get_redis()
+            await redis.ping()
+            checks["redis"] = "ok"
+        except Exception as exc:  # noqa: BLE001 - health check must not raise
+            checks["redis"] = f"error: {exc}" if not settings.is_production else "error"
+
+        return {"status": "ok", "env": settings.APP_ENV, "checks": checks}
 
     return app
 
