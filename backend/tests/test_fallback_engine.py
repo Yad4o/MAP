@@ -35,7 +35,7 @@ class TestOpenAICompatiblePath:
              patch("app.core.llm_provider.settings") as mock_settings:
             mock_settings.GROQ_API_KEY = "gsk_test"
             mock_settings.GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-            mock_settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
+            mock_settings.DEFAULT_MODEL = "openai/gpt-oss-120b"
             mock_client = AsyncMock()
             mock_client.chat.completions.create.return_value = _mock_openai_response()
             mock_cls.return_value = mock_client
@@ -58,7 +58,7 @@ class TestOpenAICompatiblePath:
              patch("app.core.llm_provider.settings") as mock_settings:
             mock_settings.GROQ_API_KEY = "gsk_test"
             mock_settings.GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-            mock_settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
+            mock_settings.DEFAULT_MODEL = "openai/gpt-oss-120b"
             mock_client = AsyncMock()
             mock_client.chat.completions.create.side_effect = Exception("API Error")
             mock_cls.return_value = mock_client
@@ -73,7 +73,7 @@ class TestOpenAICompatiblePath:
              patch("app.core.llm_provider.settings") as mock_settings:
             mock_settings.GROQ_API_KEY = "gsk_test"
             mock_settings.GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-            mock_settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
+            mock_settings.DEFAULT_MODEL = "openai/gpt-oss-120b"
             mock_client = AsyncMock()
             mock_client.chat.completions.create.return_value = _mock_openai_response(tokens_in=5, tokens_out=3)
             mock_cls.return_value = mock_client
