@@ -31,7 +31,11 @@ logger = logging.getLogger(__name__)
 # live in _credentials() where needed (settings.GROQ_BASE_URL can change
 # at runtime/in tests) rather than baked in here at import time.
 PROVIDERS = {
-    "groq": {"kind": "openai_compatible", "default_model": "llama-3.3-70b-versatile"},
+    # Note: "default_model" here is NOT what's actually used for groq/openai -
+    # _credentials() below uses settings.DEFAULT_MODEL for those two instead
+    # (see the ternary in _credentials). Kept in sync anyway so this doesn't
+    # mislead anyone reading it, but the real model lives in config.py.
+    "groq": {"kind": "openai_compatible", "default_model": "openai/gpt-oss-120b"},
     "openai": {"kind": "openai_compatible", "default_model": "gpt-4o"},
     "gemini": {"kind": "openai_compatible", "default_model": "gemini-1.5-pro"},
     "anthropic": {"kind": "anthropic", "default_model": "claude-sonnet-4-5"},
