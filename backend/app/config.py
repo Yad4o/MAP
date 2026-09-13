@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     GROQ_BASE_URL: str = Field(default="https://api.groq.com/openai/v1")
     PRIMARY_AI_PROVIDER: str = Field(default="openai")
     DEFAULT_MODEL: str = Field(default="gpt-4o")
-    FALLBACK_MODEL: str = Field(default="mistral-7b-instruct")
+    FALLBACK_MODEL: str = Field(default="openai/gpt-oss-20b")
     BENTOML_BASE_URL: str = Field(default="http://map-bentoml:3001/v1")
 
     # ── Agent Config ──────────────────────────────────────────
@@ -118,6 +118,6 @@ settings = Settings()
 # dashboard take effect as normal — these lines are skipped.
 if settings.is_development:
     settings.PRIMARY_AI_PROVIDER = "groq"
-    settings.DEFAULT_MODEL = "llama-3.3-70b-versatile"
-    settings.FALLBACK_MODEL = "llama-3.1-8b-instant"
+    settings.DEFAULT_MODEL = "openai/gpt-oss-120b"
+    settings.FALLBACK_MODEL = "openai/gpt-oss-20b"
 
