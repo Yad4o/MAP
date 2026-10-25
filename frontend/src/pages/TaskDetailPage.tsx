@@ -40,6 +40,8 @@ import {
 import AgentFlowChart from '../components/task/AgentFlowChart';
 import TaskTimeline from '../components/task/TaskTimeline';
 import TaskResultView from '../components/task/TaskResultView';
+import LiveAnswer from '../components/task/LiveAnswer';
+import { useTaskStream } from '../hooks/useTaskStream';
 import TaskConversation from '../components/task/TaskConversation';
 
 /* ── Status + priority helpers ─────────────────────────────────────────── */
@@ -157,6 +159,18 @@ export default function TaskDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: task, isLoading: isQueryLoading, error } = useTaskDetail(id);
+
+  // Live "typing" of the answer while the task runs. Polling stays the source of truth; when the
+  // stream ends we refetch right away instead of waiting for the next poll tick.
+  const isTaskActive =
+    !!task &&
+    (task.status === TaskStatus.PENDING ||
+      task.status === TaskStatus.PROCESSING ||
+      task.status === TaskStatus.RETRYING);
+  const live = useTaskStream(id, isTaskActive, () => {
+    queryClient.invalidateQueries({ queryKey: ['tasks', id, 'detail'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks', id, 'status'] });
+  });
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
   const [rawJsonSteps, setRawJsonSteps] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -919,7 +933,14 @@ export default function TaskDetailPage() {
         {/* Result — blended directly on the page, no card/header chrome.
              Stays visible (dimmed) while a follow-up re-runs the task instead
              of unmounting and popping back in once it re-completes. */}
-        {(task.status === TaskStatus.COMPLETED || (isRunning && lastResult)) && (
+        {/* Live answer — streams in while the task runs, replaced by the saved result on completion */}
+        {isRunning && live.hasText && (
+          <section className="pt-2">
+            <LiveAnswer blocks={live.blocks} />
+          </section>
+        )}
+
+        {(task.status === TaskStatus.COMPLETED || (isRunning && lastResult && !live.hasText)) && (
           <section
             className="pt-2 transition-opacity duration-300"
             style={isRunning ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
