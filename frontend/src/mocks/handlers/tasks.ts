@@ -63,6 +63,9 @@ export const resetStatusCounts = () => {
 }
 
 export const taskHandlers = [
+  // Live answer streaming isn't simulated by the mock API — a 404 makes the client fall back to polling quietly.
+  http.get('*/tasks/:id/stream', () => new HttpResponse(null, { status: 404 })),
+
   // GET /api/v1/tasks — list all tasks
   http.get(`${API_BASE}/tasks`, () => {
     return HttpResponse.json<Task[]>(mockTasks)
