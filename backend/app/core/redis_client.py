@@ -3,9 +3,12 @@ from app.config import settings
 
 _redis_client = None
 
-async def init_redis():
-    """Call once from lifespan before yielding."""
-    global _redis_client
+def build_redis_client(**overrides):
+    """Create a Redis client from settings.REDIS_URL (decode_responses, Upstash-friendly TLS).
+
+    Used by init_redis() for the API process and directly by Celery workers, which run each
+    task in its own event loop and so can't share the API's long-lived client.
+    """
     if not settings.REDIS_URL:
         raise RuntimeError("REDIS_URL is not set in settings. Cannot initialise Redis.")
     # Connect to the Upstash URL from settings with SSL cert reqs set to "none"
@@ -21,11 +24,14 @@ async def init_redis():
     kwargs = {"decode_responses": True}
     if settings.REDIS_URL.startswith("rediss://"):
         kwargs["ssl_cert_reqs"] = "none"
+    kwargs.update(overrides)
+    return aioredis.from_url(settings.REDIS_URL, **kwargs)
 
-    _redis_client = aioredis.from_url(
-        settings.REDIS_URL,
-        **kwargs
-    )
+
+async def init_redis():
+    """Call once from lifespan before yielding."""
+    global _redis_client
+    _redis_client = build_redis_client()
 
 async def get_redis():
     if _redis_client is None:

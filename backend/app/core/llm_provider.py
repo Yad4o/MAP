@@ -138,8 +138,13 @@ def build_chat_model(
     max_tokens: int | None = None,
     max_retries: int = 3,
     request_timeout: float = 60.0,
+    stream_usage: bool = False,
 ):
     """Build the LangChain chat model for these credentials.
+
+    stream_usage: ask OpenAI-compatible providers to include token usage in streamed
+    responses (LangChain leaves it off by default, which would zero the token counts
+    whenever the answer is streamed). Anthropic already reports usage when streaming.
 
     max_retries/request_timeout are passed straight into the LangChain
     client so transient 429s/timeouts are retried with backoff *before*
@@ -171,6 +176,7 @@ def build_chat_model(
         max_tokens=max_tokens,
         max_retries=max_retries,
         timeout=request_timeout,
+        stream_usage=stream_usage,
     )
 
 

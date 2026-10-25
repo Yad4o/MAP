@@ -163,3 +163,22 @@ class TestBuildChatModel:
 
         from langchain_anthropic import ChatAnthropic
         assert isinstance(llm, ChatAnthropic)
+
+
+class TestBuildChatModelStreamUsage:
+    """Streamed responses only report token usage if explicitly requested."""
+
+    def test_stream_usage_is_off_by_default(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_test")
+        creds = llm_provider.resolve_credentials(provider="groq")
+        assert llm_provider.build_chat_model(creds, temperature=0.2).stream_usage is False
+
+    def test_stream_usage_can_be_enabled_for_openai_compatible(self, monkeypatch):
+        monkeypatch.setattr(llm_provider.settings, "GROQ_API_KEY", "gsk_test")
+        creds = llm_provider.resolve_credentials(provider="groq")
+        assert llm_provider.build_chat_model(creds, temperature=0.2, stream_usage=True).stream_usage is True
+
+    def test_anthropic_ignores_the_flag(self):
+        user = _user_with_key("anthropic", "sk-ant-real-key")
+        creds = llm_provider.resolve_credentials(user=user, provider="anthropic")
+        llm_provider.build_chat_model(creds, temperature=0.2, stream_usage=True)  # must not raise
