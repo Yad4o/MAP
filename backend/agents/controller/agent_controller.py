@@ -19,6 +19,7 @@ from agents.planner.planner_agent import PlannerAgent
 from agents.executor.executor_agent import ExecutorAgent
 from agents.analyzer.analyzer_agent import AnalyzerAgent
 from agents.memory.memory_agent import MemoryAgent
+from app.core.token_stream import TokenStreamPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,25 @@ class AgentController:
         self.analyzer = AnalyzerAgent(task_id, config)
         self.memory = MemoryAgent(task_id, config)
 
+        # Live answer streaming (set for the duration of run_pipeline; None otherwise)
+        self._stream: TokenStreamPublisher | None = None
+
     async def run_pipeline(self) -> dict:
+        """Run the pipeline with live answer streaming attached.
+
+        The stream is always finished and closed — even if the pipeline crashes — so the
+        browser's live view never hangs waiting on a stream that will not end. Streaming
+        itself is best-effort and can never fail the task.
+        """
+        self._stream = await TokenStreamPublisher.open(self.task_id)
+        try:
+            return await self._run_pipeline_inner()
+        finally:
+            stream, self._stream = self._stream, None
+            await stream.finish()
+            await stream.close()
+
+    async def _run_pipeline_inner(self) -> dict:
         """
         Full pipeline:
         1. Send task description to PlannerAgent → get PlanDocument
@@ -228,7 +247,12 @@ class AgentController:
             message_type="execute_step",
             payload={"step": step, "context": context}
         )
-        result = await self.executor.run(exec_msg)
+        # Hand the executor a live stream only when streaming is on, so the
+        # non-streaming call stays exactly as it was.
+        if self._stream is not None and self._stream.enabled:
+            result = await self.executor.run(exec_msg, stream=self._stream.for_step(step_index))
+        else:
+            result = await self.executor.run(exec_msg)
         latency = int((time.monotonic() - t0) * 1000)
 
         status = "FAILED" if result.message_type == "error" else "COMPLETED"

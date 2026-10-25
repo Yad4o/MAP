@@ -8,6 +8,9 @@ def set_test_mode(enabled: bool) -> None:
     global _TEST_MODE
     _TEST_MODE = enabled
 
+def is_test_mode() -> bool:
+    return _TEST_MODE
+
 async def get_redis() -> aioredis.Redis:
     global _redis_client
     if _redis_client is None and not _TEST_MODE:

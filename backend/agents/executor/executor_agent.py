@@ -17,7 +17,7 @@ from typing import Dict, Any, List, Optional
 from agents.shared.base_agent import BaseAgent
 from agents.shared.message import AgentMessage
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, AIMessageChunk, SystemMessage, ToolMessage
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.outputs import ChatResult, ChatGeneration
 from pydantic import Field
@@ -58,6 +58,49 @@ def _is_rate_limit_error(exc: Exception) -> bool:
     return "rate limit" in msg or "429" in msg or "ratelimit" in msg
 
 
+def _chunk_text(chunk: Any) -> str:
+    """Plain text carried by a streamed message chunk ('' for tool-call-only chunks)."""
+    content = getattr(chunk, "content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):  # Anthropic-style content blocks
+        return "".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return ""
+
+
+async def _invoke_agent(agent: Any, state: dict, stream: Any = None) -> dict:
+    """Run the ReAct graph and return its final state — the same dict `ainvoke` returns.
+
+    With a live `stream` attached, the model's text is forwarded token by token while the
+    graph runs. Narration the model writes *before* calling a tool is cleared once the tool
+    runs, so the live text always converges on the final answer. Without a stream this is
+    exactly `agent.ainvoke(state)`.
+    """
+    if stream is None:
+        return await agent.ainvoke(state)
+
+    final_state: dict | None = None
+    async for mode, data in agent.astream(state, stream_mode=["messages", "values"]):
+        if mode == "messages":
+            chunk, meta = data
+            if isinstance(chunk, ToolMessage):
+                await stream.reset()
+            elif isinstance(chunk, AIMessageChunk) and (meta or {}).get("langgraph_node") == "agent":
+                text = _chunk_text(chunk)
+                if text:
+                    await stream.delta(text)
+        elif mode == "values":
+            final_state = data
+    await stream.flush()
+    if final_state is None:
+        raise RuntimeError("agent stream finished without producing a final state")
+    return final_state
+
+
 
 
 # LangGraph imports
@@ -93,8 +136,10 @@ class ExecutorAgent(BaseAgent):
             "code_interpreter": CodeInterpreterTool(),
         }
 
-    async def run(self, message: AgentMessage) -> AgentMessage:
+    async def run(self, message: AgentMessage, stream: Any = None) -> AgentMessage:
         """
+        `stream` (optional): a StepStream that receives the answer text live as it is generated.
+
         Input payload:  { "step": PlanStep, "context": list[MemoryResult] }
         Output payload: { "step_result": StepResult }
 
@@ -195,12 +240,15 @@ Please use the available tools to complete this step. Provide a clear result whe
                     creds,
                     temperature=settings.EXECUTOR_TEMPERATURE,
                     max_tokens=settings.MAX_TOKENS,
+                    **({"stream_usage": True} if stream is not None else {}),
                 )
                 agent = create_react_agent(llm, tools, state_modifier=EXECUTOR_SYSTEM_PROMPT)
                 try:
-                    result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+                    result = await _invoke_agent(agent, {"messages": [HumanMessage(content=prompt)]}, stream)
                     break
                 except Exception as exc:
+                    if stream is not None:
+                        await stream.reset()  # discard partial text from the failed attempt
                     if _is_rate_limit_error(exc):
                         last_rate_limit_exc = exc
                         logger.warning(

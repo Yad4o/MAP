@@ -2,7 +2,8 @@
 Task management routes.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
@@ -16,6 +17,8 @@ from app.services.task_service import TaskService
 from app.db.repositories.task_repo import TaskRepository, TaskMessageRepository
 from app.core.exceptions import TaskNotFoundError, TaskOwnershipError, TaskStateTransitionError, TaskNotContinuableError
 from app.worker.tasks import process_task
+from app.core.redis_client import get_redis
+from app.core.token_stream import clear_task_stream, stream_task_events
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -69,6 +72,65 @@ async def get_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
 
+async def get_stream_redis():
+    """Redis client for live-stream reads (overridable in tests)."""
+    return await get_redis()
+
+
+_TERMINAL_STATUSES = {"COMPLETED", "FAILED", "CANCELLED"}
+
+
+async def _clear_stream(task_id: uuid.UUID) -> None:
+    """Drop the previous run's streamed text before a task is re-queued. Best effort."""
+    try:
+        await clear_task_stream(await get_redis(), task_id)
+    except Exception:  # noqa: BLE001 — never block a retry/follow-up on Redis
+        pass
+
+
+@router.get("/{task_id}/stream")
+async def stream_task(
+    task_id: uuid.UUID,
+    request: Request,
+    offset: int = Query(0, ge=0, description="Resume from this event id (the SSE Last-Event-ID + 1)."),
+    current_user = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service),
+    redis = Depends(get_stream_redis),
+):
+    """
+    Server-Sent Events: the task's answer text as it is generated.
+
+    Purely additive — the task's final result is still saved and served by the normal
+    endpoints, so a client can ignore this stream (or lose it) and nothing is missed.
+    """
+    try:
+        await task_service.get_task_status(task_id, current_user.id)  # ownership check
+    except (TaskNotFoundError, TaskOwnershipError):
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    async def task_finished() -> bool:
+        # Own short-lived session: the request-scoped one is closed once streaming starts.
+        from app.db.base import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            task = await TaskRepository(session).get(task_id)
+            if task is None:
+                return True
+            return str(getattr(task.status, "value", task.status)) in _TERMINAL_STATUSES
+
+    return StreamingResponse(
+        stream_task_events(
+            redis, task_id, offset,
+            is_disconnected=request.is_disconnected,
+            is_task_finished=task_finished,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # tell proxies (nginx/Render) not to buffer the stream
+        },
+    )
+
+
 @router.get("/{task_id}/status", response_model=TaskStatusResponse)
 async def get_task_status(
     task_id: uuid.UUID,
@@ -108,6 +170,7 @@ async def add_task_message(
     # the worker reads it.
     from app.config import settings
     countdown = 1 if settings.is_development else 0
+    await _clear_stream(task_id)
     process_task.apply_async(args=[str(task_id)], countdown=countdown)
 
     return task
@@ -195,6 +258,7 @@ async def retry_task(
     # Add countdown in development mode to ensure DB commit completes
     from app.config import settings
     countdown = 1 if settings.is_development else 0
+    await _clear_stream(task_id)
     process_task.apply_async(args=[str(task_id)], countdown=countdown)
 
     # Return the refreshed task
