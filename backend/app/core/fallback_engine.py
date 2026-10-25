@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
+from app.config import settings
 from app.core.llm_provider import resolve_credentials, resolve_credentials_with_fallback
 from app.db.models.user import User
 
@@ -28,6 +29,12 @@ def _is_rate_limit_error(exc: Exception) -> bool:
     """True if `exc` looks like a provider rate-limit error (HTTP 429 etc.)."""
     msg = str(exc).lower()
     return "rate limit" in msg or "429" in msg or "ratelimit" in msg
+
+
+def _is_model_not_found_error(exc: Exception) -> bool:
+    """True if `exc` means the provider doesn't know/allow the requested model (HTTP 404)."""
+    msg = str(exc).lower()
+    return "model_not_found" in msg or ("404" in msg and "model" in msg and "does not exist" in msg)
 
 
 class FallbackEngine:
@@ -78,6 +85,26 @@ class FallbackEngine:
                 return content, i > 0, tokens_in, tokens_out
             except Exception as error:
                 last_error = error
+                if (
+                    _is_model_not_found_error(error)
+                    and creds.provider == "groq"
+                    and call_model != settings.FALLBACK_MODEL
+                ):
+                    # The requested model was retired/renamed: retry once on the
+                    # configured fallback model rather than failing the task.
+                    logger.warning(
+                        f"[{request_id}] model '{call_model}' not found on {creds.provider}; "
+                        f"retrying with FALLBACK_MODEL '{settings.FALLBACK_MODEL}'."
+                    )
+                    try:
+                        content, tokens_in, tokens_out = await self._call_openai_compatible(
+                            creds, settings.FALLBACK_MODEL, messages, temperature, max_tokens
+                        )
+                        logger.info(f"[{request_id}] succeeded on fallback model, tokens: {tokens_in}+{tokens_out}")
+                        return content, True, tokens_in, tokens_out
+                    except Exception as fallback_error:
+                        logger.error(f"[{request_id}] fallback model call failed: {fallback_error}")
+                        raise
                 if _is_rate_limit_error(error) and i + 1 < len(creds_candidates):
                     logger.warning(
                         f"[{request_id}] rate limit on provider={creds.provider}; trying fallback provider."

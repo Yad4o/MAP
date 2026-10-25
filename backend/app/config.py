@@ -10,8 +10,19 @@ Usage:
     print(settings.DATABASE_URL)
 """
 
+import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
+
+
+# Model IDs Groq has retired, mapped to their current replacements. A stale value
+# for DEFAULT_MODEL / FALLBACK_MODEL (e.g. left over in the Render dashboard) is
+# rewritten instead of 404-ing every LLM call.
+RETIRED_MODEL_REPLACEMENTS = {
+    "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
+    "llama-3.1-70b-versatile": "openai/gpt-oss-120b",
+    "llama-3.1-8b-instant": "openai/gpt-oss-20b",
+}
 
 
 class Settings(BaseSettings):
@@ -93,6 +104,18 @@ class Settings(BaseSettings):
         """Parse comma-separated CORS origins into a list."""
         return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",")]
     
+    @field_validator("DEFAULT_MODEL", "FALLBACK_MODEL", mode="after")
+    @classmethod
+    def _replace_retired_models(cls, v: str) -> str:
+        replacement = RETIRED_MODEL_REPLACEMENTS.get(v.strip().lower())
+        if replacement:
+            logging.getLogger(__name__).warning(
+                "Model '%s' is retired; using '%s' instead. Update the env var to silence this.",
+                v.strip(), replacement,
+            )
+            return replacement
+        return v
+
     @field_validator("JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", mode="before")
     @classmethod
     def fix_newlines(cls, v: str) -> str:
